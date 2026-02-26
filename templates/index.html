@@ -13,7 +13,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <!-- Space Grotesk for clean body text, Orbitron for futuristic logo, Space Mono for status and code elements -->
     <link
-        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Space+Grotesk:wght@300;400;500;600&family=Space+Mono&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Orbitron:wght@500;700&family=Space+Grotesk:wght@300;400;500;600&family=Space+Mono&display=swap"
         rel="stylesheet">
 
     <link rel="stylesheet" href="/static/css/style.css">
@@ -91,7 +91,15 @@
                 <label>Refine Existing</label>
                 <div class="refine-wrap">
                     <input type="text" class="refine-input" id="refine-input" placeholder="Add error handling...">
-                    <button class="refine-btn" id="refine-btn">Update</button>
+                    <button class="refine-btn" id="refine-btn">Refine</button>
+                </div>
+            </div>
+
+            <!-- Properties Panel (shown when node/edge selected) -->
+            <div class="properties-panel" id="properties-panel" style="display: none;">
+                <label>Properties</label>
+                <div class="prop-content" id="prop-content">
+                    <!-- Dynamically filled -->
                 </div>
             </div>
 
@@ -104,6 +112,22 @@
             <!-- Floating Toolbar -->
             <div class="toolbar">
                 <div class="toolbar-left">
+                    <!-- Undo / Redo -->
+                    <button class="toolbar-btn icon-btn" id="btn-undo" title="Undo (Ctrl+Z)" disabled>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="1 4 1 10 7 10"></polyline>
+                            <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+                        </svg>
+                    </button>
+                    <button class="toolbar-btn icon-btn" id="btn-redo" title="Redo (Ctrl+Y)" disabled>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="23 4 23 10 17 10"></polyline>
+                            <path d="M20.49 15a9 9 0 1 1-2.13-9.36L23 10"></path>
+                        </svg>
+                    </button>
+
+                    <div class="toolbar-divider"></div>
+
                     <div class="zoom-controls">
                         <button class="zoom-btn icon-btn" id="zoom-out" title="Zoom out">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -124,18 +148,35 @@
                             <circle cx="12" cy="12" r="3"></circle>
                         </svg>
                     </button>
+                    <button class="toolbar-btn icon-btn" id="btn-auto-layout" title="Auto Layout">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="7" height="7"></rect>
+                            <rect x="14" y="3" width="7" height="7"></rect>
+                            <rect x="3" y="14" width="7" height="7"></rect>
+                            <rect x="14" y="14" width="7" height="7"></rect>
+                        </svg>
+                    </button>
                 </div>
 
                 <div class="toolbar-divider"></div>
 
                 <div class="toolbar-right">
-                    <button class="toolbar-btn icon-btn" id="btn-clear-canvas" title="Clear Canvas">
+                    <button class="toolbar-btn icon-btn" id="btn-delete-selected" title="Delete Selected" disabled>
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <polyline points="3 6 5 6 21 6"></polyline>
                             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2">
                             </path>
                         </svg>
                     </button>
+                    <button class="toolbar-btn icon-btn" id="btn-clear-canvas" title="Clear Canvas">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+
+                    <div class="toolbar-divider"></div>
+
                     <button class="toolbar-btn icon-btn" id="btn-export-png" title="Export PNG">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -165,13 +206,13 @@
                 </div>
             </div>
 
-            <!-- Canvas -->
+            <!-- Canvas Container (SVG will be injected here by renderer) -->
             <div class="canvas-container" id="canvas-container">
-                <canvas id="flowchart-canvas"></canvas>
                 <div class="empty-state" id="empty-state">
                     <span class="bracket-text">[ ]</span>
                     <h2>AWAITING PROMPT</h2>
                     <p>Describe what you need in the sidebar to initialize rendering.</p>
+                    <p class="hint-text">Double-click nodes to edit text. Drag to reposition. Ctrl+Z to undo.</p>
                 </div>
             </div>
 
@@ -185,7 +226,7 @@
                     <span id="edge-count">EDGES: 0</span>
                 </div>
                 <div class="status-right">
-                    <span>ARKA V1.2.3</span>
+                    <span>ARKA V2.0</span>
                 </div>
             </div>
         </main>

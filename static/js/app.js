@@ -1,7 +1,8 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- *  Arka – Main Application Logic
- *  Handles UI interactions, API calls, Firebase, and orchestration.
+ *  Arka – Main Application Logic v2.0
+ *  Handles UI interactions, API calls, Firebase, properties panel,
+ *  undo/redo, and orchestration.
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
@@ -17,8 +18,7 @@ const FIREBASE_CONFIG = {
 // ── DOM Elements ────────────────────────────────────────────────────────────
 const promptInput = document.getElementById('prompt-input');
 const generateBtn = document.getElementById('generate-btn');
-const codeEditor = document.getElementById('code-editor');
-const canvasEl = document.getElementById('flowchart-canvas');
+const canvasContainer = document.getElementById('canvas-container');
 const emptyState = document.getElementById('empty-state');
 const zoomLevelEl = document.getElementById('zoom-level');
 const statusText = document.getElementById('status-text');
@@ -29,10 +29,15 @@ const sidebarToggle = document.getElementById('sidebar-toggle');
 const sidebar = document.getElementById('sidebar');
 const refineInput = document.getElementById('refine-input');
 const refineBtn = document.getElementById('refine-btn');
+const propsPanel = document.getElementById('properties-panel');
+const propsContent = document.getElementById('prop-content');
+const btnUndo = document.getElementById('btn-undo');
+const btnRedo = document.getElementById('btn-redo');
+const btnDeleteSelected = document.getElementById('btn-delete-selected');
 
 // ── Instances ───────────────────────────────────────────────────────────────
 const parser = new BridgeParser();
-const renderer = new FlowchartRenderer(canvasEl);
+const renderer = new FlowchartRenderer(canvasContainer);
 
 // ── State ───────────────────────────────────────────────────────────────────
 let currentBridgeCode = '';
@@ -75,44 +80,71 @@ function setupEventListeners() {
         }
     });
 
-    // Live code editor → preview
-    if (codeEditor) {
-        codeEditor.addEventListener('input', debounce(() => {
-            currentBridgeCode = codeEditor.value;
-            renderFromCode(currentBridgeCode);
-        }, 500));
-    }
-
     // Zoom controls
-    document.getElementById('zoom-in').addEventListener('click', () => {
-        renderer.zoomIn();
-    });
-    document.getElementById('zoom-out').addEventListener('click', () => {
-        renderer.zoomOut();
-    });
-    document.getElementById('zoom-fit').addEventListener('click', () => {
-        renderer.fitToScreen();
-    });
+    document.getElementById('zoom-in').addEventListener('click', () => renderer.zoomIn());
+    document.getElementById('zoom-out').addEventListener('click', () => renderer.zoomOut());
+    document.getElementById('zoom-fit').addEventListener('click', () => renderer.fitToScreen());
 
     // Zoom level display
-    canvasEl.addEventListener('zoomchange', (e) => {
+    renderer.svg.addEventListener('zoomchange', (e) => {
         zoomLevelEl.textContent = Math.round(e.detail.scale * 100) + '%';
     });
 
-    // Node edit from Canvas
-    canvasEl.addEventListener('nodeedit', (e) => {
+    // Node edit from renderer
+    renderer.svg.addEventListener('nodeedit', (e) => {
         const { node, oldText, newText } = e.detail;
         if (!currentBridgeCode) return;
 
-        // Find the node's raw code in the text editor and replace it
+        // Sync the bridge code
         const newRaw = node.raw.replace(oldText, newText);
         currentBridgeCode = currentBridgeCode.replace(node.raw, newRaw);
-        if (codeEditor) {
-            codeEditor.value = currentBridgeCode;
-        }
-
-        // Update the node's raw reference directly so future edits work without requiring a full manual re-parse
         node.raw = newRaw;
+    });
+
+    // Selection change → show/hide properties panel
+    renderer.svg.addEventListener('selectionchange', (e) => {
+        const { node, edge } = e.detail;
+        if (node) {
+            showNodeProperties(node);
+            btnDeleteSelected.disabled = false;
+        } else if (edge) {
+            showEdgeProperties(edge);
+            btnDeleteSelected.disabled = false;
+        } else {
+            hideProperties();
+            btnDeleteSelected.disabled = true;
+        }
+    });
+
+    // History state change → update undo/redo buttons
+    renderer.svg.addEventListener('historystatechange', (e) => {
+        btnUndo.disabled = !e.detail.canUndo;
+        btnRedo.disabled = !e.detail.canRedo;
+    });
+
+    // Data change (node/edge deleted)
+    renderer.svg.addEventListener('datachange', (e) => {
+        nodeCountEl.textContent = 'NODES: ' + e.detail.nodes.length;
+        edgeCountEl.textContent = 'EDGES: ' + e.detail.edges.length;
+    });
+
+    // Undo / Redo buttons
+    btnUndo.addEventListener('click', () => renderer.undo());
+    btnRedo.addEventListener('click', () => renderer.redo());
+
+    // Delete selected
+    btnDeleteSelected.addEventListener('click', () => {
+        if (renderer.selectedNode) {
+            renderer.deleteSelectedNode();
+        } else if (renderer.selectedEdge) {
+            renderer.deleteSelectedEdge();
+        }
+    });
+
+    // Auto layout
+    document.getElementById('btn-auto-layout').addEventListener('click', () => {
+        renderer.autoLayout();
+        showToast('Layout reorganized', 'success');
     });
 
     // Toolbar buttons
@@ -121,11 +153,7 @@ function setupEventListeners() {
     document.getElementById('btn-save').addEventListener('click', () => openModal('save-modal'));
     document.getElementById('btn-load').addEventListener('click', handleOpenLoad);
 
-    // Code actions
-    const btnCopyCode = document.getElementById('btn-copy-code');
-    if (btnCopyCode) btnCopyCode.addEventListener('click', handleCopyCode);
-    const btnClearCode = document.getElementById('btn-clear-code');
-    if (btnClearCode) btnClearCode.addEventListener('click', handleClearCode);
+    // Clear canvas
     const btnClearCanvas = document.getElementById('btn-clear-canvas');
     if (btnClearCanvas) btnClearCanvas.addEventListener('click', handleClearCode);
 
@@ -189,7 +217,6 @@ async function handleGenerate() {
         }
 
         currentBridgeCode = data.bridge_code;
-        if (codeEditor) codeEditor.value = currentBridgeCode;
         renderFromCode(currentBridgeCode);
         updateStatus('ready', 'Generated');
         showToast('Flowchart generated successfully!', 'success');
@@ -232,7 +259,6 @@ async function handleRefine() {
         if (!response.ok) throw new Error(data.error || 'Refinement failed');
 
         currentBridgeCode = data.bridge_code;
-        if (codeEditor) codeEditor.value = currentBridgeCode;
         renderFromCode(currentBridgeCode);
         refineInput.value = '';
         updateStatus('ready', 'Refined');
@@ -243,7 +269,7 @@ async function handleRefine() {
         updateStatus('error', 'Error');
     } finally {
         refineBtn.disabled = false;
-        refineBtn.textContent = '✨ Refine';
+        refineBtn.textContent = 'Refine';
     }
 }
 
@@ -252,11 +278,9 @@ async function handleRefine() {
 function renderFromCode(code) {
     if (!code || !code.trim()) {
         emptyState.style.display = 'block';
-        canvasEl.style.display = 'none';
-        const ctx = canvasEl.getContext('2d');
-        if (ctx) ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
+        renderer.svg.style.display = 'none';
         nodeCountEl.textContent = 'NODES: 0';
-        if (edgeCountEl) edgeCountEl.textContent = 'EDGES: 0';
+        edgeCountEl.textContent = 'EDGES: 0';
         return;
     }
 
@@ -265,17 +289,17 @@ function renderFromCode(code) {
 
         if (parsed.nodes.length === 0) {
             emptyState.style.display = 'block';
-            canvasEl.style.display = 'none';
+            renderer.svg.style.display = 'none';
             showToast('No valid blocks found in the code.', 'error');
             return;
         }
 
         emptyState.style.display = 'none';
-        canvasEl.style.display = 'block';
+        renderer.svg.style.display = 'block';
         renderer.render(parsed);
 
         nodeCountEl.textContent = 'NODES: ' + parsed.nodes.length;
-        if (edgeCountEl) edgeCountEl.textContent = 'EDGES: ' + parsed.edges.length;
+        edgeCountEl.textContent = 'EDGES: ' + parsed.edges.length;
         zoomLevelEl.textContent = Math.round(renderer.scale * 100) + '%';
 
     } catch (err) {
@@ -284,24 +308,171 @@ function renderFromCode(code) {
     }
 }
 
+// ═══ Properties Panel ═══════════════════════════════════════════════════════
+
+function showNodeProperties(node) {
+    propsPanel.style.display = 'block';
+
+    const shapeOptions = [
+        { value: 'process', label: 'Rectangle' },
+        { value: 'terminator', label: 'Oval' },
+        { value: 'decision', label: 'Diamond' },
+        { value: 'io', label: 'Parallelogram' },
+    ];
+
+    const colorOptions = [
+        { value: 'blue', label: 'Blue', color: '#3b82f6' },
+        { value: 'violet', label: 'Violet', color: '#7c3aed' },
+        { value: 'red', label: 'Red', color: '#ef4444' },
+        { value: 'amber', label: 'Amber', color: '#f59e0b' },
+        { value: 'cyan', label: 'Cyan', color: '#06b6d4' },
+        { value: 'green', label: 'Green', color: '#22c55e' },
+        { value: 'pink', label: 'Pink', color: '#ec4899' },
+        { value: 'reset', label: 'Default', color: '#888' },
+    ];
+
+    const shapeHtml = shapeOptions.map(s =>
+        `<button class="prop-shape-btn ${(node.shapeOverride || node.type) === s.value ? 'active' : ''}" 
+                data-shape="${s.value}" title="${s.label}">${s.label}</button>`
+    ).join('');
+
+    const colorHtml = colorOptions.map(c =>
+        `<button class="prop-color-swatch" data-color="${c.value}" title="${c.label}"
+                style="background: ${c.color}; ${c.value === 'reset' ? 'border: 1px dashed #666;' : ''}"></button>`
+    ).join('');
+
+    propsContent.innerHTML = `
+        <div class="prop-group">
+            <div class="prop-label">Text</div>
+            <div class="prop-value">${escapeHtml(node.text)}</div>
+        </div>
+        <div class="prop-group">
+            <div class="prop-label">Shape</div>
+            <div class="prop-shape-row">${shapeHtml}</div>
+        </div>
+        <div class="prop-group">
+            <div class="prop-label">Color</div>
+            <div class="prop-color-row">${colorHtml}</div>
+        </div>
+        <div class="prop-group">
+            <div class="prop-label">Size</div>
+            <div class="prop-size-row">
+                <button class="prop-size-btn" data-dw="-20" data-dh="0" title="Narrower">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                        <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>
+                </button>
+                <span class="prop-size-label">${Math.round(node.width)} x ${Math.round(node.height)}</span>
+                <button class="prop-size-btn" data-dw="20" data-dh="0" title="Wider">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                        <polyline points="9 18 15 12 9 6"></polyline>
+                    </svg>
+                </button>
+                <span style="margin: 0 4px;">|</span>
+                <button class="prop-size-btn" data-dw="0" data-dh="-10" title="Shorter">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                        <polyline points="18 15 12 9 6 15"></polyline>
+                    </svg>
+                </button>
+                <button class="prop-size-btn" data-dw="0" data-dh="10" title="Taller">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    `;
+
+    // Attach shape handlers
+    propsContent.querySelectorAll('.prop-shape-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            renderer.changeNodeShape(node.id, btn.dataset.shape);
+            showNodeProperties(node); // refresh
+        });
+    });
+
+    // Attach color handlers
+    propsContent.querySelectorAll('.prop-color-swatch').forEach(btn => {
+        btn.addEventListener('click', () => {
+            renderer.changeNodeColor(node.id, btn.dataset.color);
+        });
+    });
+
+    // Attach size handlers
+    propsContent.querySelectorAll('.prop-size-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const dw = parseInt(btn.dataset.dw) || 0;
+            const dh = parseInt(btn.dataset.dh) || 0;
+            renderer.resizeNode(node.id, dw, dh);
+            showNodeProperties(node); // refresh
+        });
+    });
+}
+
+function showEdgeProperties(edge) {
+    propsPanel.style.display = 'block';
+    const fromNode = renderer.nodes.find(n => n.id === edge.from);
+    const toNode = renderer.nodes.find(n => n.id === edge.to);
+
+    propsContent.innerHTML = `
+        <div class="prop-group">
+            <div class="prop-label">Arrow</div>
+            <div class="prop-value">${escapeHtml(fromNode?.text || '?')} → ${escapeHtml(toNode?.text || '?')}</div>
+        </div>
+        <div class="prop-group">
+            <div class="prop-label">Label</div>
+            <div class="prop-value">${edge.label ? escapeHtml(edge.label) : '<em style="color:#666">None</em>'}</div>
+        </div>
+        <div class="prop-group">
+            <button class="prop-action-btn" id="prop-edit-edge-label">Edit Label</button>
+            <button class="prop-action-btn danger" id="prop-delete-edge">Delete Arrow</button>
+        </div>
+    `;
+
+    document.getElementById('prop-edit-edge-label').addEventListener('click', () => {
+        const newLabel = prompt('Arrow label:', edge.label || '');
+        if (newLabel !== null) {
+            edge.label = newLabel.trim() || null;
+            renderer._saveUndoState();
+            renderer._drawAll();
+            showEdgeProperties(edge);
+        }
+    });
+
+    document.getElementById('prop-delete-edge').addEventListener('click', () => {
+        renderer.selectedEdge = edge;
+        renderer.deleteSelectedEdge();
+        hideProperties();
+    });
+}
+
+function hideProperties() {
+    propsPanel.style.display = 'none';
+    propsContent.innerHTML = '';
+}
+
 // ═══ Export Functions ════════════════════════════════════════════════════════
 
-function handleExportPNG() {
-    if (!currentBridgeCode) {
+async function handleExportPNG() {
+    if (!currentBridgeCode && renderer.nodes.length === 0) {
         showToast('Generate a flowchart first.', 'error');
         return;
     }
 
-    const dataUrl = renderer.exportPNG();
-    const link = document.createElement('a');
-    link.download = 'flowchart.png';
-    link.href = dataUrl;
-    link.click();
-    showToast('PNG exported!', 'success');
+    try {
+        const dataUrl = await renderer.exportPNG();
+        const link = document.createElement('a');
+        link.download = 'flowchart.png';
+        link.href = dataUrl;
+        link.click();
+        showToast('PNG exported!', 'success');
+    } catch (err) {
+        showToast('Export failed: ' + err.message, 'error');
+    }
 }
 
 function handleExportSVG() {
-    if (!currentBridgeCode) {
+    if (!currentBridgeCode && renderer.nodes.length === 0) {
         showToast('Generate a flowchart first.', 'error');
         return;
     }
@@ -319,26 +490,16 @@ function handleExportSVG() {
 
 // ═══ Code Actions ═══════════════════════════════════════════════════════════
 
-function handleCopyCode() {
-    if (!currentBridgeCode) {
-        showToast('Nothing to copy.', 'error');
-        return;
-    }
-    navigator.clipboard.writeText(currentBridgeCode).then(() => {
-        showToast('Code copied to clipboard!', 'success');
-    });
-}
-
 function handleClearCode() {
-    if (codeEditor) codeEditor.value = '';
     if (promptInput) promptInput.value = '';
     currentBridgeCode = '';
     emptyState.style.display = 'block';
-    canvasEl.style.display = 'none';
-    const ctx = canvasEl.getContext('2d');
-    if (ctx) ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
+    renderer.svg.style.display = 'none';
+    renderer.nodes = [];
+    renderer.edges = [];
     nodeCountEl.textContent = 'NODES: 0';
-    if (edgeCountEl) edgeCountEl.textContent = 'EDGES: 0';
+    edgeCountEl.textContent = 'EDGES: 0';
+    hideProperties();
     updateStatus('ready', 'Ready');
 }
 
@@ -414,7 +575,12 @@ function handleOpenLoad() {
                     </div>
                     <div class="saved-item-actions">
                         <button class="saved-item-btn load-item" data-id="${item.id}">Load</button>
-                        <button class="saved-item-btn delete" data-id="${item.id}">✕</button>
+                        <button class="saved-item-btn delete" data-id="${item.id}">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </button>
                     </div>
                 `;
                 listEl.appendChild(div);
@@ -443,7 +609,6 @@ function loadFlowchart(id) {
             const data = snapshot.val();
             if (data) {
                 currentBridgeCode = data.code;
-                if (codeEditor) codeEditor.value = currentBridgeCode;
                 promptInput.value = data.prompt || '';
                 renderFromCode(currentBridgeCode);
                 closeAllModals();
@@ -474,8 +639,17 @@ function showToast(message, type = 'info') {
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
 
-    const icon = type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ';
-    toast.innerHTML = `<span>${icon}</span> ${escapeHtml(message)}`;
+    // Use SVG icons instead of text characters
+    let iconSvg = '';
+    if (type === 'success') {
+        iconSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+    } else if (type === 'error') {
+        iconSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
+    } else {
+        iconSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>';
+    }
+
+    toast.innerHTML = `<span class="toast-icon">${iconSvg}</span> ${escapeHtml(message)}`;
 
     container.appendChild(toast);
 

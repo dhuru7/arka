@@ -1,183 +1,322 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- *  FlowChart Canvas Renderer
- *  Renders the parsed Bridge Language AST onto an HTML Canvas
- *  with auto-layout, smooth edges, and premium styling.
+ *  FlowChart Interactive SVG Renderer v2.0
+ *  Full interactive editing: drag nodes, edit text, change shapes/colors,
+ *  resize nodes, editable arrows, undo/redo, and auto-layout.
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
 class FlowchartRenderer {
-    constructor(canvas) {
-        this.canvas = canvas;
-        this.ctx = canvas.getContext('2d');
+    constructor(containerEl) {
+        this.container = containerEl;
 
-        // ── Pan & Zoom ──────────────────────────────────────────────────
+        // ── Pan & Zoom ────────────────────────────────────────────────────
         this.scale = 1;
         this.offsetX = 0;
         this.offsetY = 0;
-        this.isPanning = false;
-        this.lastPanX = 0;
-        this.lastPanY = 0;
 
-        // ── Layout Config ───────────────────────────────────────────────
+        // ── Layout Config (MUST be initialized before _createDefs) ────────
         this.config = {
-            nodeMinWidth: 180,
-            nodeMaxWidth: 280,
-            nodeHeight: 52,
+            nodeMinWidth: 160,
+            nodeMaxWidth: 260,
+            nodeHeight: 50,
             nodePadding: 20,
-            decisionSize: 90,
-            terminatorHeight: 46,
-            ioSkew: 16,
+            decisionWidth: 140,
+            decisionHeight: 90,
+            terminatorHeight: 44,
+            ioSkew: 18,
             connectorRadius: 16,
             subBlockWidth: 240,
             subBlockHeight: 100,
 
             horizontalGap: 80,
-            verticalGap: 60,
-            arrowColor: '#6366f1',
-            arrowLabelColor: '#a5b4fc',
-            arrowWidth: 2,
-            arrowHeadSize: 10,
+            verticalGap: 70,
 
             colors: {
-                terminator: { bg: '#1a1a2e', border: '#7c3aed', text: '#e0e0ff', glow: 'rgba(124,58,237,0.2)' },
-                terminator_start: { bg: '#1a1a2e', border: '#7c3aed', text: '#e0e0ff', glow: 'rgba(124,58,237,0.2)' },
-                terminator_end: { bg: '#1a1a2e', border: '#ef4444', text: '#fecaca', glow: 'rgba(239,68,68,0.2)' },
-                process: { bg: '#111827', border: '#3b82f6', text: '#bfdbfe', glow: 'rgba(59,130,246,0.15)' },
-                decision: { bg: '#1c1917', border: '#f59e0b', text: '#fde68a', glow: 'rgba(245,158,11,0.15)' },
-                io: { bg: '#0f172a', border: '#06b6d4', text: '#a5f3fc', glow: 'rgba(6,182,212,0.15)' },
-                connector: { bg: '#1e1b4b', border: '#818cf8', text: '#c7d2fe', glow: 'rgba(129,140,248,0.15)' },
-                sub_block: { bg: '#1a1a2e', border: '#8b5cf6', text: '#ddd6fe', glow: 'rgba(139,92,246,0.15)' }
+                terminator: { bg: '#1a1a2e', border: '#7c3aed', text: '#e0e0ff', glow: 'rgba(124,58,237,0.3)' },
+                terminator_start: { bg: '#1a1a2e', border: '#7c3aed', text: '#e0e0ff', glow: 'rgba(124,58,237,0.3)' },
+                terminator_end: { bg: '#1a1a2e', border: '#ef4444', text: '#fecaca', glow: 'rgba(239,68,68,0.3)' },
+                process: { bg: '#111827', border: '#3b82f6', text: '#bfdbfe', glow: 'rgba(59,130,246,0.25)' },
+                decision: { bg: '#1c1917', border: '#f59e0b', text: '#fde68a', glow: 'rgba(245,158,11,0.25)' },
+                io: { bg: '#0f172a', border: '#06b6d4', text: '#a5f3fc', glow: 'rgba(6,182,212,0.25)' },
+                connector: { bg: '#1e1b4b', border: '#818cf8', text: '#c7d2fe', glow: 'rgba(129,140,248,0.25)' },
+                sub_block: { bg: '#1a1a2e', border: '#8b5cf6', text: '#ddd6fe', glow: 'rgba(139,92,246,0.25)' }
             },
 
-            font: '500 13px Inter, sans-serif',
-            smallFont: '400 11px Inter, sans-serif',
-            labelFont: '500 11px Inter, sans-serif',
+            arrowColor: '#6366f1',
+            arrowLabelColor: '#a5b4fc',
         };
 
-        // ── Internal State ──────────────────────────────────────────────
+        // ── Create SVG element ────────────────────────────────────────────
+        this.svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        this.svg.setAttribute('class', 'flowchart-svg');
+        this.svg.setAttribute('width', '100%');
+        this.svg.setAttribute('height', '100%');
+        this.container.appendChild(this.svg);
+
+        // Arrow marker defs (config must be set before this)
+        this._createDefs();
+
+        // Main group for pan/zoom transform
+        this.mainGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        this.mainGroup.setAttribute('class', 'main-group');
+        this.svg.appendChild(this.mainGroup);
+
+        // Layers
+        this.edgeLayer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        this.edgeLayer.setAttribute('class', 'edge-layer');
+        this.mainGroup.appendChild(this.edgeLayer);
+
+        this.nodeLayer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        this.nodeLayer.setAttribute('class', 'node-layer');
+        this.mainGroup.appendChild(this.nodeLayer);
+
+        // ── State ─────────────────────────────────────────────────────────
         this.nodes = [];
         this.edges = [];
+        this.selectedNode = null;
+        this.selectedEdge = null;
+        this.isDragging = false;
+        this.dragNode = null;
+        this.dragStartX = 0;
+        this.dragStartY = 0;
+        this.nodeStartX = 0;
+        this.nodeStartY = 0;
+
+        // ── Undo/Redo ─────────────────────────────────────────────────────
+        this.undoStack = [];
+        this.redoStack = [];
+        this.maxUndoSteps = 50;
 
         this._setupInteraction();
     }
 
-    /**
-     * Render a parsed graph
-     */
-    render(parsedData) {
-        this.nodes = parsedData.nodes.map(n => ({ ...n }));
-        this.edges = parsedData.edges.map(e => ({ ...e }));
+    // ═══ SVG Defs (arrow markers, filters) ══════════════════════════════════
 
-        this._layoutNodes();
-        this._resizeCanvas();
-        this._draw();
+    _createDefs() {
+        const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+
+        // Arrow marker
+        const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+        marker.setAttribute('id', 'arrowhead');
+        marker.setAttribute('markerWidth', '12');
+        marker.setAttribute('markerHeight', '8');
+        marker.setAttribute('refX', '11');
+        marker.setAttribute('refY', '4');
+        marker.setAttribute('orient', 'auto');
+        marker.setAttribute('markerUnits', 'userSpaceOnUse');
+
+        const arrowPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        arrowPath.setAttribute('d', 'M0,0 L12,4 L0,8 L3,4 Z');
+        arrowPath.setAttribute('fill', this.config.arrowColor);
+        marker.appendChild(arrowPath);
+        defs.appendChild(marker);
+
+        // Back-ref arrow marker
+        const markerBack = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+        markerBack.setAttribute('id', 'arrowhead-back');
+        markerBack.setAttribute('markerWidth', '12');
+        markerBack.setAttribute('markerHeight', '8');
+        markerBack.setAttribute('refX', '11');
+        markerBack.setAttribute('refY', '4');
+        markerBack.setAttribute('orient', 'auto');
+        markerBack.setAttribute('markerUnits', 'userSpaceOnUse');
+
+        const arrowPathBack = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        arrowPathBack.setAttribute('d', 'M0,0 L12,4 L0,8 L3,4 Z');
+        arrowPathBack.setAttribute('fill', '#ef4444');
+        markerBack.appendChild(arrowPathBack);
+        defs.appendChild(markerBack);
+
+        // Glow filter
+        const filter = document.createElementNS('http://www.w3.org/2000/svg', 'filter');
+        filter.setAttribute('id', 'glow');
+        filter.setAttribute('x', '-30%');
+        filter.setAttribute('y', '-30%');
+        filter.setAttribute('width', '160%');
+        filter.setAttribute('height', '160%');
+        const feGauss = document.createElementNS('http://www.w3.org/2000/svg', 'feGaussianBlur');
+        feGauss.setAttribute('stdDeviation', '4');
+        feGauss.setAttribute('result', 'coloredBlur');
+        filter.appendChild(feGauss);
+        const feMerge = document.createElementNS('http://www.w3.org/2000/svg', 'feMerge');
+        const feMergeNode1 = document.createElementNS('http://www.w3.org/2000/svg', 'feMergeNode');
+        feMergeNode1.setAttribute('in', 'coloredBlur');
+        feMerge.appendChild(feMergeNode1);
+        const feMergeNode2 = document.createElementNS('http://www.w3.org/2000/svg', 'feMergeNode');
+        feMergeNode2.setAttribute('in', 'SourceGraphic');
+        feMerge.appendChild(feMergeNode2);
+        filter.appendChild(feMerge);
+        defs.appendChild(filter);
+
+        // Create colored arrow markers for each node type
+        const markerColors = {
+            'arrowhead-violet': '#7c3aed',
+            'arrowhead-red': '#ef4444',
+            'arrowhead-blue': '#3b82f6',
+            'arrowhead-amber': '#f59e0b',
+            'arrowhead-cyan': '#06b6d4',
+            'arrowhead-indigo': '#818cf8',
+            'arrowhead-purple': '#8b5cf6',
+        };
+
+        for (const [id, color] of Object.entries(markerColors)) {
+            const m = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+            m.setAttribute('id', id);
+            m.setAttribute('markerWidth', '12');
+            m.setAttribute('markerHeight', '8');
+            m.setAttribute('refX', '11');
+            m.setAttribute('refY', '4');
+            m.setAttribute('orient', 'auto');
+            m.setAttribute('markerUnits', 'userSpaceOnUse');
+            const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            p.setAttribute('d', 'M0,0 L12,4 L0,8 L3,4 Z');
+            p.setAttribute('fill', color);
+            m.appendChild(p);
+            defs.appendChild(m);
+        }
+
+        this.svg.appendChild(defs);
     }
 
-    /**
-     * Auto-layout: assign x, y positions to all nodes.
-     * Uses a simple top-to-bottom flow, with branching handled by horizontal offsets.
-     */
+    // ═══ Render ══════════════════════════════════════════════════════════════
+
+    render(parsedData) {
+        this.nodes = parsedData.nodes.map(n => ({
+            ...n,
+            color: null,       // custom override
+            shapeOverride: null // custom shape override
+        }));
+        this.edges = parsedData.edges.map(e => ({ ...e }));
+        this.selectedNode = null;
+        this.selectedEdge = null;
+
+        this._saveUndoState();
+        this._layoutNodes();
+        this._drawAll();
+        this._centerGraph();
+    }
+
+    // ═══ Auto Layout (Dagre-inspired) ════════════════════════════════════════
+
     _layoutNodes() {
         if (this.nodes.length === 0) return;
 
-        const cfg = this.config;
-        this.ctx.font = cfg.font;
+        // Measure all nodes
         for (const node of this.nodes) {
             const dims = this._measureNode(node);
             node.width = dims.width;
             node.height = dims.height;
         }
 
-        // Longest-path Level Assignment (DAG)
-        const level = new Map();
-        for (const n of this.nodes) level.set(n.id, 0);
+        const cfg = this.config;
 
+        // ── Build adjacency from non-backref edges ──
+        const forwardEdges = this.edges.filter(e => !e.isBackRef);
+
+        // ── Topological level assignment (longest path) ──
+        const level = new Map();
+        const inDegree = new Map();
+        for (const n of this.nodes) {
+            level.set(n.id, 0);
+            inDegree.set(n.id, 0);
+        }
+
+        // Count in-degrees for forward edges
+        for (const e of forwardEdges) {
+            inDegree.set(e.to, (inDegree.get(e.to) || 0) + 1);
+        }
+
+        // Longest path BFS
         let changed = true;
-        while (changed) {
+        let iterations = 0;
+        const maxIter = this.nodes.length * this.nodes.length + 10;
+        while (changed && iterations < maxIter) {
             changed = false;
-            for (const edge of this.edges) {
-                if (edge.isBackRef) continue;
-                const parentLvl = level.get(edge.from);
-                const childLvl = level.get(edge.to);
-                if (parentLvl + 1 > childLvl) {
-                    if (parentLvl + 1 > this.nodes.length) {
-                        edge.isBackRef = true; // Cycle detected dynamically
+            iterations++;
+            for (const edge of forwardEdges) {
+                const fromLvl = level.get(edge.from);
+                const toLvl = level.get(edge.to);
+                if (fromLvl + 1 > toLvl) {
+                    // Cycle guard
+                    if (fromLvl + 1 > this.nodes.length) {
+                        edge.isBackRef = true;
                         continue;
                     }
-                    level.set(edge.to, parentLvl + 1);
+                    level.set(edge.to, fromLvl + 1);
                     changed = true;
                 }
             }
         }
 
-        // Build Tree structure for parallel layout branching
-        const primaryParent = new Map();
-        const childLists = new Map();
-        for (const node of this.nodes) childLists.set(node.id, []);
+        // ── Build spanning tree ──
+        const children = new Map();
+        const parent = new Map();
+        for (const n of this.nodes) children.set(n.id, []);
 
-        for (const edge of this.edges) {
-            if (edge.isBackRef) continue;
-            if (!primaryParent.has(edge.to)) {
-                primaryParent.set(edge.to, edge.from);
-                childLists.get(edge.from).push(edge.to);
+        for (const e of forwardEdges) {
+            if (e.isBackRef) continue;
+            if (!parent.has(e.to)) {
+                parent.set(e.to, e.from);
+                children.get(e.from).push(e.to);
             }
         }
 
-        // Recursive subtree width calculation
-        const subtreeWidth = new Map();
-        const calcWidth = (nid) => {
-            const children = childLists.get(nid);
-            if (children.length === 0) {
-                const w = cfg.nodeMaxWidth;
-                subtreeWidth.set(nid, w);
-                return w;
+        // ── Subtree widths ──
+        const subtreeW = new Map();
+        const calcW = (nid) => {
+            const ch = children.get(nid);
+            const nodeW = this.nodes.find(n => n.id === nid)?.width || cfg.nodeMaxWidth;
+            if (!ch || ch.length === 0) {
+                subtreeW.set(nid, nodeW + cfg.horizontalGap);
+                return subtreeW.get(nid);
             }
-            let w = 0;
-            for (const c of children) {
-                w += calcWidth(c);
-            }
-            w += (children.length - 1) * cfg.horizontalGap;
-            const finalW = Math.max(cfg.nodeMaxWidth, w);
-            subtreeWidth.set(nid, finalW);
-            return finalW;
+            let totalW = 0;
+            for (const c of ch) totalW += calcW(c);
+            totalW = Math.max(nodeW + cfg.horizontalGap, totalW);
+            subtreeW.set(nid, totalW);
+            return totalW;
         };
 
-        const roots = this.nodes.filter(n => !primaryParent.has(n.id));
+        const roots = this.nodes.filter(n => !parent.has(n.id));
         if (roots.length === 0 && this.nodes.length > 0) roots.push(this.nodes[0]);
-        roots.forEach(r => calcWidth(r.id));
+        roots.forEach(r => calcW(r.id));
+        // Also calc for any orphans
+        for (const n of this.nodes) {
+            if (!subtreeW.has(n.id)) calcW(n.id);
+        }
 
-        // Assign X coordinates hierarchically to force parallel streams
-        const assignedX = new Map();
-        const assignX = (nid, baseX) => {
-            assignedX.set(nid, baseX);
-            const children = childLists.get(nid);
-            if (children.length === 0) return;
+        // ── Assign X from subtree widths ──
+        const xPos = new Map();
+        const assignX = (nid, cx) => {
+            xPos.set(nid, cx);
+            const ch = children.get(nid);
+            if (!ch || ch.length === 0) return;
 
-            const totalW = subtreeWidth.get(nid);
-            let currentX = baseX - (totalW / 2);
-            for (const c of children) {
-                const cw = subtreeWidth.get(c);
-                const centerOfChild = currentX + (cw / 2);
-                assignX(c, centerOfChild);
-                currentX += cw + cfg.horizontalGap;
+            let totalChildW = ch.reduce((s, c) => s + subtreeW.get(c), 0);
+            let startX = cx - totalChildW / 2;
+
+            for (const c of ch) {
+                const cw = subtreeW.get(c);
+                assignX(c, startX + cw / 2);
+                startX += cw;
             }
         };
 
-        let totalRootW = roots.reduce((s, r) => s + subtreeWidth.get(r.id), 0) + (roots.length - 1) * cfg.horizontalGap;
-        let startX = -(totalRootW / 2);
+        let totalRootW = roots.reduce((s, r) => s + (subtreeW.get(r.id) || 200), 0);
+        let startRootX = -totalRootW / 2;
         for (const r of roots) {
-            const rw = subtreeWidth.get(r.id);
-            assignX(r.id, startX + (rw / 2));
-            startX += rw + cfg.horizontalGap;
+            const rw = subtreeW.get(r.id) || 200;
+            assignX(r.id, startRootX + rw / 2);
+            startRootX += rw;
         }
 
-        // Fallback for completely isolated nodes
+        // Orphan fallback
         for (const n of this.nodes) {
-            if (!assignedX.has(n.id)) assignedX.set(n.id, 0);
+            if (!xPos.has(n.id)) xPos.set(n.id, 0);
         }
 
-        // Group by level and compute actual physical Y values
+        // ── Assign Y by level, fix overlaps ──
         const levelsMap = new Map();
         let maxLevel = 0;
         for (const node of this.nodes) {
@@ -190,178 +329,64 @@ class FlowchartRenderer {
         let currentY = 60;
         for (let l = 0; l <= maxLevel; l++) {
             const nodesAtLevel = levelsMap.get(l) || [];
+            nodesAtLevel.sort((a, b) => (xPos.get(a.id) || 0) - (xPos.get(b.id) || 0));
 
-            // Push apart overlapping nodes intelligently if cross-edges caused crowding
-            nodesAtLevel.sort((a, b) => assignedX.get(a.id) - assignedX.get(b.id));
+            // Push apart overlapping nodes
             for (let i = 1; i < nodesAtLevel.length; i++) {
                 const prev = nodesAtLevel[i - 1];
                 const curr = nodesAtLevel[i];
-                const minDistance = (prev.width / 2 + curr.width / 2) + cfg.horizontalGap;
-                const actualDistance = assignedX.get(curr.id) - assignedX.get(prev.id);
-                if (actualDistance < minDistance) {
-                    assignedX.set(curr.id, assignedX.get(prev.id) + minDistance);
+                const minDist = (prev.width / 2 + curr.width / 2) + cfg.horizontalGap;
+                const actualDist = (xPos.get(curr.id) || 0) - (xPos.get(prev.id) || 0);
+                if (actualDist < minDist) {
+                    xPos.set(curr.id, (xPos.get(prev.id) || 0) + minDist);
                 }
             }
 
             let maxH = 0;
             for (const node of nodesAtLevel) {
-                node.x = assignedX.get(node.id) - (node.width / 2);
+                node.x = (xPos.get(node.id) || 0) - node.width / 2;
                 node.y = currentY;
                 maxH = Math.max(maxH, node.height);
             }
             if (maxH > 0) currentY += maxH + cfg.verticalGap;
         }
-
-        this._centerGraph();
     }
 
-    /**
-     * Center the graph in the visible canvas area
-     */
-    _centerGraph() {
-        if (this.nodes.length === 0) return;
-
-        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-        for (const node of this.nodes) {
-            minX = Math.min(minX, node.x);
-            minY = Math.min(minY, node.y);
-            maxX = Math.max(maxX, node.x + node.width);
-            maxY = Math.max(maxY, node.y + node.height);
-        }
-
-        const graphW = maxX - minX;
-        const graphH = maxY - minY;
-        const canvasW = this.canvas.parentElement.clientWidth;
-        const canvasH = this.canvas.parentElement.clientHeight;
-
-        // Calculate scale to fit
-        const scaleX = (canvasW - 100) / graphW;
-        const scaleY = (canvasH - 100) / graphH;
-        this.scale = Math.min(scaleX, scaleY, 1.5);
-        this.scale = Math.max(this.scale, 0.3);
-
-        // Center
-        this.offsetX = (canvasW - graphW * this.scale) / 2 - minX * this.scale;
-        this.offsetY = (canvasH - graphH * this.scale) / 2 - minY * this.scale;
-    }
-
-    /**
-     * Measure node dimensions
-     */
     _measureNode(node) {
         const cfg = this.config;
-        this.ctx.font = cfg.font;
 
         if (node.type === 'connector') {
             return { width: cfg.connectorRadius * 2, height: cfg.connectorRadius * 2 };
         }
-
         if (node.type === 'decision') {
-            const textW = this.ctx.measureText(node.text).width;
-            const size = Math.max(cfg.decisionSize, textW * 0.8 + 40);
-            return { width: size, height: size * 0.7 };
+            const textLen = (node.text || '').length;
+            const w = Math.max(cfg.decisionWidth, textLen * 6 + 60);
+            return { width: w, height: Math.max(cfg.decisionHeight, w * 0.65) };
         }
-
         if (node.type === 'sub_block') {
-            let maxW = cfg.subBlockWidth;
-            if (node.subBlocks) {
-                const mkW = (t) => t ? this.ctx.measureText(t).width : 0;
-                maxW = Math.max(maxW, mkW(node.subBlocks.tm) + 40);
-                maxW = Math.max(maxW, mkW(node.subBlocks.bm) + 40);
-                maxW = Math.max(maxW, mkW(node.subBlocks.tl) + mkW(node.subBlocks.tr) + 60);
-                maxW = Math.max(maxW, mkW(node.subBlocks.bl) + mkW(node.subBlocks.br) + 60);
-            }
-            return { width: maxW, height: cfg.subBlockHeight };
+            return { width: cfg.subBlockWidth, height: cfg.subBlockHeight };
         }
 
-        const textW = this.ctx.measureText(node.text).width;
-        const width = Math.min(Math.max(textW + cfg.nodePadding * 2, cfg.nodeMinWidth), cfg.nodeMaxWidth);
+        const charW = (node.text || '').length * 7.5 + cfg.nodePadding * 2;
+        const width = Math.min(Math.max(charW, cfg.nodeMinWidth), cfg.nodeMaxWidth);
 
-        if (node.type === 'terminator_start' || node.type === 'terminator_end') {
+        if (node.type === 'terminator_start' || node.type === 'terminator_end' || node.type === 'terminator') {
             return { width, height: cfg.terminatorHeight };
         }
-
         if (node.type === 'io') {
             return { width: width + cfg.ioSkew * 2, height: cfg.nodeHeight };
         }
-
         return { width, height: cfg.nodeHeight };
     }
 
-    /**
-     * Resize canvas to container
-     */
-    _resizeCanvas() {
-        const container = this.canvas.parentElement;
-        const dpr = window.devicePixelRatio || 1;
-        this.canvas.width = container.clientWidth * dpr;
-        this.canvas.height = container.clientHeight * dpr;
-        this.canvas.style.width = container.clientWidth + 'px';
-        this.canvas.style.height = container.clientHeight + 'px';
-        this.ctx.scale(dpr, dpr);
-    }
+    // ═══ Drawing ═════════════════════════════════════════════════════════════
 
-    /**
-     * Main draw call
-     */
-    _draw() {
-        const ctx = this.ctx;
-        const dpr = window.devicePixelRatio || 1;
-        const w = this.canvas.width / dpr;
-        const h = this.canvas.height / dpr;
+    _drawAll() {
+        // Clear layers
+        this.edgeLayer.innerHTML = '';
+        this.nodeLayer.innerHTML = '';
 
-        // Clear
-        ctx.clearRect(0, 0, w, h);
-
-        // Draw subtle grid
-        this._drawGrid(w, h);
-
-        // Apply transform
-        ctx.save();
-        ctx.translate(this.offsetX, this.offsetY);
-        ctx.scale(this.scale, this.scale);
-
-        // Pre-calculate edge anchor spread to avoid arrowhead overlapping
-        const incomingEdges = new Map();
-        const outgoingEdges = new Map();
-
-        for (const edge of this.edges) {
-            if (!incomingEdges.has(edge.to)) incomingEdges.set(edge.to, []);
-            incomingEdges.get(edge.to).push(edge);
-
-            if (!outgoingEdges.has(edge.from)) outgoingEdges.set(edge.from, []);
-            outgoingEdges.get(edge.from).push(edge);
-        }
-
-        for (const [, encEdges] of incomingEdges.entries()) {
-            if (encEdges.length <= 1) continue;
-            encEdges.sort((a, b) => {
-                const nodeA = this.nodes.find(n => n.id === a.from);
-                const nodeB = this.nodes.find(n => n.id === b.from);
-                const ax = a.isBackRef ? -Infinity : (nodeA ? nodeA.x + nodeA.width / 2 : 0);
-                const bx = b.isBackRef ? -Infinity : (nodeB ? nodeB.x + nodeB.width / 2 : 0);
-                return ax - bx;
-            });
-            const spread = 24;
-            const startX = -((encEdges.length - 1) * spread) / 2;
-            encEdges.forEach((e, idx) => { e.targetOffsetX = startX + idx * spread; });
-        }
-
-        for (const [, outEdges] of outgoingEdges.entries()) {
-            if (outEdges.length <= 1) continue;
-            outEdges.sort((a, b) => {
-                const nodeA = this.nodes.find(n => n.id === a.to);
-                const nodeB = this.nodes.find(n => n.id === b.to);
-                const ax = a.isBackRef ? -Infinity : (nodeA ? nodeA.x + nodeA.width / 2 : 0);
-                const bx = b.isBackRef ? -Infinity : (nodeB ? nodeB.x + nodeB.width / 2 : 0);
-                return ax - bx;
-            });
-            const spread = 24;
-            const startX = -((outEdges.length - 1) * spread) / 2;
-            outEdges.forEach((e, idx) => { e.sourceOffsetX = startX + idx * spread; });
-        }
-
-        // Draw edges first (behind nodes)
+        // Draw edges
         for (const edge of this.edges) {
             this._drawEdge(edge);
         }
@@ -370,430 +395,356 @@ class FlowchartRenderer {
         for (const node of this.nodes) {
             this._drawNode(node);
         }
-
-        ctx.restore();
     }
 
-    /**
-     * Draw background grid
-     */
-    _drawGrid(w, h) {
-        const ctx = this.ctx;
-        const gridSize = 30 * this.scale;
-
-        if (gridSize < 8) return; // Too small to bother
-
-        ctx.save();
-        ctx.strokeStyle = 'rgba(255,255,255,0.02)';
-        ctx.lineWidth = 1;
-
-        const startX = this.offsetX % gridSize;
-        const startY = this.offsetY % gridSize;
-
-        for (let x = startX; x < w; x += gridSize) {
-            ctx.beginPath();
-            ctx.moveTo(x, 0);
-            ctx.lineTo(x, h);
-            ctx.stroke();
-        }
-
-        for (let y = startY; y < h; y += gridSize) {
-            ctx.beginPath();
-            ctx.moveTo(0, y);
-            ctx.lineTo(w, y);
-            ctx.stroke();
-        }
-
-        ctx.restore();
-    }
-
-    /**
-     * Draw a single node
-     */
     _drawNode(node) {
-        const ctx = this.ctx;
-        const colors = this.config.colors[node.type] || this.config.colors.process;
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        g.setAttribute('class', 'node-group');
+        g.setAttribute('data-node-id', node.id);
+        g.style.cursor = 'pointer';
 
-        ctx.save();
+        const effectiveType = node.shapeOverride || node.type;
+        const colors = node.color
+            ? { bg: node.color.bg || '#111827', border: node.color.border || '#3b82f6', text: node.color.text || '#bfdbfe', glow: node.color.glow || 'rgba(59,130,246,0.25)' }
+            : (this.config.colors[effectiveType] || this.config.colors.process);
 
-        switch (node.type) {
+        let shape;
+        switch (effectiveType) {
             case 'terminator':
             case 'terminator_start':
             case 'terminator_end':
-                this._drawTerminator(node, colors);
-                break;
-            case 'process':
-                this._drawProcess(node, colors);
+                shape = this._createTerminatorShape(node, colors);
                 break;
             case 'decision':
-                this._drawDecision(node, colors);
+                shape = this._createDecisionShape(node, colors);
                 break;
             case 'io':
-                this._drawIO(node, colors);
+                shape = this._createIOShape(node, colors);
                 break;
             case 'connector':
-                this._drawConnector(node, colors);
+                shape = this._createConnectorShape(node, colors);
                 break;
             case 'sub_block':
-                this._drawSubBlock(node, colors);
+                shape = this._createSubBlockShape(node, colors);
                 break;
             default:
-                this._drawProcess(node, colors);
+                shape = this._createProcessShape(node, colors);
         }
 
-        ctx.restore();
-    }
-
-    /**
-     * Draw terminator (rounded rectangle / stadium shape)
-     */
-    _drawTerminator(node, colors) {
-        const ctx = this.ctx;
-        const { x, y, width, height, text } = node;
-        const radius = height / 2;
-
-        // Glow
-        ctx.shadowColor = colors.glow;
-        ctx.shadowBlur = 20;
-
-        // Shape
-        ctx.beginPath();
-        ctx.moveTo(x + radius, y);
-        ctx.lineTo(x + width - radius, y);
-        ctx.arc(x + width - radius, y + height / 2, radius, -Math.PI / 2, Math.PI / 2);
-        ctx.lineTo(x + radius, y + height);
-        ctx.arc(x + radius, y + height / 2, radius, Math.PI / 2, -Math.PI / 2);
-        ctx.closePath();
-
-        ctx.fillStyle = colors.bg;
-        ctx.fill();
-        ctx.shadowBlur = 0;
-        ctx.strokeStyle = colors.border;
-        ctx.lineWidth = 2;
-        ctx.stroke();
+        g.appendChild(shape);
 
         // Text
-        ctx.fillStyle = colors.text;
-        ctx.font = this.config.font;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(text, x + width / 2, y + height / 2 + 1);
+        if (node.type !== 'connector') {
+            const textEl = this._createTextElement(node, colors);
+            g.appendChild(textEl);
+        }
+
+        // Selection highlight
+        if (this.selectedNode && this.selectedNode.id === node.id) {
+            const selRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            selRect.setAttribute('x', node.x - 4);
+            selRect.setAttribute('y', node.y - 4);
+            selRect.setAttribute('width', node.width + 8);
+            selRect.setAttribute('height', node.height + 8);
+            selRect.setAttribute('rx', '12');
+            selRect.setAttribute('fill', 'none');
+            selRect.setAttribute('stroke', '#fff');
+            selRect.setAttribute('stroke-width', '2');
+            selRect.setAttribute('stroke-dasharray', '6,3');
+            selRect.setAttribute('class', 'selection-indicator');
+            g.insertBefore(selRect, g.firstChild);
+        }
+
+        this.nodeLayer.appendChild(g);
     }
 
-    /**
-     * Draw process (rounded rectangle)
-     */
-    _drawProcess(node, colors) {
-        const ctx = this.ctx;
-        const { x, y, width, height, text } = node;
-        const r = 10;
-
-        ctx.shadowColor = colors.glow;
-        ctx.shadowBlur = 16;
-
-        this._roundedRect(x, y, width, height, r);
-        ctx.fillStyle = colors.bg;
-        ctx.fill();
-        ctx.shadowBlur = 0;
-        ctx.strokeStyle = colors.border;
-        ctx.lineWidth = 2;
-        ctx.stroke();
-
-        ctx.fillStyle = colors.text;
-        ctx.font = this.config.font;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        this._wrapText(text, x + width / 2, y + height / 2, width - 20);
+    _createTerminatorShape(node, colors) {
+        const { x, y, width, height } = node;
+        const r = height / 2;
+        const shape = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        shape.setAttribute('x', x);
+        shape.setAttribute('y', y);
+        shape.setAttribute('width', width);
+        shape.setAttribute('height', height);
+        shape.setAttribute('rx', r);
+        shape.setAttribute('ry', r);
+        shape.setAttribute('fill', colors.bg);
+        shape.setAttribute('stroke', colors.border);
+        shape.setAttribute('stroke-width', '2');
+        shape.setAttribute('filter', 'url(#glow)');
+        return shape;
     }
 
-    /**
-     * Draw decision (diamond)
-     */
-    _drawDecision(node, colors) {
-        const ctx = this.ctx;
-        const { x, y, width, height, text } = node;
+    _createProcessShape(node, colors) {
+        const { x, y, width, height } = node;
+        const shape = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        shape.setAttribute('x', x);
+        shape.setAttribute('y', y);
+        shape.setAttribute('width', width);
+        shape.setAttribute('height', height);
+        shape.setAttribute('rx', '10');
+        shape.setAttribute('ry', '10');
+        shape.setAttribute('fill', colors.bg);
+        shape.setAttribute('stroke', colors.border);
+        shape.setAttribute('stroke-width', '2');
+        shape.setAttribute('filter', 'url(#glow)');
+        return shape;
+    }
+
+    _createDecisionShape(node, colors) {
+        const { x, y, width, height } = node;
         const cx = x + width / 2;
         const cy = y + height / 2;
-
-        ctx.shadowColor = colors.glow;
-        ctx.shadowBlur = 16;
-
-        ctx.beginPath();
-        ctx.moveTo(cx, y);
-        ctx.lineTo(x + width, cy);
-        ctx.lineTo(cx, y + height);
-        ctx.lineTo(x, cy);
-        ctx.closePath();
-
-        ctx.fillStyle = colors.bg;
-        ctx.fill();
-        ctx.shadowBlur = 0;
-        ctx.strokeStyle = colors.border;
-        ctx.lineWidth = 2;
-        ctx.stroke();
-
-        ctx.fillStyle = colors.text;
-        ctx.font = this.config.smallFont;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        this._wrapText(text, cx, cy, width * 0.55, 13);
+        const points = `${cx},${y} ${x + width},${cy} ${cx},${y + height} ${x},${cy}`;
+        const shape = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+        shape.setAttribute('points', points);
+        shape.setAttribute('fill', colors.bg);
+        shape.setAttribute('stroke', colors.border);
+        shape.setAttribute('stroke-width', '2');
+        shape.setAttribute('filter', 'url(#glow)');
+        return shape;
     }
 
-    /**
-     * Draw I/O (parallelogram)
-     */
-    _drawIO(node, colors) {
-        const ctx = this.ctx;
-        const { x, y, width, height, text } = node;
-        const skew = this.config.ioSkew;
-
-        ctx.shadowColor = colors.glow;
-        ctx.shadowBlur = 16;
-
-        ctx.beginPath();
-        ctx.moveTo(x + skew, y);
-        ctx.lineTo(x + width, y);
-        ctx.lineTo(x + width - skew, y + height);
-        ctx.lineTo(x, y + height);
-        ctx.closePath();
-
-        ctx.fillStyle = colors.bg;
-        ctx.fill();
-        ctx.shadowBlur = 0;
-        ctx.strokeStyle = colors.border;
-        ctx.lineWidth = 2;
-        ctx.stroke();
-
-        ctx.fillStyle = colors.text;
-        ctx.font = this.config.font;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(text, x + width / 2, y + height / 2 + 1);
+    _createIOShape(node, colors) {
+        const { x, y, width, height } = node;
+        const sk = this.config.ioSkew;
+        const points = `${x + sk},${y} ${x + width},${y} ${x + width - sk},${y + height} ${x},${y + height}`;
+        const shape = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+        shape.setAttribute('points', points);
+        shape.setAttribute('fill', colors.bg);
+        shape.setAttribute('stroke', colors.border);
+        shape.setAttribute('stroke-width', '2');
+        shape.setAttribute('filter', 'url(#glow)');
+        return shape;
     }
 
-    /**
-     * Draw connector (small circle)
-     */
-    _drawConnector(node, colors) {
-        const ctx = this.ctx;
+    _createConnectorShape(node, colors) {
         const r = this.config.connectorRadius;
-        const cx = node.x + r;
-        const cy = node.y + r;
-
-        ctx.shadowColor = colors.glow;
-        ctx.shadowBlur = 12;
-
-        ctx.beginPath();
-        ctx.arc(cx, cy, r, 0, Math.PI * 2);
-        ctx.fillStyle = colors.bg;
-        ctx.fill();
-        ctx.shadowBlur = 0;
-        ctx.strokeStyle = colors.border;
-        ctx.lineWidth = 2;
-        ctx.stroke();
+        const shape = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        shape.setAttribute('cx', node.x + r);
+        shape.setAttribute('cy', node.y + r);
+        shape.setAttribute('r', r);
+        shape.setAttribute('fill', colors.bg);
+        shape.setAttribute('stroke', colors.border);
+        shape.setAttribute('stroke-width', '2');
+        shape.setAttribute('filter', 'url(#glow)');
+        return shape;
     }
 
-    /**
-     * Draw sub-block (box with positional labels)
-     */
-    _drawSubBlock(node, colors) {
-        const ctx = this.ctx;
-        const { x, y, width, height, subBlocks } = node;
-        const r = 10;
-
-        ctx.shadowColor = colors.glow;
-        ctx.shadowBlur = 16;
-
-        this._roundedRect(x, y, width, height, r);
-        ctx.fillStyle = colors.bg;
-        ctx.fill();
-        ctx.shadowBlur = 0;
-        ctx.strokeStyle = colors.border;
-        ctx.lineWidth = 2;
-        ctx.stroke();
-
-        if (!subBlocks) return;
-
-        ctx.font = this.config.smallFont;
-        const pad = 12;
-
-        if (subBlocks.tm) {
-            ctx.fillStyle = colors.text;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'top';
-            ctx.fillText(subBlocks.tm, x + width / 2, y + pad);
-        }
-        if (subBlocks.bm) {
-            ctx.fillStyle = colors.text;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'bottom';
-            ctx.fillText(subBlocks.bm, x + width / 2, y + height - pad);
-        }
-        if (subBlocks.tl) {
-            ctx.fillStyle = colors.text;
-            ctx.textAlign = 'left';
-            ctx.textBaseline = 'top';
-            ctx.fillText(subBlocks.tl, x + pad, y + pad);
-        }
-        if (subBlocks.tr) {
-            ctx.fillStyle = colors.text;
-            ctx.textAlign = 'right';
-            ctx.textBaseline = 'top';
-            ctx.fillText(subBlocks.tr, x + width - pad, y + pad);
-        }
-        if (subBlocks.bl) {
-            ctx.fillStyle = colors.text;
-            ctx.textAlign = 'left';
-            ctx.textBaseline = 'bottom';
-            ctx.fillText(subBlocks.bl, x + pad, y + height - pad);
-        }
-        if (subBlocks.br) {
-            ctx.fillStyle = colors.text;
-            ctx.textAlign = 'right';
-            ctx.textBaseline = 'bottom';
-            ctx.fillText(subBlocks.br, x + width - pad, y + height - pad);
-        }
+    _createSubBlockShape(node, colors) {
+        const { x, y, width, height } = node;
+        const shape = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        shape.setAttribute('x', x);
+        shape.setAttribute('y', y);
+        shape.setAttribute('width', width);
+        shape.setAttribute('height', height);
+        shape.setAttribute('rx', '10');
+        shape.setAttribute('ry', '10');
+        shape.setAttribute('fill', colors.bg);
+        shape.setAttribute('stroke', colors.border);
+        shape.setAttribute('stroke-width', '2');
+        shape.setAttribute('filter', 'url(#glow)');
+        return shape;
     }
 
-    /**
-     * Draw an edge (arrow)
-     */
+    _createTextElement(node, colors) {
+        const textEl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        textEl.setAttribute('x', node.x + node.width / 2);
+        textEl.setAttribute('y', node.y + node.height / 2);
+        textEl.setAttribute('text-anchor', 'middle');
+        textEl.setAttribute('dominant-baseline', 'central');
+        textEl.setAttribute('fill', colors.text);
+        textEl.setAttribute('font-family', 'Inter, system-ui, sans-serif');
+        textEl.setAttribute('font-size', node.type === 'decision' ? '12' : '13');
+        textEl.setAttribute('font-weight', '500');
+        textEl.setAttribute('pointer-events', 'none');
+
+        // Word wrap for long text
+        const maxWidth = node.type === 'decision' ? node.width * 0.55 : node.width - 20;
+        const words = (node.text || '').split(' ');
+        const lines = [];
+        let currentLine = '';
+
+        for (const word of words) {
+            const testLine = currentLine ? currentLine + ' ' + word : word;
+            if (testLine.length * 7 > maxWidth && currentLine) {
+                lines.push(currentLine);
+                currentLine = word;
+            } else {
+                currentLine = testLine;
+            }
+        }
+        if (currentLine) lines.push(currentLine);
+
+        if (lines.length <= 1) {
+            textEl.textContent = node.text || '';
+        } else {
+            const lineHeight = 16;
+            const startDy = -((lines.length - 1) * lineHeight) / 2;
+            for (let i = 0; i < lines.length; i++) {
+                const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+                tspan.setAttribute('x', node.x + node.width / 2);
+                tspan.setAttribute('dy', i === 0 ? startDy : lineHeight);
+                tspan.textContent = lines[i];
+                textEl.appendChild(tspan);
+            }
+        }
+
+        return textEl;
+    }
+
+    // ── Edge Drawing ──────────────────────────────────────────────────────
+
     _drawEdge(edge) {
-        const ctx = this.ctx;
         const fromNode = this.nodes.find(n => n.id === edge.from);
         const toNode = this.nodes.find(n => n.id === edge.to);
-
         if (!fromNode || !toNode) return;
 
-        // Get anchor points
-        const from = this._getNodeAnchor(fromNode, 'bottom');
-        const to = this._getNodeAnchor(toNode, 'top');
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        g.setAttribute('class', 'edge-group');
+        g.setAttribute('data-edge-from', edge.from);
+        g.setAttribute('data-edge-to', edge.to);
 
-        if (edge.sourceOffsetX) from.x += edge.sourceOffsetX;
-        if (edge.targetOffsetX) to.x += edge.targetOffsetX;
+        const from = this._getAnchor(fromNode, 'bottom');
+        const to = this._getAnchor(toNode, 'top');
 
-        ctx.save();
+        // Calculate anchor offsets for parallel edges
+        const outgoing = this.edges.filter(e => e.from === edge.from && !e.isBackRef);
+        const incoming = this.edges.filter(e => e.to === edge.to && !e.isBackRef);
 
-        // Style
-        let arrowColor = this.config.arrowColor;
-
-        if (edge.isBackRef) {
-            // Draw solid line, but match the destination node's theme color
-            const targetColorCfg = this.config.colors[toNode.type] || this.config.colors.process;
-            arrowColor = targetColorCfg.border;
-            ctx.setLineDash([]); // solid line instead of dotted!
-            ctx.strokeStyle = arrowColor;
-        } else {
-            ctx.strokeStyle = this.config.arrowColor;
+        if (outgoing.length > 1) {
+            const idx = outgoing.indexOf(edge);
+            const spread = 20;
+            const offset = (idx - (outgoing.length - 1) / 2) * spread;
+            from.x += offset;
         }
-        ctx.lineWidth = this.config.arrowWidth;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
+        if (incoming.length > 1) {
+            const idx = incoming.indexOf(edge);
+            const spread = 20;
+            const offset = (idx - (incoming.length - 1) / 2) * spread;
+            to.x += offset;
+        }
 
-        // Draw smooth path
-        const dx = to.x - from.x;
-        const dy = to.y - from.y;
-
-        ctx.beginPath();
-        ctx.moveTo(from.x, from.y);
+        let pathD;
+        let arrowColor = this.config.arrowColor;
+        let markerId = 'arrowhead';
 
         if (edge.isBackRef) {
-            // Back-reference: route around the left side, far enough not to overlap with sibling/parent nodes
-            // Apply dynamic stagger based on edge index to prevent multiple backrefs from overlapping
-            const edgeIndex = this.edges.indexOf(edge);
-            const stagger = (edgeIndex % 6) * 15;
-            let minX = Math.min(from.x, to.x) - 40 - stagger;
-            const minY = Math.min(from.y, to.y);
-            const maxY = Math.max(from.y, to.y);
+            // Route back-ref arrows around the left side
+            const backrefs = this.edges.filter(e => e.isBackRef);
+            const backIdx = backrefs.indexOf(edge);
+            const stagger = backIdx * 20;
 
-            // Check nodes in this vertical span to ensure we route around the widest node
+            let minX = Math.min(from.x, to.x);
             for (const n of this.nodes) {
-                if (n.y + n.height >= minY && n.y <= maxY) {
-                    minX = Math.min(minX, n.x - 40 - stagger);
+                const ny = n.y;
+                const nyb = n.y + n.height;
+                const minY = Math.min(from.y, to.y);
+                const maxY = Math.max(from.y, to.y);
+                if (nyb >= minY && ny <= maxY) {
+                    minX = Math.min(minX, n.x);
                 }
             }
+            minX -= 50 + stagger;
 
-            ctx.lineTo(from.x, from.y + 20);
-            ctx.lineTo(minX, from.y + 20);
-            ctx.lineTo(minX, to.y - 12);
-            ctx.lineTo(to.x, to.y - 12);
-            ctx.lineTo(to.x, to.y);
-        } else if (Math.abs(dx) < 5) {
-            // Straight down
-            ctx.lineTo(to.x, to.y);
+            pathD = `M${from.x},${from.y} L${from.x},${from.y + 20} L${minX},${from.y + 20} L${minX},${to.y - 20} L${to.x},${to.y - 20} L${to.x},${to.y}`;
+
+            const tgtColors = this.config.colors[toNode.type] || this.config.colors.process;
+            arrowColor = tgtColors.border;
+            markerId = this._getMarkerIdForColor(arrowColor);
         } else {
-            // Curved path using smooth interpolation
-            const isUpward = dy < 0;
-            if (isUpward) {
-                // If moving upward, route using Bezier differently to prevent clipping the shapes
-                const cpY = from.y + 40;
-                const cp2Y = to.y - 40;
-                ctx.bezierCurveTo(from.x, cpY, to.x, cp2Y, to.x, to.y);
+            const dx = to.x - from.x;
+            const dy = to.y - from.y;
+
+            if (Math.abs(dx) < 5) {
+                // Straight down
+                pathD = `M${from.x},${from.y} L${to.x},${to.y}`;
+            } else if (dy < 0) {
+                // Going upward
+                pathD = `M${from.x},${from.y} C${from.x},${from.y + 40} ${to.x},${to.y - 40} ${to.x},${to.y}`;
             } else {
-                const curveOffset = Math.max(40, dy / 2);
-                ctx.bezierCurveTo(from.x, from.y + curveOffset, to.x, to.y - curveOffset, to.x, to.y);
+                // Normal curved path
+                const curveOffset = Math.max(30, dy * 0.4);
+                pathD = `M${from.x},${from.y} C${from.x},${from.y + curveOffset} ${to.x},${to.y - curveOffset} ${to.x},${to.y}`;
             }
         }
 
-        ctx.stroke();
-        ctx.setLineDash([]);
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', pathD);
+        path.setAttribute('fill', 'none');
+        path.setAttribute('stroke', arrowColor);
+        path.setAttribute('stroke-width', '2');
+        path.setAttribute('marker-end', `url(#${markerId})`);
+        path.setAttribute('class', 'edge-path');
+        if (edge.isBackRef) {
+            path.setAttribute('stroke-dasharray', '6,4');
+        }
+        g.appendChild(path);
 
-        // Arrowhead
-        this._drawArrowhead(to.x, to.y, edge.isBackRef ? 'down' : (dy >= 0 ? 'down' : 'up'), arrowColor);
+        // Invisible wider path for easier clicking
+        const hitPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        hitPath.setAttribute('d', pathD);
+        hitPath.setAttribute('fill', 'none');
+        hitPath.setAttribute('stroke', 'transparent');
+        hitPath.setAttribute('stroke-width', '14');
+        hitPath.setAttribute('class', 'edge-hit-area');
+        hitPath.style.cursor = 'pointer';
+        g.appendChild(hitPath);
 
-        // Label
+        // Edge label
         if (edge.label) {
-            const labelX = (from.x + to.x) / 2;
-            const labelY = (from.y + to.y) / 2;
+            const midX = (from.x + to.x) / 2;
+            const midY = (from.y + to.y) / 2;
 
-            ctx.font = this.config.labelFont;
-            const tw = ctx.measureText(edge.label).width;
+            // Label bg
+            const labelBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            const labelW = edge.label.length * 7 + 16;
+            labelBg.setAttribute('x', midX - labelW / 2);
+            labelBg.setAttribute('y', midY - 10);
+            labelBg.setAttribute('width', labelW);
+            labelBg.setAttribute('height', 20);
+            labelBg.setAttribute('rx', '6');
+            labelBg.setAttribute('fill', 'rgba(10,10,15,0.9)');
+            labelBg.setAttribute('stroke', 'rgba(255,255,255,0.1)');
+            labelBg.setAttribute('stroke-width', '1');
+            g.appendChild(labelBg);
 
-            // Label background
-            ctx.fillStyle = 'rgba(10,10,15,0.85)';
-            this._roundedRect(labelX - tw / 2 - 8, labelY - 9, tw + 16, 20, 6);
-            ctx.fill();
-            ctx.strokeStyle = 'rgba(255,255,255,0.08)';
-            ctx.lineWidth = 1;
-            ctx.stroke();
-
-            ctx.fillStyle = this.config.arrowLabelColor;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(edge.label, labelX, labelY + 1);
+            const labelText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            labelText.setAttribute('x', midX);
+            labelText.setAttribute('y', midY);
+            labelText.setAttribute('text-anchor', 'middle');
+            labelText.setAttribute('dominant-baseline', 'central');
+            labelText.setAttribute('fill', this.config.arrowLabelColor);
+            labelText.setAttribute('font-family', 'Inter, system-ui, sans-serif');
+            labelText.setAttribute('font-size', '11');
+            labelText.setAttribute('font-weight', '500');
+            labelText.textContent = edge.label;
+            g.appendChild(labelText);
         }
 
-        ctx.restore();
-    }
-
-    /**
-     * Draw arrowhead
-     */
-    _drawArrowhead(x, y, direction, color) {
-        const ctx = this.ctx;
-        const size = this.config.arrowHeadSize;
-
-        ctx.fillStyle = color;
-        ctx.beginPath();
-
-        if (direction === 'down') {
-            ctx.moveTo(x, y);
-            ctx.lineTo(x - size / 2, y - size);
-            ctx.lineTo(x + size / 2, y - size);
-        } else {
-            ctx.moveTo(x, y);
-            ctx.lineTo(x - size / 2, y + size);
-            ctx.lineTo(x + size / 2, y + size);
+        // Selection indicator
+        if (this.selectedEdge && this.selectedEdge.from === edge.from && this.selectedEdge.to === edge.to) {
+            path.setAttribute('stroke', '#fff');
+            path.setAttribute('stroke-width', '3');
         }
 
-        ctx.closePath();
-        ctx.fill();
+        this.edgeLayer.appendChild(g);
     }
 
-    /**
-     * Get anchor point of a node
-     */
-    _getNodeAnchor(node, position) {
+    _getMarkerIdForColor(color) {
+        const colorMap = {
+            '#7c3aed': 'arrowhead-violet',
+            '#ef4444': 'arrowhead-red',
+            '#3b82f6': 'arrowhead-blue',
+            '#f59e0b': 'arrowhead-amber',
+            '#06b6d4': 'arrowhead-cyan',
+            '#818cf8': 'arrowhead-indigo',
+            '#8b5cf6': 'arrowhead-purple',
+        };
+        return colorMap[color] || 'arrowhead';
+    }
+
+    _getAnchor(node, position) {
         const cx = node.x + node.width / 2;
         const cy = node.y + node.height / 2;
 
@@ -806,192 +757,541 @@ class FlowchartRenderer {
         }
     }
 
-    /**
-     * Helper: rounded rectangle path
-     */
-    _roundedRect(x, y, w, h, r) {
-        const ctx = this.ctx;
-        ctx.beginPath();
-        ctx.moveTo(x + r, y);
-        ctx.lineTo(x + w - r, y);
-        ctx.arcTo(x + w, y, x + w, y + r, r);
-        ctx.lineTo(x + w, y + h - r);
-        ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
-        ctx.lineTo(x + r, y + h);
-        ctx.arcTo(x, y + h, x, y + h - r, r);
-        ctx.lineTo(x, y + r);
-        ctx.arcTo(x, y, x + r, y, r);
-        ctx.closePath();
-    }
-
-    /**
-     * Helper: wrap text within max width
-     */
-    _wrapText(text, x, y, maxWidth, lineHeight = 16) {
-        const ctx = this.ctx;
-        const words = text.split(' ');
-        let line = '';
-        const lines = [];
-
-        for (const word of words) {
-            const testLine = line ? line + ' ' + word : word;
-            if (ctx.measureText(testLine).width > maxWidth && line) {
-                lines.push(line);
-                line = word;
-            } else {
-                line = testLine;
-            }
-        }
-        lines.push(line);
-
-        const totalH = lines.length * lineHeight;
-        const startY = y - totalH / 2 + lineHeight / 2;
-
-        for (let i = 0; i < lines.length; i++) {
-            ctx.fillText(lines[i], x, startY + i * lineHeight);
-        }
-    }
-
-    // ═══ Pan & Zoom Interaction ═══════════════════════════════════════════
+    // ═══ Pan/Zoom/Interaction ════════════════════════════════════════════════
 
     _setupInteraction() {
-        const container = this.canvas.parentElement;
+        let isPanning = false;
+        let lastPanX = 0, lastPanY = 0;
+        let didPan = false;
 
-        // Mouse wheel → zoom
-        container.addEventListener('wheel', (e) => {
+        // ── Wheel zoom ──
+        this.svg.addEventListener('wheel', (e) => {
             e.preventDefault();
             const zoomFactor = e.deltaY > 0 ? 0.92 : 1.08;
-            const rect = this.canvas.getBoundingClientRect();
+            const rect = this.svg.getBoundingClientRect();
             const mx = e.clientX - rect.left;
             const my = e.clientY - rect.top;
 
-            // Zoom towards cursor
             this.offsetX = mx - (mx - this.offsetX) * zoomFactor;
             this.offsetY = my - (my - this.offsetY) * zoomFactor;
             this.scale *= zoomFactor;
-            this.scale = Math.max(0.1, Math.min(5, this.scale));
+            this.scale = Math.max(0.15, Math.min(5, this.scale));
 
-            this._draw();
+            this._applyTransform();
             this._fireZoomChange();
         }, { passive: false });
 
-        // Mouse drag → pan / Click → edit
-        let didPan = false;
-        container.addEventListener('mousedown', (e) => {
+        // ── Mouse interactions ──
+        this.svg.addEventListener('mousedown', (e) => {
+            const nodeGroup = e.target.closest('.node-group');
+            const edgeGroup = e.target.closest('.edge-group');
+
+            if (nodeGroup && !e.shiftKey) {
+                // Start dragging node
+                const nodeId = parseInt(nodeGroup.dataset.nodeId);
+                const node = this.nodes.find(n => n.id === nodeId);
+                if (node) {
+                    this.isDragging = true;
+                    this.dragNode = node;
+                    const rect = this.svg.getBoundingClientRect();
+                    this.dragStartX = (e.clientX - rect.left - this.offsetX) / this.scale;
+                    this.dragStartY = (e.clientY - rect.top - this.offsetY) / this.scale;
+                    this.nodeStartX = node.x;
+                    this.nodeStartY = node.y;
+                    didPan = false;
+                    e.preventDefault();
+                    return;
+                }
+            }
+
+            if (edgeGroup) {
+                const from = parseInt(edgeGroup.dataset.edgeFrom);
+                const to = parseInt(edgeGroup.dataset.edgeTo);
+                const edge = this.edges.find(e => e.from === from && e.to === to);
+                if (edge) {
+                    this.selectedEdge = edge;
+                    this.selectedNode = null;
+                    this._drawAll();
+                    this._fireSelectionChange();
+                    return;
+                }
+            }
+
+            // Pan
+            isPanning = true;
             didPan = false;
-            this.isPanning = true;
-            this.lastPanX = e.clientX;
-            this.lastPanY = e.clientY;
-            container.style.cursor = 'grabbing';
+            lastPanX = e.clientX;
+            lastPanY = e.clientY;
+            this.svg.style.cursor = 'grabbing';
         });
 
         window.addEventListener('mousemove', (e) => {
-            if (!this.isPanning) return;
-            const dx = e.clientX - this.lastPanX;
-            const dy = e.clientY - this.lastPanY;
-            if (Math.abs(dx) > 3 || Math.abs(dy) > 3) didPan = true;
+            if (this.isDragging && this.dragNode) {
+                const rect = this.svg.getBoundingClientRect();
+                const mx = (e.clientX - rect.left - this.offsetX) / this.scale;
+                const my = (e.clientY - rect.top - this.offsetY) / this.scale;
+                const dx = mx - this.dragStartX;
+                const dy = my - this.dragStartY;
+
+                this.dragNode.x = this.nodeStartX + dx;
+                this.dragNode.y = this.nodeStartY + dy;
+                this._drawAll();
+                return;
+            }
+
+            if (!isPanning) return;
+            const dx = e.clientX - lastPanX;
+            const dy = e.clientY - lastPanY;
+            if (Math.abs(dx) > 2 || Math.abs(dy) > 2) didPan = true;
             this.offsetX += dx;
             this.offsetY += dy;
-            this.lastPanX = e.clientX;
-            this.lastPanY = e.clientY;
-            this._draw();
+            lastPanX = e.clientX;
+            lastPanY = e.clientY;
+            this._applyTransform();
         });
 
         window.addEventListener('mouseup', (e) => {
-            this.isPanning = false;
-            container.style.cursor = 'grab';
+            if (this.isDragging && this.dragNode) {
+                // Save undo state after drag
+                if (this.dragNode.x !== this.nodeStartX || this.dragNode.y !== this.nodeStartY) {
+                    this._saveUndoState();
+                }
+                this.isDragging = false;
+                this.dragNode = null;
+                return;
+            }
 
-            if (!didPan && e.target === this.canvas) {
-                const rect = this.canvas.getBoundingClientRect();
-                const mx = (e.clientX - rect.left - this.offsetX) / this.scale;
-                const my = (e.clientY - rect.top - this.offsetY) / this.scale;
+            isPanning = false;
+            this.svg.style.cursor = 'grab';
 
-                for (let i = this.nodes.length - 1; i >= 0; i--) {
-                    const n = this.nodes[i];
-                    if (mx >= n.x && mx <= n.x + n.width && my >= n.y && my <= n.y + n.height) {
-                        this._handleNodeClick(n);
-                        break;
-                    }
+            if (!didPan && e.target === this.svg) {
+                // Click on empty space: deselect
+                this.selectedNode = null;
+                this.selectedEdge = null;
+                this._drawAll();
+                this._fireSelectionChange();
+            }
+        });
+
+        // ── Click to select node ──
+        this.svg.addEventListener('click', (e) => {
+            if (didPan) return;
+
+            const nodeGroup = e.target.closest('.node-group');
+            if (nodeGroup) {
+                const nodeId = parseInt(nodeGroup.dataset.nodeId);
+                const node = this.nodes.find(n => n.id === nodeId);
+                if (node) {
+                    this.selectedNode = node;
+                    this.selectedEdge = null;
+                    this._drawAll();
+                    this._fireSelectionChange();
                 }
             }
         });
 
-        // Resize observer
-        const resizeObs = new ResizeObserver(() => {
-            this._resizeCanvas();
-            this._draw();
+        // ── Double-click to edit text ──
+        this.svg.addEventListener('dblclick', (e) => {
+            const nodeGroup = e.target.closest('.node-group');
+            if (nodeGroup) {
+                const nodeId = parseInt(nodeGroup.dataset.nodeId);
+                const node = this.nodes.find(n => n.id === nodeId);
+                if (node && node.type !== 'connector') {
+                    this._startInlineEdit(node);
+                }
+                return;
+            }
+
+            const edgeGroup = e.target.closest('.edge-group');
+            if (edgeGroup) {
+                const from = parseInt(edgeGroup.dataset.edgeFrom);
+                const to = parseInt(edgeGroup.dataset.edgeTo);
+                const edge = this.edges.find(e => e.from === from && e.to === to);
+                if (edge) {
+                    this._editEdgeLabel(edge);
+                }
+            }
         });
-        resizeObs.observe(container);
+
+        // ── Keyboard shortcuts ──
+        document.addEventListener('keydown', (e) => {
+            // Only handle if the canvas area is focused (no input/textarea focused)
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
+
+            if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+                e.preventDefault();
+                this.undo();
+            }
+            if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+                e.preventDefault();
+                this.redo();
+            }
+            if (e.key === 'Delete' || e.key === 'Backspace') {
+                if (this.selectedNode) {
+                    e.preventDefault();
+                    this.deleteSelectedNode();
+                } else if (this.selectedEdge) {
+                    e.preventDefault();
+                    this.deleteSelectedEdge();
+                }
+            }
+        });
     }
 
-    _fireZoomChange() {
-        const event = new CustomEvent('zoomchange', { detail: { scale: this.scale } });
-        this.canvas.dispatchEvent(event);
+    _applyTransform() {
+        this.mainGroup.setAttribute('transform', `translate(${this.offsetX},${this.offsetY}) scale(${this.scale})`);
     }
 
-    _handleNodeClick(node) {
-        if (node.type === 'connector') return; // cannot edit empty connector
-        if (node.type === 'sub_block') return; // multi edit not natively supported in prompt
+    _centerGraph() {
+        if (this.nodes.length === 0) return;
 
-        const newText = prompt('Edit block text (updates code automatically):', node.text);
-        if (newText !== null && newText.trim() !== '') {
-            const oldText = node.text;
-            node.text = newText.trim();
-            const event = new CustomEvent('nodeedit', { detail: { node, oldText, newText: node.text } });
-            this.canvas.dispatchEvent(event);
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        for (const n of this.nodes) {
+            minX = Math.min(minX, n.x);
+            minY = Math.min(minY, n.y);
+            maxX = Math.max(maxX, n.x + n.width);
+            maxY = Math.max(maxY, n.y + n.height);
+        }
 
-            this._layoutNodes();
-            this._draw();
+        const graphW = maxX - minX;
+        const graphH = maxY - minY;
+        const containerW = this.container.clientWidth;
+        const containerH = this.container.clientHeight;
+
+        const scaleX = (containerW - 100) / graphW;
+        const scaleY = (containerH - 100) / graphH;
+        this.scale = Math.min(scaleX, scaleY, 1.5);
+        this.scale = Math.max(this.scale, 0.3);
+
+        this.offsetX = (containerW - graphW * this.scale) / 2 - minX * this.scale;
+        this.offsetY = (containerH - graphH * this.scale) / 2 - minY * this.scale;
+
+        this._applyTransform();
+        this._fireZoomChange();
+    }
+
+    // ═══ Inline Editing ═════════════════════════════════════════════════════
+
+    _startInlineEdit(node) {
+        // Create a foreign object overlay for inline text editing
+        const rect = this.svg.getBoundingClientRect();
+        const screenX = node.x * this.scale + this.offsetX + rect.left;
+        const screenY = node.y * this.scale + this.offsetY + rect.top;
+        const screenW = node.width * this.scale;
+        const screenH = node.height * this.scale;
+
+        const input = document.createElement('textarea');
+        input.value = node.text;
+        input.className = 'inline-editor';
+        input.style.cssText = `
+            position: fixed;
+            left: ${screenX}px;
+            top: ${screenY}px;
+            width: ${screenW}px;
+            height: ${screenH}px;
+            min-height: 40px;
+            z-index: 10000;
+            background: rgba(17, 24, 39, 0.95);
+            border: 2px solid #6366f1;
+            color: #e0e0ff;
+            font-family: Inter, system-ui, sans-serif;
+            font-size: ${13 * this.scale}px;
+            text-align: center;
+            padding: 8px;
+            border-radius: 8px;
+            outline: none;
+            resize: none;
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.4);
+        `;
+
+        document.body.appendChild(input);
+        input.focus();
+        input.select();
+
+        const commit = () => {
+            const newText = input.value.trim();
+            if (newText && newText !== node.text) {
+                const oldText = node.text;
+                node.text = newText;
+                // Re-measure
+                const dims = this._measureNode(node);
+                node.width = dims.width;
+                node.height = dims.height;
+                this._saveUndoState();
+                this._drawAll();
+
+                // Fire event for app.js to sync code
+                const event = new CustomEvent('nodeedit', {
+                    detail: { node, oldText, newText }
+                });
+                this.svg.dispatchEvent(event);
+            }
+            input.remove();
+        };
+
+        input.addEventListener('blur', commit);
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                commit();
+            }
+            if (e.key === 'Escape') {
+                input.remove();
+            }
+        });
+    }
+
+    _editEdgeLabel(edge) {
+        const fromNode = this.nodes.find(n => n.id === edge.from);
+        const toNode = this.nodes.find(n => n.id === edge.to);
+        if (!fromNode || !toNode) return;
+
+        const newLabel = prompt('Edit arrow label:', edge.label || '');
+        if (newLabel !== null) {
+            edge.label = newLabel.trim() || null;
+            this._saveUndoState();
+            this._drawAll();
         }
     }
 
-    /**
-     * Export canvas as PNG data URL
-     */
-    exportPNG() {
-        // Draw onto a temp canvas with white bg
-        const tempCanvas = document.createElement('canvas');
-        const bounds = this._getGraphBounds();
-        const padding = 60;
+    // ═══ Undo / Redo ════════════════════════════════════════════════════════
 
-        tempCanvas.width = (bounds.width + padding * 2) * 2;
-        tempCanvas.height = (bounds.height + padding * 2) * 2;
+    _saveUndoState() {
+        const state = {
+            nodes: this.nodes.map(n => ({ ...n, color: n.color ? { ...n.color } : null })),
+            edges: this.edges.map(e => ({ ...e }))
+        };
+        this.undoStack.push(JSON.stringify(state));
+        if (this.undoStack.length > this.maxUndoSteps) this.undoStack.shift();
+        this.redoStack = [];
 
-        const tempCtx = tempCanvas.getContext('2d');
-        tempCtx.scale(2, 2);
-
-        // Background
-        tempCtx.fillStyle = '#0a0a0f';
-        tempCtx.fillRect(0, 0, bounds.width + padding * 2, bounds.height + padding * 2);
-
-        // Translate to fit
-        tempCtx.translate(padding - bounds.minX, padding - bounds.minY);
-
-        // Swap context temporarily
-        const origCtx = this.ctx;
-        this.ctx = tempCtx;
-
-        // Draw
-        for (const edge of this.edges) this._drawEdge(edge);
-        for (const node of this.nodes) this._drawNode(node);
-
-        this.ctx = origCtx;
-
-        return tempCanvas.toDataURL('image/png');
+        // Dispatch event for undo/redo button state
+        this.svg.dispatchEvent(new CustomEvent('historystatechange', {
+            detail: { canUndo: this.undoStack.length > 1, canRedo: this.redoStack.length > 0 }
+        }));
     }
 
-    /**
-     * Export canvas as SVG (simple conversion)
-     */
-    exportSVG() {
-        // For simplicity, export as PNG embedded in SVG
-        const dataUrl = this.exportPNG();
+    undo() {
+        if (this.undoStack.length <= 1) return;
+        const current = this.undoStack.pop();
+        this.redoStack.push(current);
+
+        const prevState = JSON.parse(this.undoStack[this.undoStack.length - 1]);
+        this.nodes = prevState.nodes;
+        this.edges = prevState.edges;
+        this.selectedNode = null;
+        this.selectedEdge = null;
+        this._drawAll();
+        this._fireSelectionChange();
+
+        this.svg.dispatchEvent(new CustomEvent('historystatechange', {
+            detail: { canUndo: this.undoStack.length > 1, canRedo: this.redoStack.length > 0 }
+        }));
+    }
+
+    redo() {
+        if (this.redoStack.length === 0) return;
+        const state = this.redoStack.pop();
+        this.undoStack.push(state);
+
+        const restoredState = JSON.parse(state);
+        this.nodes = restoredState.nodes;
+        this.edges = restoredState.edges;
+        this.selectedNode = null;
+        this.selectedEdge = null;
+        this._drawAll();
+        this._fireSelectionChange();
+
+        this.svg.dispatchEvent(new CustomEvent('historystatechange', {
+            detail: { canUndo: this.undoStack.length > 1, canRedo: this.redoStack.length > 0 }
+        }));
+    }
+
+    // ═══ Node/Edge Operations ════════════════════════════════════════════════
+
+    deleteSelectedNode() {
+        if (!this.selectedNode) return;
+        const id = this.selectedNode.id;
+        this.nodes = this.nodes.filter(n => n.id !== id);
+        this.edges = this.edges.filter(e => e.from !== id && e.to !== id);
+        this.selectedNode = null;
+        this._saveUndoState();
+        this._drawAll();
+        this._fireSelectionChange();
+        this._fireDataChange();
+    }
+
+    deleteSelectedEdge() {
+        if (!this.selectedEdge) return;
+        const from = this.selectedEdge.from;
+        const to = this.selectedEdge.to;
+        this.edges = this.edges.filter(e => !(e.from === from && e.to === to));
+        this.selectedEdge = null;
+        this._saveUndoState();
+        this._drawAll();
+        this._fireSelectionChange();
+        this._fireDataChange();
+    }
+
+    changeNodeShape(nodeId, newShape) {
+        const node = this.nodes.find(n => n.id === nodeId);
+        if (!node) return;
+        node.shapeOverride = newShape;
+        const dims = this._measureNode(node);
+        node.width = dims.width;
+        node.height = dims.height;
+        this._saveUndoState();
+        this._drawAll();
+    }
+
+    changeNodeColor(nodeId, colorPreset) {
+        const node = this.nodes.find(n => n.id === nodeId);
+        if (!node) return;
+
+        const presets = {
+            blue: { bg: '#111827', border: '#3b82f6', text: '#bfdbfe', glow: 'rgba(59,130,246,0.25)' },
+            violet: { bg: '#1a1a2e', border: '#7c3aed', text: '#e0e0ff', glow: 'rgba(124,58,237,0.3)' },
+            red: { bg: '#1a1a2e', border: '#ef4444', text: '#fecaca', glow: 'rgba(239,68,68,0.3)' },
+            amber: { bg: '#1c1917', border: '#f59e0b', text: '#fde68a', glow: 'rgba(245,158,11,0.25)' },
+            cyan: { bg: '#0f172a', border: '#06b6d4', text: '#a5f3fc', glow: 'rgba(6,182,212,0.25)' },
+            green: { bg: '#052e16', border: '#22c55e', text: '#bbf7d0', glow: 'rgba(34,197,94,0.25)' },
+            pink: { bg: '#1a0a1e', border: '#ec4899', text: '#fbcfe8', glow: 'rgba(236,72,153,0.25)' },
+            reset: null
+        };
+
+        node.color = presets[colorPreset] || null;
+        this._saveUndoState();
+        this._drawAll();
+    }
+
+    resizeNode(nodeId, widthDelta, heightDelta) {
+        const node = this.nodes.find(n => n.id === nodeId);
+        if (!node) return;
+        node.width = Math.max(80, node.width + widthDelta);
+        node.height = Math.max(30, node.height + heightDelta);
+        this._saveUndoState();
+        this._drawAll();
+    }
+
+    // ═══ Auto Re-layout ═════════════════════════════════════════════════════
+
+    autoLayout() {
+        this._layoutNodes();
+        this._saveUndoState();
+        this._drawAll();
+        this._centerGraph();
+    }
+
+    // ═══ Event Helpers ══════════════════════════════════════════════════════
+
+    _fireZoomChange() {
+        this.svg.dispatchEvent(new CustomEvent('zoomchange', { detail: { scale: this.scale } }));
+    }
+
+    _fireSelectionChange() {
+        this.svg.dispatchEvent(new CustomEvent('selectionchange', {
+            detail: { node: this.selectedNode, edge: this.selectedEdge }
+        }));
+    }
+
+    _fireDataChange() {
+        this.svg.dispatchEvent(new CustomEvent('datachange', {
+            detail: { nodes: this.nodes, edges: this.edges }
+        }));
+    }
+
+    // ═══ Zoom Controls ══════════════════════════════════════════════════════
+
+    zoomIn() {
+        this.scale *= 1.2;
+        this.scale = Math.min(5, this.scale);
+        this._applyTransform();
+        this._fireZoomChange();
+    }
+
+    zoomOut() {
+        this.scale *= 0.83;
+        this.scale = Math.max(0.15, this.scale);
+        this._applyTransform();
+        this._fireZoomChange();
+    }
+
+    fitToScreen() {
+        this._centerGraph();
+    }
+
+    // ═══ Export ══════════════════════════════════════════════════════════════
+
+    exportPNG() {
         const bounds = this._getGraphBounds();
-        const w = bounds.width + 120;
-        const h = bounds.height + 120;
-        return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">
-            <image href="${dataUrl}" width="${w}" height="${h}"/>
-        </svg>`;
+        const padding = 60;
+        const w = bounds.width + padding * 2;
+        const h = bounds.height + padding * 2;
+
+        const canvas = document.createElement('canvas');
+        canvas.width = w * 2;
+        canvas.height = h * 2;
+        const ctx = canvas.getContext('2d');
+        ctx.scale(2, 2);
+
+        // Dark background
+        ctx.fillStyle = '#0a0a0f';
+        ctx.fillRect(0, 0, w, h);
+
+        // Serialize SVG
+        const svgClone = this.svg.cloneNode(true);
+        svgClone.setAttribute('width', w);
+        svgClone.setAttribute('height', h);
+        const mainG = svgClone.querySelector('.main-group');
+        if (mainG) {
+            mainG.setAttribute('transform', `translate(${padding - bounds.minX}, ${padding - bounds.minY}) scale(1)`);
+        }
+
+        const svgData = new XMLSerializer().serializeToString(svgClone);
+        const img = new Image();
+        const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+        const url = URL.createObjectURL(svgBlob);
+
+        return new Promise((resolve) => {
+            img.onload = () => {
+                ctx.drawImage(img, 0, 0, w, h);
+                URL.revokeObjectURL(url);
+                resolve(canvas.toDataURL('image/png'));
+            };
+            img.onerror = () => {
+                URL.revokeObjectURL(url);
+                // Fallback: serialize inline
+                resolve(canvas.toDataURL('image/png'));
+            };
+            img.src = url;
+        });
+    }
+
+    exportSVG() {
+        const bounds = this._getGraphBounds();
+        const padding = 60;
+        const w = bounds.width + padding * 2;
+        const h = bounds.height + padding * 2;
+
+        const svgClone = this.svg.cloneNode(true);
+        svgClone.setAttribute('width', w);
+        svgClone.setAttribute('height', h);
+        svgClone.setAttribute('viewBox', `0 0 ${w} ${h}`);
+        svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+
+        // Add background
+        const bgRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        bgRect.setAttribute('width', w);
+        bgRect.setAttribute('height', h);
+        bgRect.setAttribute('fill', '#0a0a0f');
+        svgClone.insertBefore(bgRect, svgClone.firstChild);
+
+        const mainG = svgClone.querySelector('.main-group');
+        if (mainG) {
+            mainG.setAttribute('transform', `translate(${padding - bounds.minX}, ${padding - bounds.minY}) scale(1)`);
+        }
+
+        return new XMLSerializer().serializeToString(svgClone);
     }
 
     _getGraphBounds() {
@@ -1006,29 +1306,6 @@ class FlowchartRenderer {
         }
 
         return { minX, minY, width: maxX - minX, height: maxY - minY };
-    }
-
-    /**
-     * Zoom controls
-     */
-    zoomIn() {
-        this.scale *= 1.2;
-        this.scale = Math.min(5, this.scale);
-        this._draw();
-        this._fireZoomChange();
-    }
-
-    zoomOut() {
-        this.scale *= 0.83;
-        this.scale = Math.max(0.1, this.scale);
-        this._draw();
-        this._fireZoomChange();
-    }
-
-    fitToScreen() {
-        this._centerGraph();
-        this._draw();
-        this._fireZoomChange();
     }
 }
 

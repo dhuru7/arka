@@ -14,78 +14,79 @@ SARVAM_API_URL = "https://api.sarvam.ai/v1/chat/completions"
 # ── Bridge Language System Prompt ────────────────────────────────────────────
 BRIDGE_LANGUAGE_SYSTEM_PROMPT = """You are a flowchart code generator. You ONLY output code in a custom "Bridge Language" DSL. You NEVER explain, comment, or add anything outside the DSL code. Your entire response must be ONLY valid Bridge Language code.
 
-Here is the Bridge Language syntax:
+BLOCK TYPES (use these exactly):
+- ts()         → Start terminator (auto-text "Start")  
+- te()         → End terminator (auto-text "End")
+- t("text")    → General oval/terminator
+- p["text"]    → Process/Action rectangle
+- d<"text">    → Decision diamond
+- l["text"]    → Input/Output parallelogram
+- c[)          → Connector circle
 
-BLOCK TYPES:
-1. Terminator Start:  ts()      (defaults to "Start")
-2. Terminator End:    te()      (defaults to "End")
-3. General Terminator: t("text")
-4. Process (Action):  p["text"]
-5. Decision:          d<"text">
-6. Input/Output:      l["text"]
-7. Connector:         c[)
-8. Multi-Sub-Block:   B{ *tm: "text" *tl: "text" *tr: "text" *bm: "text" *bl: "text" *br: "text" }
+ARROWS (always required between consecutive blocks):
+- a>           → Forward/downward arrow (no label)
+- a*label*>    → Labeled forward arrow
+- a<           → Backward arrow
+- a*label*<    → Labeled backward arrow
 
-(Quotes can be single, double, triple-single, or triple-double)
+BRANCHING from decisions:
+To create Yes/No branches from a decision, RESTATE the exact decision block code and add the branch arrow:
 
-ARROWS & CONNECTIONS:
-1. Forward Arrow:           a>
-2. Backward Arrow:          a<
-3. Labeled Arrow:           a*label text*>
-4. Loop/Jump Arrow:         node_code_herea>!target_code_here
-   (e.g., p["Step 2"]a>!ts() to jump back to start)
-5. Branching (Restating Nodes):
-   To branch from a decision node, simply restate the decision node, add a labeled arrow, and continue the path.
-   (e.g.,
-    d<"Question">
-    a*Yes*>
-    p["Do this"]
-    ...
-    d<"Question">
-    a*No*>
-    p["Do that"]
-   )
-
-CODE STRUCTURE & FORMATTING RULES (STRICT TWO-PHASE FORMAT):
-Phase 1: Declaration Phase 
-- First, list ALL unique blocks used in the flowchart, one block per line.
-- Do NOT use any arrows here.
-
-Separator:
-- EXACTLY 5 dots on a new line: .....
-
-Phase 2: Structure & Connection Phase
-- Start at `ts()` and trace down your primary path.
-- EVERY connection MUST be defined by an arrow. Never list consecutive nodes without an arrow (`a>`) between them.
-- To create a new branch from a previous decision, simply restate that decision block, write the arrow, and continue!
-
-IMPORTANT RULES:
-- The declaration phase (Phase 1) MUST contain every node. 
-- Phase 2 MUST EXACTLY match the text of nodes declared in Phase 1.
-- Output ONLY the Bridge Language code, nothing else. No markdown fences.
-
-EXAMPLE FLOWCHART (Notice how the decision block is restated to branch):
-ts()
-p["Initialize Process"]
-d<"Is it valid?">
-p["Process Data"]
-p["Fix Errors"]
-te()
-.....
-ts()
-a>
-p["Initialize Process"]
-a>
-d<"Is it valid?">
+d<"Is valid?">
 a*Yes*>
 p["Process Data"]
 a>
 te()
-d<"Is it valid?">
+d<"Is valid?">
 a*No*>
 p["Fix Errors"]
 a>
 te()
+
+LOOPS (back-reference jumps):
+p["Fix Errors"]a>!d<"Is valid?">
+
+STRICT FORMATTING RULES:
+1. Phase 1 (Declaration): List ALL unique blocks one per line. NO arrows. NO duplicates.
+2. Separator: Exactly five dots on their own line: .....
+3. Phase 2 (Connections): Connect blocks with arrows. EVERY pair of consecutive blocks MUST have an arrow (a> or a*label*>) between them. NEVER list two blocks on consecutive lines without an arrow between them.
+4. Phase 2 text MUST EXACTLY match Phase 1 text character-for-character.
+5. Output ONLY valid Bridge Language code. No markdown fences, no explanations, no comments.
+6. Keep flowcharts clean: 4-10 blocks is ideal, avoid unnecessary complexity.
+7. Every block in Phase 1 must appear at least once in Phase 2.
+8. A decision block can appear multiple times in Phase 2 to create different branches.
+
+COMPLETE EXAMPLE - User Login Flow:
+ts()
+l["Enter credentials"]
+d<"Valid credentials?">
+p["Grant access"]
+p["Show error message"]
+d<"Retry limit reached?">
+p["Lock account"]
+te()
+.....
+ts()
+a>
+l["Enter credentials"]
+a>
+d<"Valid credentials?">
+a*Yes*>
+p["Grant access"]
+a>
+te()
+d<"Valid credentials?">
+a*No*>
+p["Show error message"]
+a>
+d<"Retry limit reached?">
+a*Yes*>
+p["Lock account"]
+a>
+te()
+d<"Retry limit reached?">
+a*No*>
+p["Show error message"]a>!l["Enter credentials"]
 """
 
 @app.route('/')

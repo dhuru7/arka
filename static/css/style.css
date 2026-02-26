@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   Arka – AI Flowchart Generator
-   Arka Theme: Monochrome, Brutalist, High-Contrast
+   Arka – AI Flowchart Generator v2.0
+   Theme: Monochrome, Brutalist, High-Contrast
    ═══════════════════════════════════════════════════════════════════════════ */
 
 /* ── CSS Custom Properties ──────────────────────────────────────────────── */
@@ -109,6 +109,12 @@ button:hover {
     color: var(--bg);
 }
 
+button:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
 button.primary {
     background: var(--accent);
     color: var(--fg);
@@ -165,6 +171,7 @@ input::placeholder, textarea::placeholder {
     backdrop-filter: blur(20px);
     z-index: 10;
     transition: transform var(--transition-base);
+    overflow-y: auto;
 }
 
 .sidebar-header {
@@ -258,6 +265,137 @@ input::placeholder, textarea::placeholder {
     padding: 10px 16px !important;
 }
 
+.refine-btn {
+    white-space: nowrap;
+    min-width: 80px;
+}
+
+/* ── Properties Panel ──────────────────────────────────────────────────── */
+.properties-panel {
+    padding: 0 24px 24px;
+    border-top: 1px solid var(--border);
+    margin-top: 8px;
+    padding-top: 16px;
+}
+
+.prop-group {
+    margin-bottom: 14px;
+}
+
+.prop-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--fg-muted);
+    margin-bottom: 6px;
+}
+
+.prop-value {
+    font-size: 0.85rem;
+    color: var(--fg);
+    padding: 6px 0;
+    word-break: break-word;
+}
+
+.prop-shape-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.prop-shape-btn {
+    padding: 4px 10px;
+    font-size: 0.7rem;
+    border-radius: 6px;
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--fg-muted);
+    border-color: var(--border);
+}
+
+.prop-shape-btn.active {
+    border-color: var(--fg);
+    color: var(--fg);
+    background: rgba(255,255,255,0.08);
+}
+
+.prop-shape-btn:hover {
+    background: rgba(255,255,255,0.05);
+    color: var(--fg);
+}
+
+.prop-color-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.prop-color-swatch {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    padding: 0;
+    cursor: pointer;
+    transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.prop-color-swatch:hover {
+    transform: scale(1.2);
+    border-color: var(--fg);
+    background: inherit !important;
+    color: inherit;
+}
+
+.prop-size-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.prop-size-btn {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--fg-muted);
+    border-color: var(--border);
+}
+
+.prop-size-btn:hover {
+    color: var(--fg);
+    background: rgba(255,255,255,0.05);
+}
+
+.prop-size-label {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--fg-muted);
+    min-width: 70px;
+    text-align: center;
+}
+
+.prop-action-btn {
+    width: 100%;
+    margin-bottom: 8px;
+    padding: 8px 16px;
+    font-size: 0.75rem;
+    border-radius: var(--radius-sm);
+}
+
+.prop-action-btn.danger {
+    border-color: #ef4444;
+    color: #ef4444;
+}
+
+.prop-action-btn.danger:hover {
+    background: #ef4444;
+    color: #fff;
+}
+
 /* ── Main Canvas Area ───────────────────────────────────────────────────── */
 .main-area {
     flex: 1;
@@ -274,11 +412,11 @@ input::placeholder, textarea::placeholder {
     transform: translateX(-50%);
     display: flex;
     align-items: center;
-    gap: 16px;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(12px);
+    gap: 8px;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(16px);
     border: 1px solid var(--border);
-    padding: 8px 16px;
+    padding: 6px 12px;
     border-radius: var(--radius-pill);
     z-index: 20;
 }
@@ -286,24 +424,25 @@ input::placeholder, textarea::placeholder {
 .toolbar-left, .toolbar-right {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
 }
 
 .zoom-controls {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
 }
 
 .toolbar-divider {
     width: 1px;
     height: 20px;
     background: var(--border-light);
+    margin: 0 4px;
 }
 
 .icon-btn {
-    width: 36px;
-    height: 36px;
+    width: 34px;
+    height: 34px;
     padding: 0;
     border-radius: 50%;
     border: 1px solid transparent;
@@ -321,18 +460,19 @@ input::placeholder, textarea::placeholder {
 }
 
 .icon-btn svg {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
 }
 
 .zoom-level {
     font-family: var(--font-mono);
-    font-size: 0.8rem;
-    min-width: 45px;
+    font-size: 0.75rem;
+    min-width: 40px;
     text-align: center;
+    color: var(--fg-muted);
 }
 
-/* ── Canvas ─────────────────────────────────────────────────────────────── */
+/* ── Canvas Container ──────────────────────────────────────────────────── */
 .canvas-container {
     flex: 1;
     position: relative;
@@ -345,9 +485,50 @@ input::placeholder, textarea::placeholder {
 
 .canvas-container:active { cursor: grabbing; }
 
-canvas {
-    max-width: 100%;
-    max-height: 100%;
+/* SVG Flowchart Styles */
+.flowchart-svg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.node-group {
+    transition: opacity 0.15s ease;
+}
+
+.node-group:hover {
+    cursor: pointer;
+}
+
+.node-group:hover rect,
+.node-group:hover polygon,
+.node-group:hover circle {
+    stroke-width: 2.5;
+    filter: url(#glow);
+}
+
+.edge-path {
+    transition: stroke-width 0.15s ease;
+}
+
+.edge-group:hover .edge-path {
+    stroke-width: 3;
+}
+
+.selection-indicator {
+    animation: dash-rotate 2s linear infinite;
+}
+
+@keyframes dash-rotate {
+    0% { stroke-dashoffset: 0; }
+    100% { stroke-dashoffset: 18; }
+}
+
+/* ── Inline Editor ─────────────────────────────────────────────────────── */
+.inline-editor {
+    font-family: Inter, system-ui, sans-serif !important;
 }
 
 /* ── Empty State ────────────────────────────────────────────────────────── */
@@ -357,6 +538,7 @@ canvas {
     max-width: 400px;
     position: absolute;
     pointer-events: none;
+    z-index: 5;
 }
 
 .empty-state .bracket-text {
@@ -376,6 +558,14 @@ canvas {
 
 .empty-state p {
     font-size: 0.9rem;
+    margin-bottom: 4px;
+}
+
+.empty-state .hint-text {
+    font-size: 0.75rem;
+    color: var(--border-light);
+    margin-top: 16px;
+    font-family: var(--font-mono);
 }
 
 /* ── Status Bar ─────────────────────────────────────────────────────────── */
@@ -391,6 +581,7 @@ canvas {
     color: var(--fg-muted);
     text-transform: uppercase;
     pointer-events: none;
+    z-index: 15;
 }
 
 .status-left, .status-right {
@@ -482,6 +673,33 @@ canvas {
 .saved-item-name { font-size: 0.9rem; }
 .saved-item-date { font-size: 0.7rem; color: var(--fg-muted); font-family: var(--font-mono); }
 
+.saved-item-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.saved-item-btn {
+    padding: 6px 12px;
+    font-size: 0.7rem;
+    border-radius: 6px;
+}
+
+.saved-item-btn.delete {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border-radius: 50%;
+    border-color: transparent;
+    color: var(--fg-muted);
+}
+
+.saved-item-btn.delete:hover {
+    background: #ef4444;
+    color: #fff;
+    border-color: #ef4444;
+}
+
 /* ── Toast Notifications ────────────────────────────────────────────────── */
 .toast-container {
     position: fixed;
@@ -504,11 +722,32 @@ canvas {
     text-transform: uppercase;
     box-shadow: 0 4px 12px rgba(0,0,0,0.5);
     animation: toast-in 0.3s ease-out;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.toast.success { border-color: #22c55e; }
+.toast.error { border-color: #ef4444; }
+
+.toast-icon {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.toast-exit {
+    animation: toast-out 0.3s ease-in forwards;
 }
 
 @keyframes toast-in {
     from { opacity: 0; transform: translateY(16px); }
     to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes toast-out {
+    from { opacity: 1; transform: translateY(0); }
+    to { opacity: 0; transform: translateY(16px); }
 }
 
 /* ── Mobile Sidebar Toggle ──────────────────────────────────────────────── */
