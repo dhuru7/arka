@@ -1,0 +1,212 @@
+Flowchart Generator Project Documentation
+
+1. Overview
+
+A system designed to generate visual flowcharts from natural language inputs.
+
+2. Core Components
+
+AI Engine: Sarvam M (Large Language Model).
+
+Bridge Language: A custom intermediate language acting as the connector.
+
+Renderer: A separate custom program designed to read the bridge language and generate the visual flowchart.
+
+3. The Problem & Solution
+
+Sarvam M is a text-based LLM and cannot natively draw visual flowcharts. To bridge the gap between text generation and visual rendering, the system uses a custom language pipeline:
+
+Input: The user provides instructions in plain English.
+
+Translation: Sarvam M translates the English input into the custom "Bridge Language."
+
+Execution: The Renderer program reads the Bridge Language output and converts it into the final visual flowchart.
+
+4. Bridge Language: Syntax Reference
+
+4.1 Terminator (Start / End / Oval)
+
+Defines the beginning, ending, or any general oval shape in the flowchart.
+
+General Oval Syntax: t( ... )
+
+Default Start Block: ts() (Automatically defaults to having "Start" inside it, no text needed).
+
+Default End Block: te() (Automatically defaults to having "End" inside it, no text needed).
+
+Content: For the general t() block, the AI places the text inside the parentheses.
+
+String Formatting: Text inside t() can be enclosed using any of the following quote styles:
+
+Single quotes: 'text'
+
+Double quotes: "text"
+
+Triple single quotes: '''text'''
+
+Triple double quotes: """text"""
+
+Examples:
+
+Default Start: ts()
+
+Default End: te()
+
+Custom Oval: t("Initialize Engine")
+
+4.2 Process (Rectangle)
+
+Represents an action, task, or operational step in the flowchart.
+
+Syntax: p[ ... ]
+
+Content: The AI places the process description directly inside the square brackets.
+
+String Formatting: Uses the exact same flexible quote styles as the Terminator block (', ", ''', """).
+
+Examples:
+
+Process step: p["Initialize variables"]
+
+Process step: p['''Send email notification''']
+
+4.3 Decision (Diamond)
+
+Represents a decision point, conditional branch, or question in the flowchart.
+
+Syntax: d< ... >
+
+Content: The AI places the decision logic or question inside the angle brackets.
+
+String Formatting: Uses the exact same flexible quote styles as the previous blocks (', ", ''', """).
+
+Examples:
+
+Decision point: d<"Is the user logged in?">
+
+Decision point: d<'''Does the file exist?'''>
+
+4.4 Block with Multiple Sub-Blocks
+
+A complex container block that allows for specific text placement in various positions (headings) within the block.
+
+Syntax: B{ ... }
+
+Content: Inside the curly braces, specific positional tags are used to define where the text should be rendered.
+
+Positional Tags:
+
+*tm: - Top Middle heading
+
+*bm: - Bottom Middle heading
+
+*tl: - Top Left corner heading
+
+*tr: - Top Right corner heading
+
+*bl: - Bottom Left corner heading
+
+*br: - Bottom Right corner heading
+
+Examples:
+
+B{
+  *tm: "Main Process Overview"
+  *tl: "Step 1"
+  *br: "Completed"
+}
+
+
+
+4.5 Input / Output (Parallelogram)
+
+Represents data input or output in the flowchart.
+
+Syntax: l[ ... ]
+
+Content: The AI places the input/output description inside the square brackets.
+
+String Formatting: Uses the exact same flexible quote styles as the previous blocks (', ", ''', """).
+
+Examples:
+
+Input: l["Read user data"]
+
+Output: l['''Print report''']
+
+4.6 Connector Block
+
+Represents a connection point where multiple paths converge, often depicted as a small circle in flowcharts.
+
+Syntax: c[)
+
+Usage: Usually acts as a target for multiple incoming arrows.
+
+4.7 Arrows and Connections
+
+Defines the flow, direction, and connections between blocks. Arrows are only used in the "Structure Phase" of the code (see Section 5).
+
+Standard Arrow: Use a> for a forward/downward arrow (→) or a< for a backward/upward arrow.
+
+Labeled Arrow: To add text to an arrow, enclose the text after the a and before the directional triangle.
+
+Syntax: a*write on arrow> or a*write anything on the arrow<
+
+Multiple Connections (Branching Out): Used when one block connects to multiple subsequent blocks. The target blocks are listed inside square brackets.
+
+Syntax Example:
+
+t("the block")
+ma*connecting multiple blocks>[
+p["A block"]
+a*this text will appear on the line connecting to B block*
+p["B Block"]
+]
+
+
+Multiple Incoming Connections (Merging In): Used when multiple arrows converge into a single target block. The target block is written first, followed by ma...<[, and then the source blocks.
+
+Syntax Example:
+
+p["The block"]ma*connecting multiple blocks<[
+p["A block"]
+a*this text will appear on the line connecting to B block*
+p["B Block"]
+]
+
+
+Back-Reference / Loop / Jump Arrow: Used to connect blocks that skip steps or loop backward. Use the ! symbol followed by the exact code of the target block.
+
+Loop upward (e.g., end to start): t("this is block down there")a>!t("this is the block up")
+
+Jump downward (e.g., skipping blocks 2 through 12 to connect to block 13): t("this is block down there")a<!t("this is the block up")
+
+5. Code Structure & Formatting Rules
+
+To ensure the Renderer parses the code correctly, the AI must follow a strict Two-Phase formatting rule.
+
+Phase 1: Declaration: ALL blocks must be declared first.
+
+Separator: The declaration phase and the structure phase MUST be separated by exactly five dots on a new line: .....
+
+Phase 2: Structure/Connection: After the separator, the blocks are connected using arrows.
+
+Example Flowchart Code:
+
+ts()
+p["Initialize Process"]
+d<"Is it valid?">
+p["Fix Errors"]
+te()
+.....
+ts()
+a>
+p["Initialize Process"]
+a>
+d<"Is it valid?">
+ma*Evaluation>[
+te()
+a*Invalid*
+p["Fix Errors"]
+]
+p["Fix Errors"]a>!ts()

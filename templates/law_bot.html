@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Arka Legal AI – AI-powered legal assistant specializing in Indian law.">
+    <title>ARKA | Legal AI Assistant</title>
+
+    <!-- Google Fonts for Nothing OS Aesthetic -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Space+Grotesk:wght@300;400;500;600&family=Space+Mono&display=swap"
+        rel="stylesheet">
+    <!-- Marked.js for markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/law.css">
+
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='black'/><text y='50%' x='50%' dominant-baseline='middle' text-anchor='middle' fill='white' font-family='sans-serif' font-size='60' font-weight='bold'>A</text></svg>">
+</head>
+
+<body>
+    <!-- Background Grid -->
+    <div class="bg-grid"></div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Mobile Sidebar Toggle -->
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+    </button>
+
+    <!-- App Container -->
+    <div class="app-container">
+
+        <!-- ═══ Sidebar ═══════════════════════════════════════════════════ -->
+        <aside class="sidebar" id="sidebar">
+            <!-- Logo -->
+            <div class="sidebar-header">
+                <div class="logo-text">
+                    <h1>ARKA</h1>
+                    <span>Legal AI Assistant</span>
+                </div>
+            </div>
+
+            <!-- Quick Examples -->
+            <div class="examples-section" style="padding-top: 24px;">
+                <label>Common Legal Issues</label>
+                <div class="example-chips">
+                    <button class="example-chip"
+                        data-prompt="I am facing harassment at my workplace. What can I do?">Workplace
+                        Harassment</button>
+                    <button class="example-chip"
+                        data-prompt="My university is charging unjust extra fees. What are the UGC rules?">Unjust Uni
+                        Fees</button>
+                    <button class="example-chip"
+                        data-prompt="I bought a defective product online and they won't refund me.">Consumer
+                        Rights</button>
+                    <button class="example-chip"
+                        data-prompt="A bank is harassing me for a loan repayment abruptly.">Bank Harassment</button>
+                </div>
+            </div>
+
+            <div style="flex-grow: 1;"></div>
+        </aside>
+
+        <!-- ═══ Main Area ══════════════════════════════════════════ -->
+        <main class="main-area" style="padding: 24px; display: flex; flex-direction: column;">
+
+            <!-- Chat Window -->
+            <div class="chat-window" id="chat-window">
+                <!-- Initial Welcome Message -->
+                <div class="message ai-message">
+                    <div class="message-content">
+                        <h3>Welcome to Arka Legal Assistant</h3>
+                        <p>I specialize in Indian law. Whether it's harassment, university fee issues, or consumer
+                            disputes, I'm here to guide you with solutions, official government links, and previous
+                            rulings. Keep in mind that different states may have varied laws.</p>
+                        <p><strong>Please explain your legal issue below.</strong></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Input Area -->
+            <div class="chat-input-area">
+                <label for="law-prompt-input" style="display: none;">Your issue...</label>
+                <div style="display: flex; gap: 12px; width: 100%;">
+                    <div class="prompt-input-wrap" style="flex: 1;">
+                        <textarea id="law-prompt-input" class="prompt-input law-input"
+                            placeholder="Type your legal issue here (e.g. My school is taking extra fees for nothing...)"
+                            rows="2"></textarea>
+                    </div>
+                    <button class="generate-btn primary chat-send-btn" id="send-btn">
+                        <div class="spinner"></div>
+                        <span class="btn-text">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                style="width: 20px; height: 20px;">
+                                <line x1="22" y1="2" x2="11" y2="13"></line>
+                                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                            </svg>
+                        </span>
+                    </button>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- App Scripts -->
+    <script src="/static/js/law_bot.js"></script>
+</body>
+
+</html>

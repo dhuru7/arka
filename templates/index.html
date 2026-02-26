@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="Arka – AI-powered flowchart generator. Describe your flowchart in plain English and watch it come to life.">
+    <title>ARKA | AI Flowchart Generator</title>
+
+    <!-- Google Fonts for Nothing OS Aesthetic -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- Space Grotesk for clean body text, Orbitron for futuristic logo, Space Mono for status and code elements -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Space+Grotesk:wght@300;400;500;600&family=Space+Mono&display=swap"
+        rel="stylesheet">
+
+    <link rel="stylesheet" href="/static/css/style.css">
+    <!-- Replaced emoji favicon with a minimalistic SVG -->
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='black'/><text y='50%' x='50%' dominant-baseline='middle' text-anchor='middle' fill='white' font-family='sans-serif' font-size='60' font-weight='bold'>A</text></svg>">
+</head>
+
+<body>
+    <!-- Background Grid -->
+    <div class="bg-grid"></div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Mobile Sidebar Toggle -->
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+    </button>
+
+    <!-- App Container -->
+    <div class="app-container">
+
+        <!-- ═══ Sidebar ═══════════════════════════════════════════════════ -->
+        <aside class="sidebar" id="sidebar">
+            <!-- Logo -->
+            <div class="sidebar-header">
+                <div class="logo-text">
+                    <h1>ARKA</h1>
+                    <span>AI Flowchart Generator</span>
+                </div>
+            </div>
+
+            <!-- Prompt Input -->
+            <div class="prompt-section">
+                <label for="prompt-input">Describe your flow</label>
+                <div class="prompt-input-wrap">
+                    <textarea id="prompt-input" class="prompt-input"
+                        placeholder="e.g. A user login flow with email validation, password check, and 2FA verification..."
+                        rows="4"></textarea>
+                </div>
+                <button class="generate-btn primary" id="generate-btn">
+                    <div class="spinner"></div>
+                    <span class="btn-text">Generate Flowchart</span>
+                    <span class="btn-loading-text">Processing...</span>
+                </button>
+            </div>
+
+            <!-- Quick Examples -->
+            <div class="examples-section">
+                <label>Quick Presets</label>
+                <div class="example-chips">
+                    <button class="example-chip"
+                        data-prompt="User registration flow with email verification">Registration</button>
+                    <button class="example-chip" data-prompt="E-commerce order processing from cart to delivery">Order
+                        Flow</button>
+                    <button class="example-chip" data-prompt="Bug fixing process for software development">Bug
+                        Fix</button>
+                    <button class="example-chip"
+                        data-prompt="Job interview process from application to offer">Hiring</button>
+                    <button class="example-chip"
+                        data-prompt="CI/CD pipeline with testing and deployment stages">CI/CD</button>
+                    <button class="example-chip"
+                        data-prompt="Customer support ticket handling workflow">Support</button>
+                </div>
+            </div>
+
+            <!-- Refine Section -->
+            <div class="refine-section">
+                <label>Refine Existing</label>
+                <div class="refine-wrap">
+                    <input type="text" class="refine-input" id="refine-input" placeholder="Add error handling...">
+                    <button class="refine-btn" id="refine-btn">Update</button>
+                </div>
+            </div>
+
+            <div style="flex-grow: 1;"></div>
+
+        </aside>
+
+        <!-- ═══ Main Canvas Area ══════════════════════════════════════════ -->
+        <main class="main-area">
+            <!-- Floating Toolbar -->
+            <div class="toolbar">
+                <div class="toolbar-left">
+                    <div class="zoom-controls">
+                        <button class="zoom-btn icon-btn" id="zoom-out" title="Zoom out">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                        </button>
+                        <span class="zoom-level" id="zoom-level">100%</span>
+                        <button class="zoom-btn icon-btn" id="zoom-in" title="Zoom in">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                        </button>
+                    </div>
+                    <button class="toolbar-btn icon-btn" id="zoom-fit" title="Fit to screen">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="toolbar-divider"></div>
+
+                <div class="toolbar-right">
+                    <button class="toolbar-btn icon-btn" id="btn-clear-canvas" title="Clear Canvas">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2">
+                            </path>
+                        </svg>
+                    </button>
+                    <button class="toolbar-btn icon-btn" id="btn-export-png" title="Export PNG">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                    </button>
+                    <button class="toolbar-btn icon-btn" id="btn-export-svg" title="Export SVG">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="16 18 22 12 16 6"></polyline>
+                            <polyline points="8 6 2 12 8 18"></polyline>
+                        </svg>
+                    </button>
+                    <button class="toolbar-btn icon-btn" id="btn-save" title="Save to cloud">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                            <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                            <polyline points="7 3 7 8 15 8"></polyline>
+                        </svg>
+                    </button>
+                    <button class="toolbar-btn icon-btn accent" id="btn-load" title="Load saved">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z">
+                            </path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Canvas -->
+            <div class="canvas-container" id="canvas-container">
+                <canvas id="flowchart-canvas"></canvas>
+                <div class="empty-state" id="empty-state">
+                    <span class="bracket-text">[ ]</span>
+                    <h2>AWAITING PROMPT</h2>
+                    <p>Describe what you need in the sidebar to initialize rendering.</p>
+                </div>
+            </div>
+
+            <!-- Status Bar -->
+            <div class="status-bar">
+                <div class="status-left">
+                    <div class="status-dot" id="status-dot"></div>
+                    <span id="status-text">SYSTEM READY</span>
+                    <span>|</span>
+                    <span id="node-count">NODES: 0</span>
+                    <span id="edge-count">EDGES: 0</span>
+                </div>
+                <div class="status-right">
+                    <span>ARKA V1.2.3</span>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ═══ Save Modal ════════════════════════════════════════════════════ -->
+    <div class="modal-overlay" id="save-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>SAVE FLOWCHART</h2>
+                <button class="icon-btn modal-close">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="save-name">Reference Name</label>
+                    <input type="text" id="save-name" placeholder="Enter reference name...">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-cancel">Cancel</button>
+                <button class="primary" id="save-confirm">Save to System</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ Load Modal ════════════════════════════════════════════════════ -->
+    <div class="modal-overlay" id="load-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>SAVED FLOWCHARTS</h2>
+                <button class="icon-btn modal-close">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="saved-list"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-cancel">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ Scripts ═══════════════════════════════════════════════════════ -->
+    <!-- Firebase (Compat SDK for simplicity) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+    <!-- App Scripts -->
+    <script src="/static/js/parser.js"></script>
+    <script src="/static/js/renderer.js"></script>
+    <script src="/static/js/app.js"></script>
+</body>
+
+</html>
