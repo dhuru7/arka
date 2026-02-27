@@ -1,6 +1,6 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- *  Arka – Main Application Logic v2.0
+ *  Arka – Main Application Logic v2.4
  *  Handles UI interactions, API calls, Firebase, properties panel,
  *  undo/redo, and orchestration.
  * ═══════════════════════════════════════════════════════════════════════════
@@ -39,15 +39,17 @@ const btnDeleteSelected = document.getElementById('btn-delete-selected');
 const parser = new BridgeParser();
 const renderer = new FlowchartRenderer(canvasContainer);
 
-// ── State ───────────────────────────────────────────────────────────────────
+// ── State ───────────────────────────────────────────────────────────────
 let currentBridgeCode = '';
 let db = null; // Firebase Realtime DB reference
+let currentMode = 'flowchart'; // 'flowchart' or 'block'
 
 // ═══ Initialization ═════════════════════════════════════════════════════════
 
 document.addEventListener('DOMContentLoaded', () => {
     initFirebase();
     setupEventListeners();
+    setupModeToggle();
     updateStatus('ready', 'Ready');
 });
 
@@ -190,12 +192,91 @@ function setupEventListeners() {
     document.getElementById('save-confirm').addEventListener('click', handleSave);
 }
 
+// ═══ Mode Toggle ════════════════════════════════════════════════════════════
+
+function setupModeToggle() {
+    const modeFlowchartBtn = document.getElementById('mode-flowchart');
+    const modeBlockBtn = document.getElementById('mode-block');
+    const indicator = document.getElementById('mode-indicator');
+
+    modeFlowchartBtn.addEventListener('click', () => switchMode('flowchart'));
+    modeBlockBtn.addEventListener('click', () => switchMode('block'));
+}
+
+function switchMode(mode) {
+    if (mode === currentMode) return;
+    currentMode = mode;
+
+    const modeFlowchartBtn = document.getElementById('mode-flowchart');
+    const modeBlockBtn = document.getElementById('mode-block');
+    const indicator = document.getElementById('mode-indicator');
+    const subtitleText = document.getElementById('subtitle-text');
+    const promptLabel = document.getElementById('prompt-label');
+    const generateBtnText = document.getElementById('generate-btn-text');
+    const emptyIcon = document.getElementById('empty-icon');
+    const emptyTitle = document.getElementById('empty-title');
+    const emptyDesc = document.getElementById('empty-desc');
+    const examplesFlowchart = document.getElementById('examples-flowchart');
+    const examplesBlock = document.getElementById('examples-block');
+
+    if (mode === 'block') {
+        // Switch to Block Diagram mode
+        modeFlowchartBtn.classList.remove('active');
+        modeBlockBtn.classList.add('active');
+        indicator.classList.add('right');
+
+        subtitleText.textContent = 'AI Block Diagram Generator';
+        promptLabel.textContent = 'Describe your system';
+        generateBtnText.textContent = 'Generate Block Diagram';
+        promptInput.placeholder = 'e.g. A microservice architecture with API gateway, authentication, and database cluster...';
+        emptyIcon.textContent = '[ □ ]';
+        emptyTitle.textContent = 'AWAITING SYSTEM DESCRIPTION';
+        emptyDesc.textContent = 'Describe your system architecture in the sidebar to generate a block diagram.';
+        examplesFlowchart.style.display = 'none';
+        examplesBlock.style.display = 'block';
+    } else {
+        // Switch to Flowchart mode
+        modeBlockBtn.classList.remove('active');
+        modeFlowchartBtn.classList.add('active');
+        indicator.classList.remove('right');
+
+        subtitleText.textContent = 'AI Flowchart Generator';
+        promptLabel.textContent = 'Describe your flow';
+        generateBtnText.textContent = 'Generate Flowchart';
+        promptInput.placeholder = 'e.g. A user login flow with email validation, password check, and 2FA verification...';
+        emptyIcon.textContent = '[ ]';
+        emptyTitle.textContent = 'AWAITING PROMPT';
+        emptyDesc.textContent = 'Describe what you need in the sidebar to initialize rendering.';
+        examplesFlowchart.style.display = 'block';
+        examplesBlock.style.display = 'none';
+    }
+
+    // Re-bind example chips for the newly visible section
+    bindExampleChips();
+
+    // Clear current diagram on mode switch
+    handleClearCode();
+    showToast(`Switched to ${mode === 'block' ? 'Block Diagram' : 'Flowchart'} mode`, 'info');
+}
+
+function bindExampleChips() {
+    document.querySelectorAll('.example-chip').forEach(chip => {
+        // Remove old listeners by cloning
+        const newChip = chip.cloneNode(true);
+        chip.parentNode.replaceChild(newChip, chip);
+        newChip.addEventListener('click', () => {
+            promptInput.value = newChip.dataset.prompt;
+            promptInput.focus();
+        });
+    });
+}
+
 // ═══ Core: Generate Flowchart ═══════════════════════════════════════════════
 
 async function handleGenerate() {
     const prompt = promptInput.value.trim();
     if (!prompt) {
-        showToast('Please describe the flowchart you want to create.', 'error');
+        showToast(`Please describe the ${currentMode === 'block' ? 'block diagram' : 'flowchart'} you want to create.`, 'error');
         return;
     }
 
@@ -203,8 +284,13 @@ async function handleGenerate() {
     generateBtn.disabled = true;
     updateStatus('loading', 'Generating...');
 
+    const generateEndpoint = currentMode === 'block'
+        ? 'http://127.0.0.1:5000/api/generate-block'
+        : 'http://127.0.0.1:5000/api/generate';
+    const modeLabel = currentMode === 'block' ? 'block diagram' : 'flowchart';
+
     try {
-        const response = await fetch('http://127.0.0.1:5000/api/generate', {
+        const response = await fetch(generateEndpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ prompt })
@@ -219,7 +305,7 @@ async function handleGenerate() {
         currentBridgeCode = data.bridge_code;
         renderFromCode(currentBridgeCode);
         updateStatus('ready', 'Generated');
-        showToast('Flowchart generated successfully!', 'success');
+        showToast(`${currentMode === 'block' ? 'Block diagram' : 'Flowchart'} generated successfully!`, 'success');
 
     } catch (err) {
         console.error('Generate error:', err);
@@ -240,7 +326,7 @@ async function handleRefine() {
         return;
     }
     if (!currentBridgeCode) {
-        showToast('Generate a flowchart first.', 'error');
+        showToast(`Generate a ${currentMode === 'block' ? 'block diagram' : 'flowchart'} first.`, 'error');
         return;
     }
 
@@ -248,8 +334,12 @@ async function handleRefine() {
     refineBtn.textContent = 'Refining...';
     updateStatus('loading', 'Refining...');
 
+    const refineEndpoint = currentMode === 'block'
+        ? 'http://127.0.0.1:5000/api/refine-block'
+        : 'http://127.0.0.1:5000/api/refine';
+
     try {
-        const response = await fetch('http://127.0.0.1:5000/api/refine', {
+        const response = await fetch(refineEndpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ current_code: currentBridgeCode, instruction })
@@ -262,7 +352,7 @@ async function handleRefine() {
         renderFromCode(currentBridgeCode);
         refineInput.value = '';
         updateStatus('ready', 'Refined');
-        showToast('Flowchart refined!', 'success');
+        showToast(`${currentMode === 'block' ? 'Block diagram' : 'Flowchart'} refined!`, 'success');
 
     } catch (err) {
         showToast(err.message, 'error');
@@ -454,15 +544,16 @@ function hideProperties() {
 // ═══ Export Functions ════════════════════════════════════════════════════════
 
 async function handleExportPNG() {
+    const exportType = currentMode === 'block' ? 'block-diagram' : 'flowchart';
     if (!currentBridgeCode && renderer.nodes.length === 0) {
-        showToast('Generate a flowchart first.', 'error');
+        showToast(`Generate a ${currentMode === 'block' ? 'block diagram' : 'flowchart'} first.`, 'error');
         return;
     }
 
     try {
         const dataUrl = await renderer.exportPNG();
         const link = document.createElement('a');
-        link.download = 'flowchart.png';
+        link.download = `${exportType}.png`;
         link.href = dataUrl;
         link.click();
         showToast('PNG exported!', 'success');
@@ -472,8 +563,9 @@ async function handleExportPNG() {
 }
 
 function handleExportSVG() {
+    const exportType = currentMode === 'block' ? 'block-diagram' : 'flowchart';
     if (!currentBridgeCode && renderer.nodes.length === 0) {
-        showToast('Generate a flowchart first.', 'error');
+        showToast(`Generate a ${currentMode === 'block' ? 'block diagram' : 'flowchart'} first.`, 'error');
         return;
     }
 
@@ -481,7 +573,7 @@ function handleExportSVG() {
     const blob = new Blob([svgContent], { type: 'image/svg+xml' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.download = 'flowchart.svg';
+    link.download = `${exportType}.svg`;
     link.href = url;
     link.click();
     URL.revokeObjectURL(url);
@@ -510,11 +602,11 @@ function handleSave() {
     const name = nameInput.value.trim();
 
     if (!name) {
-        showToast('Enter a name for the flowchart.', 'error');
+        showToast(`Enter a name for the ${currentMode === 'block' ? 'block diagram' : 'flowchart'}.`, 'error');
         return;
     }
     if (!currentBridgeCode) {
-        showToast('Generate a flowchart first.', 'error');
+        showToast(`Generate a ${currentMode === 'block' ? 'block diagram' : 'flowchart'} first.`, 'error');
         return;
     }
     if (!db) {
@@ -526,6 +618,7 @@ function handleSave() {
         name,
         code: currentBridgeCode,
         prompt: promptInput.value,
+        mode: currentMode,
         createdAt: Date.now()
     };
 
@@ -608,6 +701,10 @@ function loadFlowchart(id) {
         .then(snapshot => {
             const data = snapshot.val();
             if (data) {
+                // Switch to the saved mode if available
+                if (data.mode && data.mode !== currentMode) {
+                    switchMode(data.mode);
+                }
                 currentBridgeCode = data.code;
                 promptInput.value = data.prompt || '';
                 renderFromCode(currentBridgeCode);

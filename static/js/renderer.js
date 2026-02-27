@@ -1,6 +1,6 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- *  FlowChart Interactive SVG Renderer v2.0
+ *  FlowChart Interactive SVG Renderer v2.4
  *  Full interactive editing: drag nodes, edit text, change shapes/colors,
  *  resize nodes, editable arrows, undo/redo, and auto-layout.
  * ═══════════════════════════════════════════════════════════════════════════
@@ -693,14 +693,77 @@ class FlowchartRenderer {
 
         // Edge label
         if (edge.label) {
-            const midX = (from.x + to.x) / 2;
-            const midY = (from.y + to.y) / 2;
+            let labelX, labelY;
+
+            if (edge.isBackRef) {
+                // For back-ref polylines, find midpoint along the path segments
+                // pathD format: M... L... L... L... L... L...
+                const points = pathD.match(/[ML](-?[\d.]+),(-?[\d.]+)/g);
+                if (points && points.length >= 2) {
+                    // Calculate total path length and find midpoint
+                    const coords = points.map(p => {
+                        const m = p.match(/(-?[\d.]+),(-?[\d.]+)/);
+                        return { x: parseFloat(m[1]), y: parseFloat(m[2]) };
+                    });
+                    let totalLen = 0;
+                    const segLens = [];
+                    for (let i = 1; i < coords.length; i++) {
+                        const dx = coords[i].x - coords[i - 1].x;
+                        const dy = coords[i].y - coords[i - 1].y;
+                        const len = Math.sqrt(dx * dx + dy * dy);
+                        segLens.push(len);
+                        totalLen += len;
+                    }
+                    let targetLen = totalLen / 2;
+                    let accumulated = 0;
+                    labelX = coords[0].x;
+                    labelY = coords[0].y;
+                    for (let i = 0; i < segLens.length; i++) {
+                        if (accumulated + segLens[i] >= targetLen) {
+                            const frac = (targetLen - accumulated) / segLens[i];
+                            labelX = coords[i].x + frac * (coords[i + 1].x - coords[i].x);
+                            labelY = coords[i].y + frac * (coords[i + 1].y - coords[i].y);
+                            break;
+                        }
+                        accumulated += segLens[i];
+                    }
+                } else {
+                    labelX = (from.x + to.x) / 2;
+                    labelY = (from.y + to.y) / 2;
+                }
+            } else {
+                // For Bezier curves: compute actual point on curve at t=0.5
+                // Cubic Bezier: B(t) = (1-t)^3*P0 + 3(1-t)^2*t*P1 + 3(1-t)*t^2*P2 + t^3*P3
+                // At t=0.5: B = 0.125*P0 + 0.375*P1 + 0.375*P2 + 0.125*P3
+                const dx = to.x - from.x;
+                const dy = to.y - from.y;
+
+                if (Math.abs(dx) < 5) {
+                    // Straight line — simple midpoint is correct
+                    labelX = (from.x + to.x) / 2;
+                    labelY = (from.y + to.y) / 2;
+                } else {
+                    // Curved path — compute Bezier midpoint
+                    let cp1x, cp1y, cp2x, cp2y;
+                    if (dy < 0) {
+                        cp1x = from.x; cp1y = from.y + 40;
+                        cp2x = to.x; cp2y = to.y - 40;
+                    } else {
+                        const curveOffset = Math.max(30, dy * 0.4);
+                        cp1x = from.x; cp1y = from.y + curveOffset;
+                        cp2x = to.x; cp2y = to.y - curveOffset;
+                    }
+                    // B(0.5):
+                    labelX = 0.125 * from.x + 0.375 * cp1x + 0.375 * cp2x + 0.125 * to.x;
+                    labelY = 0.125 * from.y + 0.375 * cp1y + 0.375 * cp2y + 0.125 * to.y;
+                }
+            }
 
             // Label bg
             const labelBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
             const labelW = edge.label.length * 7 + 16;
-            labelBg.setAttribute('x', midX - labelW / 2);
-            labelBg.setAttribute('y', midY - 10);
+            labelBg.setAttribute('x', labelX - labelW / 2);
+            labelBg.setAttribute('y', labelY - 10);
             labelBg.setAttribute('width', labelW);
             labelBg.setAttribute('height', 20);
             labelBg.setAttribute('rx', '6');
@@ -710,8 +773,8 @@ class FlowchartRenderer {
             g.appendChild(labelBg);
 
             const labelText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            labelText.setAttribute('x', midX);
-            labelText.setAttribute('y', midY);
+            labelText.setAttribute('x', labelX);
+            labelText.setAttribute('y', labelY);
             labelText.setAttribute('text-anchor', 'middle');
             labelText.setAttribute('dominant-baseline', 'central');
             labelText.setAttribute('fill', this.config.arrowLabelColor);

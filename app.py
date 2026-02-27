@@ -3,6 +3,29 @@ from flask_cors import CORS
 import requests
 import json
 import os
+import time
+import re
+import sys
+
+# ── Fix Windows console Unicode encoding ─────────────────────────────────────
+# Windows cmd/powershell uses cp1252 by default which can't handle ₹, ™, etc.
+# This prevents UnicodeEncodeError from crashing the server when logging.
+try:
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+except (AttributeError, OSError):
+    pass  # Fallback for older Python versions
+
+
+def safe_print(*args, **kwargs):
+    """Print that won't crash on Unicode characters on Windows."""
+    try:
+        print(*args, **kwargs)
+    except UnicodeEncodeError:
+        # Fallback: encode to ascii replacing problem chars
+        text = ' '.join(str(a) for a in args)
+        print(text.encode('ascii', errors='replace').decode('ascii'), **kwargs)
+
 
 app = Flask(__name__)
 CORS(app)
@@ -25,9 +48,15 @@ BLOCK TYPES (use these exactly):
 
 ARROWS (always required between consecutive blocks):
 - a>           → Forward/downward arrow (no label)
-- a*label*>    → Labeled forward arrow
+- a*label*>    → Labeled forward arrow (MUST have closing * before >)
 - a<           → Backward arrow
-- a*label*<    → Labeled backward arrow
+- a*label*<    → Labeled backward arrow (MUST have closing * before <)
+
+CRITICAL ARROW LABEL RULES:
+- Labels MUST be enclosed between two * characters: a*Yes*> NOT a*Yes>
+- The closing * before the direction symbol (> or <) is REQUIRED
+- Each arrow label applies ONLY to the very next connection
+- Never omit the closing * — it will break the parser
 
 BRANCHING from decisions:
 To create Yes/No branches from a decision, RESTATE the exact decision block code and add the branch arrow:
@@ -43,8 +72,18 @@ p["Fix Errors"]
 a>
 te()
 
+BRANCHING to multiple blocks at once (ma syntax):
+When one block connects to multiple targets, use ma*label*> and list targets inside []:
+d<"Check">
+ma*Yes*>[
+p["Action A"]
+a*No*
+p["Action B"]
+]
+NOTE: Inside ma blocks, each target node gets the group label unless overridden with a*custom label* on the line BEFORE the target node.
+
 LOOPS (back-reference jumps):
-p["Fix Errors"]a>!d<"Is valid?">
+p["Fix Errors"]a*Retry*>!d<"Is valid?">
 
 STRICT FORMATTING RULES:
 1. Phase 1 (Declaration): List ALL unique blocks one per line. NO arrows. NO duplicates.
@@ -55,6 +94,7 @@ STRICT FORMATTING RULES:
 6. Keep flowcharts clean: 4-10 blocks is ideal, avoid unnecessary complexity.
 7. Every block in Phase 1 must appear at least once in Phase 2.
 8. A decision block can appear multiple times in Phase 2 to create different branches.
+9. Arrow labels must ALWAYS use the format a*text*> with closing * — never a*text>
 
 COMPLETE EXAMPLE - User Login Flow:
 ts()
@@ -86,7 +126,98 @@ a>
 te()
 d<"Retry limit reached?">
 a*No*>
-p["Show error message"]a>!l["Enter credentials"]
+p["Show error message"]a*Retry*>!l["Enter credentials"]
+"""
+
+# ── Block Diagram Bridge Language System Prompt ──────────────────────────────
+BLOCK_DIAGRAM_SYSTEM_PROMPT = """You are a block diagram code generator. You ONLY output code in a custom "Bridge Language" DSL. You NEVER explain, comment, or add anything outside the DSL code. Your entire response must be ONLY valid Bridge Language code.
+
+BLOCK TYPES (use these exactly):
+- t("text")    → Oval shape (for hubs, databases, endpoints)
+- p["text"]    → Rectangle shape (for servers, modules, services)
+- d<"text">    → Diamond shape (for load balancers, routers, decision points)
+- l["text"]    → Parallelogram shape (for external APIs, I/O, external services)
+- c[)          → Small connector circle (merge point)
+- B{           → Complex container block with positional text:
+    *tm: "Top Middle"
+    *bm: "Bottom Middle"
+    *tl: "Top Left"
+    *tr: "Top Right"
+    *bl: "Bottom Left"
+    *br: "Bottom Right"
+  }
+
+ARROWS (always required between connected blocks):
+- a>           → Forward/downward arrow (no label)
+- a*label*>    → Labeled forward arrow (MUST have closing * before >)
+- a<           → Backward/upward arrow
+- a*label*<    → Labeled backward arrow (MUST have closing * before <)
+
+CRITICAL ARROW LABEL RULES:
+- Labels MUST be enclosed between two * characters: a*Request*> NOT a*Request>
+- The closing * before the direction symbol (> or <) is REQUIRED
+- Never omit the closing * — it will break the parser
+
+BRANCHING OUT (one block sends to multiple):
+p["Load Balancer"]
+ma*routes to*>[
+p["Server A"]
+a*also routes to*
+p["Server B"]
+]
+NOTE: Inside ma blocks, each target gets the group label unless overridden with a*custom label* on the line BEFORE the target node.
+
+MERGING IN (multiple blocks feed into one):
+t("Central Database")ma*saves data*<[
+p["Server A"]
+p["Server B"]
+]
+
+JUMP ARROWS (connect to previously declared blocks):
+p["Module C"]a*feedback*>!p["Module A"]
+
+STRICT FORMATTING RULES:
+1. Phase 1 (Declaration): List ALL unique blocks one per line. NO arrows. NO duplicates.
+2. Separator: Exactly five dots on their own line: .....
+3. Phase 2 (Connections): Connect blocks with arrows. EVERY pair of consecutive blocks MUST have an arrow (a> or a*label*>) between them. NEVER write two block codes on consecutive lines without an arrow between them.
+4. Phase 2 text MUST EXACTLY match Phase 1 text character-for-character.
+5. Output ONLY valid Bridge Language code. No markdown fences, no explanations, no comments.
+6. Do NOT use ts() or te(). Those are flowchart-only. Use t("text"), p["text"], etc.
+7. Use appropriate shapes for different component types in the architecture.
+8. Keep diagrams clean: 4-12 blocks is ideal.
+9. Arrow labels must ALWAYS use the format a*text*> with closing * — never a*text>
+10. CRITICAL: EVERY block declared in Phase 1 MUST be connected to at least one other block in Phase 2. No orphan/disconnected blocks allowed. If a block exists, it must have at least one arrow going to or from it.
+11. In Phase 2, make sure the data/control flow is complete. Every block should be reachable from at least one other block.
+
+COMPLETE EXAMPLE - Microservice Architecture:
+p["Client App"]
+l["API Gateway"]
+d<"Auth Service">
+p["User Service"]
+p["Order Service"]
+t("PostgreSQL DB")
+t("Redis Cache")
+.....
+p["Client App"]
+a*HTTP Request*>
+l["API Gateway"]
+a*Authenticate*>
+d<"Auth Service">
+ma*Authorized*>[
+p["User Service"]
+a*Route Order*
+p["Order Service"]
+]
+p["User Service"]
+a*Query*>
+t("PostgreSQL DB")
+p["Order Service"]
+a*Query*>
+t("PostgreSQL DB")
+d<"Auth Service">
+a*Cache Token*>
+t("Redis Cache")
+d<"Auth Service">a*Rejected*>!p["Client App"]
 """
 
 @app.route('/')
@@ -163,6 +294,133 @@ def generate_flowchart():
         return jsonify({'error': 'Could not connect to the AI service.'}), 503
     except Exception as e:
         print(f"Server error: {str(e)}")
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
+
+
+@app.route('/api/generate-block', methods=['POST'])
+def generate_block_diagram():
+    """
+    Receives a natural language description from the user,
+    sends it to SarvamM to translate into Bridge Language for block diagrams,
+    and returns the Bridge Language code to the frontend.
+    """
+    try:
+        data = request.get_json()
+        user_prompt = data.get('prompt', '')
+
+        if not user_prompt.strip():
+            return jsonify({'error': 'Please provide a description for the block diagram.'}), 400
+
+        headers = {
+            'Content-Type': 'application/json',
+            'api-subscription-key': SARVAM_API_KEY
+        }
+
+        payload = {
+            'model': 'sarvam-m',
+            'messages': [
+                {
+                    'role': 'system',
+                    'content': BLOCK_DIAGRAM_SYSTEM_PROMPT
+                },
+                {
+                    'role': 'user',
+                    'content': f"Generate a block diagram in Bridge Language for: {user_prompt}"
+                }
+            ],
+            'temperature': 0.3,
+            'max_tokens': 2048
+        }
+
+        response = requests.post(SARVAM_API_URL, headers=headers, json=payload, timeout=60)
+
+        if response.status_code != 200:
+            error_detail = response.text
+            print(f"Sarvam API Error [{response.status_code}]: {error_detail}")
+            return jsonify({
+                'error': f'AI service returned status {response.status_code}',
+                'detail': error_detail
+            }), 502
+
+        result = response.json()
+        bridge_code = result['choices'][0]['message']['content'].strip()
+
+        if bridge_code.startswith('```'):
+            lines = bridge_code.split('\n')
+            lines = [l for l in lines if not l.strip().startswith('```')]
+            bridge_code = '\n'.join(lines).strip()
+
+        return jsonify({
+            'success': True,
+            'bridge_code': bridge_code,
+            'usage': result.get('usage', {})
+        })
+
+    except requests.exceptions.Timeout:
+        return jsonify({'error': 'The AI service timed out. Please try again.'}), 504
+    except requests.exceptions.ConnectionError:
+        return jsonify({'error': 'Could not connect to the AI service.'}), 503
+    except Exception as e:
+        print(f"Server error: {str(e)}")
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
+
+
+@app.route('/api/refine-block', methods=['POST'])
+def refine_block_diagram():
+    """
+    Takes existing Bridge Language code for a block diagram and a refinement instruction,
+    sends both to SarvamM to produce an updated version.
+    """
+    try:
+        data = request.get_json()
+        current_code = data.get('current_code', '')
+        instruction = data.get('instruction', '')
+
+        if not instruction.strip():
+            return jsonify({'error': 'Please provide a refinement instruction.'}), 400
+
+        headers = {
+            'Content-Type': 'application/json',
+            'api-subscription-key': SARVAM_API_KEY
+        }
+
+        payload = {
+            'model': 'sarvam-m',
+            'messages': [
+                {
+                    'role': 'system',
+                    'content': BLOCK_DIAGRAM_SYSTEM_PROMPT
+                },
+                {
+                    'role': 'user',
+                    'content': f"Here is my current block diagram code:\n{current_code}\n\nPlease modify it with this instruction: {instruction}\n\nOutput ONLY the complete updated Bridge Language code."
+                }
+            ],
+            'temperature': 0.3,
+            'max_tokens': 2048
+        }
+
+        response = requests.post(SARVAM_API_URL, headers=headers, json=payload, timeout=60)
+
+        if response.status_code != 200:
+            return jsonify({'error': f'AI service returned status {response.status_code}'}), 502
+
+        result = response.json()
+        bridge_code = result['choices'][0]['message']['content'].strip()
+
+        if bridge_code.startswith('```'):
+            lines = bridge_code.split('\n')
+            lines = [l for l in lines if not l.strip().startswith('```')]
+            bridge_code = '\n'.join(lines).strip()
+
+        return jsonify({
+            'success': True,
+            'bridge_code': bridge_code,
+            'usage': result.get('usage', {})
+        })
+
+    except Exception as e:
+        print(f"Refine block diagram error: {str(e)}")
         return jsonify({'error': f'Server error: {str(e)}'}), 500
 
 
@@ -279,6 +537,7 @@ def law_chat():
     """
     Receives user query, sends it to SarvamM with the law system prompt,
     and returns a structured JSON (message and questions) to the frontend.
+    Includes retry logic for transient Sarvam API failures.
     """
     try:
         data = request.get_json()
@@ -322,23 +581,124 @@ def law_chat():
             'max_tokens': 2048
         }
 
-        print(f"[LawBot] Sending request to Sarvam API...")
-        response = requests.post(SARVAM_API_URL, headers=headers, json=payload, timeout=90)
-        print(f"[LawBot] Sarvam API responded with status: {response.status_code}")
+        # ── Retry logic for transient Sarvam API failures ─────────────────
+        MAX_RETRIES = 3
+        law_response = None
+        last_error = None
 
-        if response.status_code != 200:
-            error_detail = response.text
-            print(f"Law Bot - Sarvam API Error [{response.status_code}]: {error_detail}")
-            return jsonify({
-                'error': f'AI service returned status {response.status_code}',
-                'detail': error_detail
-            }), 502
+        for attempt in range(1, MAX_RETRIES + 1):
+            try:
+                safe_print(f"[LawBot] Attempt {attempt}/{MAX_RETRIES} - Sending request to Sarvam API...")
+                response = requests.post(SARVAM_API_URL, headers=headers, json=payload, timeout=90)
+                safe_print(f"[LawBot] Sarvam API responded with status: {response.status_code}")
 
-        result = response.json()
-        law_response = result['choices'][0]['message']['content'].strip()
+                if response.status_code != 200:
+                    error_detail = response.text
+                    safe_print(f"[LawBot] API Error [{response.status_code}]: {error_detail}")
+                    # 429 (rate limit) and 5xx (server errors) are retryable
+                    if response.status_code in (429, 500, 502, 503, 504) and attempt < MAX_RETRIES:
+                        wait_time = 2 ** attempt  # 2s, 4s, 8s
+                        safe_print(f"[LawBot] Retryable status {response.status_code}, waiting {wait_time}s...")
+                        time.sleep(wait_time)
+                        continue
+                    return jsonify({
+                        'error': f'AI service returned status {response.status_code}',
+                        'detail': error_detail
+                    }), 502
+
+                # Check for empty response body
+                response_text = response.text.strip()
+                if not response_text:
+                    safe_print(f"[LawBot] WARNING: Empty response body on attempt {attempt}")
+                    if attempt < MAX_RETRIES:
+                        wait_time = 2 ** attempt
+                        safe_print(f"[LawBot] Retrying in {wait_time}s...")
+                        time.sleep(wait_time)
+                        continue
+                    return jsonify({
+                        'error': 'AI service returned an empty response after multiple retries. Please try again.'
+                    }), 502
+
+                # Parse the API response
+                try:
+                    result = json.loads(response_text)
+                except json.JSONDecodeError as je:
+                    safe_print(f"[LawBot] WARNING: Failed to parse API response as JSON on attempt {attempt}: {je}")
+                    safe_print(f"[LawBot] Raw response (first 500 chars): {response_text[:500]}")
+                    if attempt < MAX_RETRIES:
+                        wait_time = 2 ** attempt
+                        safe_print(f"[LawBot] Retrying in {wait_time}s...")
+                        time.sleep(wait_time)
+                        continue
+                    return jsonify({
+                        'error': 'AI service returned an invalid response. Please try again.'
+                    }), 502
+
+                # Extract content from choices
+                choices = result.get('choices', [])
+                if not choices or not choices[0].get('message', {}).get('content'):
+                    safe_print(f"[LawBot] WARNING: No valid content in choices on attempt {attempt}")
+                    safe_print(f"[LawBot] Result keys: {list(result.keys())}")
+                    if attempt < MAX_RETRIES:
+                        wait_time = 2 ** attempt
+                        safe_print(f"[LawBot] Retrying in {wait_time}s...")
+                        time.sleep(wait_time)
+                        continue
+                    return jsonify({
+                        'error': 'AI service returned a response with no content. Please try again.'
+                    }), 502
+
+                law_response = choices[0]['message']['content'].strip()
+                if not law_response:
+                    safe_print(f"[LawBot] WARNING: Empty content string on attempt {attempt}")
+                    if attempt < MAX_RETRIES:
+                        wait_time = 2 ** attempt
+                        safe_print(f"[LawBot] Retrying in {wait_time}s...")
+                        time.sleep(wait_time)
+                        continue
+                    return jsonify({
+                        'error': 'AI service returned empty content. Please try again.'
+                    }), 502
+
+                # Successfully got a response — break out of retry loop
+                safe_print(f"[LawBot] Got valid response on attempt {attempt} (length: {len(law_response)})")
+                break
+
+            except requests.exceptions.Timeout:
+                last_error = 'timeout'
+                safe_print(f"[LawBot] Timeout on attempt {attempt}")
+                if attempt < MAX_RETRIES:
+                    wait_time = 2 ** attempt
+                    safe_print(f"[LawBot] Retrying in {wait_time}s...")
+                    time.sleep(wait_time)
+                    continue
+                return jsonify({'error': 'The AI service timed out after multiple retries. Please try again.'}), 504
+
+            except requests.exceptions.ConnectionError as e:
+                last_error = str(e)
+                safe_print(f"[LawBot] Connection error on attempt {attempt}: {e}")
+                if attempt < MAX_RETRIES:
+                    wait_time = 2 ** attempt
+                    safe_print(f"[LawBot] Retrying in {wait_time}s...")
+                    time.sleep(wait_time)
+                    continue
+                return jsonify({'error': 'Could not connect to the AI service after multiple retries.'}), 503
+
+            except requests.exceptions.SSLError as e:
+                last_error = str(e)
+                safe_print(f"[LawBot] SSL error on attempt {attempt}: {e}")
+                if attempt < MAX_RETRIES:
+                    wait_time = 2 ** attempt
+                    safe_print(f"[LawBot] Retrying in {wait_time}s...")
+                    time.sleep(wait_time)
+                    continue
+                return jsonify({'error': 'SSL connection error after multiple retries.'}), 503
+
+        # If we got here without law_response, something unexpected happened
+        if not law_response:
+            return jsonify({'error': 'Failed to get a response from the AI service. Please try again.'}), 502
 
         # ── Robust JSON extraction ───────────────────────────────────────
-        import re
 
         # Step 1: Remove BOM and invisible characters
         law_response = law_response.lstrip('\ufeff\u200b\u200c\u200d')
@@ -350,9 +710,9 @@ def law_chat():
         parsed = None
         try:
             parsed = json.loads(law_response)
-            print(f"[LawBot] Direct JSON parse succeeded")
+            safe_print(f"[LawBot] Direct JSON parse succeeded")
         except json.JSONDecodeError:
-            print(f"[LawBot] Direct parse failed, trying extraction...")
+            safe_print(f"[LawBot] Direct parse failed, trying extraction...")
 
         # Step 4: If direct parse failed, extract the first complete JSON object
         if parsed is None:
@@ -386,13 +746,13 @@ def law_chat():
                     json_str = law_response[first_brace:end_pos + 1]
                     try:
                         parsed = json.loads(json_str)
-                        print(f"[LawBot] Extracted JSON from position {first_brace}-{end_pos}")
+                        safe_print(f"[LawBot] Extracted JSON from position {first_brace}-{end_pos}")
                     except json.JSONDecodeError:
-                        print(f"[LawBot] Extracted JSON also failed to parse")
+                        safe_print(f"[LawBot] Extracted JSON also failed to parse")
 
         # Step 5: Final fallback — wrap as plain message
         if parsed is None:
-            print(f"[LawBot] All JSON parsing failed, using fallback")
+            safe_print(f"[LawBot] All JSON parsing failed, using fallback")
             parsed = {
                 "phase": "questioning",
                 "message": law_response,
@@ -400,23 +760,14 @@ def law_chat():
                 "options": []
             }
 
-        print(f"[LawBot] Successfully processed response (phase: {parsed.get('phase', 'unknown')})")
+        safe_print(f"[LawBot] Successfully processed response (phase: {parsed.get('phase', 'unknown')})")
         return jsonify({
             'success': True,
             'response': parsed
         })
 
-    except requests.exceptions.Timeout:
-        print("[LawBot] ERROR: Sarvam API timed out after 90s")
-        return jsonify({'error': 'The AI service timed out. Please try again.'}), 504
-    except requests.exceptions.ConnectionError as e:
-        print(f"[LawBot] ERROR: Could not connect to Sarvam API: {str(e)}")
-        return jsonify({'error': 'Could not connect to the AI service. Please try again.'}), 503
-    except requests.exceptions.SSLError as e:
-        print(f"[LawBot] ERROR: SSL error connecting to Sarvam API: {str(e)}")
-        return jsonify({'error': 'SSL connection error. Please try again.'}), 503
     except Exception as e:
-        print(f"[LawBot] ERROR: {type(e).__name__}: {str(e)}")
+        safe_print(f"[LawBot] ERROR: {type(e).__name__}: {str(e)}")
         return jsonify({'error': f'Server error: {str(e)}'}), 500
 
 

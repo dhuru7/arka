@@ -1,0 +1,167 @@
+Block Diagram Generator Project Documentation
+
+1. Overview
+
+A system designed to generate visual block diagrams, system architectures, and graphs from natural language inputs.
+
+2. Core Components
+
+AI Engine: Sarvam M (Large Language Model).
+
+Bridge Language: A custom intermediate language acting as the connector.
+
+Renderer: A separate custom program designed to read the bridge language and generate the visual diagram.
+
+3. The Problem & Solution
+
+Sarvam M is a text-based LLM and cannot natively draw visual diagrams. To bridge the gap between text generation and visual rendering, the system uses a custom language pipeline:
+
+Input: The user provides instructions or a system description in plain English.
+
+Translation: Sarvam M translates the English input into the custom "Bridge Language."
+
+Execution: The Renderer program reads the Bridge Language output and converts it into the final visual block diagram.
+
+4. Bridge Language: Shape Syntax Reference
+
+The language provides several geometric shapes. The AI can use any shape as requested by the user.
+
+4.1 Oval Shape
+
+Syntax: t( ... )
+
+Content: Text is placed inside the parentheses.
+
+String Formatting: Text can be enclosed using single ('), double ("), triple single ('''), or triple double (""") quotes.
+
+Example: t("System Hub")
+
+4.2 Rectangle Shape
+
+Syntax: p[ ... ]
+
+Content: Text is placed directly inside the square brackets.
+
+String Formatting: Uses flexible quote styles (', ", ''', """).
+
+Example: p["Main Server"]
+
+4.3 Diamond Shape
+
+Syntax: d< ... >
+
+Content: Text is placed inside the angle brackets.
+
+String Formatting: Uses flexible quote styles (', ", ''', """).
+
+Example: d<"Load Balancer">
+
+4.4 Parallelogram Shape
+
+Syntax: l[ ... ]
+
+Content: Text is placed inside the square brackets.
+
+String Formatting: Uses flexible quote styles (', ", ''', """).
+
+Example: l["External API"]
+
+4.5 Small Circle / Connector Node
+
+Syntax: c[)
+
+Usage: A small circular point, often used when multiple lines need to merge into a single empty point before continuing.
+
+4.6 Complex Container Block
+
+A complex container block that allows for specific text placement in various positions (headings) within the block.
+
+Syntax: B{ ... }
+
+Positional Tags:
+
+*tm: - Top Middle
+
+*bm: - Bottom Middle
+
+*tl: - Top Left
+
+*tr: - Top Right
+
+*bl: - Bottom Left
+
+*br: - Bottom Right
+
+Example:
+
+B{
+  *tm: "Database Cluster"
+  *bl: "Primary"
+  *br: "Replica"
+}
+
+
+5. Arrows and Connections
+
+Arrows define the flow and connections between the declared shapes.
+
+Standard Arrow: Use a> for a forward/downward arrow (→) or a< for a backward/upward arrow (←).
+
+Labeled Arrow: To add text to an arrow, enclose the text after the a and before the directional triangle.
+
+Syntax: a*write on arrow> or a*write anything on the arrow<
+
+Multiple Connections (Branching Out): Used when one block sends arrows to multiple subsequent blocks. Target blocks are listed inside square brackets.
+
+Syntax Example:
+
+p["Load Balancer"]
+ma*routes to>[
+p["Server A"]
+p["Server B"]
+]
+
+
+Multiple Incoming Connections (Merging In): Used when multiple arrows converge into a single target block. The target block is written first, followed by ma...<[, and then the source blocks.
+
+Syntax Example:
+
+t("Central Database")ma*saves data<[
+p["Server A"]
+p["Server B"]
+]
+
+
+Targeted / Jump Arrows: Used to connect blocks to specific, previously declared blocks (useful for loops or jumping across the diagram). Use the ! symbol followed exactly by the code of the target block.
+
+Syntax Example: p["Module C"]a>!p["Module A"]
+
+6. Code Structure & Generation Procedure
+
+To ensure the Renderer parses the code correctly, the AI MUST follow a strict Two-Phase formatting rule.
+
+Phase 1: Declaration: ALL shapes and blocks must be declared first, each on a new line.
+
+Separator: The declaration phase and the structure phase MUST be separated by exactly five dots on a new line: .....
+
+Phase 2: Structure/Connection: After the separator, the blocks are connected using the arrow syntax.
+
+Complete Block Diagram Example:
+
+p["Client Application"]
+l["API Gateway"]
+d<"Authentication">
+p["Microservice A"]
+t("User Database")
+.....
+p["Client Application"]
+a*Request>
+l["API Gateway"]
+a>
+d<"Authentication">
+ma*Valid>[
+p["Microservice A"]
+a>
+t("User Database")
+]
+d<"Authentication">a*Invalid>!p["Client Application"]

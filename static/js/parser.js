@@ -1,6 +1,6 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- *  Bridge Language Parser v2.0
+ *  Bridge Language Parser v2.4
  *  Robust parser for the custom flowchart DSL
  *  Handles restated decision branching, back-references, and multi-connections
  * ═══════════════════════════════════════════════════════════════════════════
@@ -268,12 +268,13 @@ class BridgeParser {
 
     _processMultiConnect(anchorNode, innerLines, groupLabel, groupDir, mode) {
         let currentLabel = null;
+        let isFirstTarget = true;
 
         for (const il of innerLines) {
             const trimmed = il.trim();
             if (!trimmed) continue;
 
-            // Check if it's a label line
+            // Check if it's an arrow line (a>, a<, a*label*>, a*label*<)
             const arrowMatch = this._matchArrowLine(trimmed);
             if (arrowMatch) {
                 currentLabel = arrowMatch.label;
@@ -290,7 +291,16 @@ class BridgeParser {
             // It's a node reference
             const node = this._findNodeByCode(trimmed);
             if (node && anchorNode) {
-                const label = currentLabel || groupLabel;
+                // Label priority: explicit currentLabel > groupLabel (only for first target) > null
+                let label;
+                if (currentLabel !== null) {
+                    label = currentLabel;
+                } else if (isFirstTarget) {
+                    label = groupLabel;
+                } else {
+                    label = null;
+                }
+
                 if (mode === 'outgoing') {
                     if (groupDir === 'forward') {
                         this._addEdge(anchorNode.id, node.id, label);
@@ -307,6 +317,7 @@ class BridgeParser {
                 }
             }
             currentLabel = null;
+            isFirstTarget = false;
         }
     }
 

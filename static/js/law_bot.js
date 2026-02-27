@@ -55,23 +55,23 @@ document.addEventListener('DOMContentLoaded', () => {
         inputArea.focus();
     });
 
-    // ── Build API URL (always use current origin) ──────────────────────────
+    // ── Build API URL (always point to Flask server) ────────────────────────
     function getApiUrl(path) {
-        // Use the current page origin to build absolute URL
-        const base = window.location.origin;
-        return base + path;
+        // Always use Flask server at port 5000, so the law bot works
+        // whether opened via Flask (port 5000) or Live Server (port 5500)
+        return 'http://127.0.0.1:5000' + path;
     }
 
     // ── Fetch with retry (handles empty responses and JSON parse errors) ──
-    async function fetchWithRetry(url, options, maxRetries = 3) {
+    async function fetchWithRetry(url, options, maxRetries = 2) {
         let lastError;
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
                 console.log(`[LawBot] API attempt ${attempt}/${maxRetries} → ${url}`);
 
-                // Add a 120-second timeout via AbortController
+                // 150-second timeout to allow backend retries (up to ~90s each) to complete
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 120000);
+                const timeoutId = setTimeout(() => controller.abort(), 150000);
                 const fetchOptions = { ...options, signal: controller.signal };
 
                 const response = await fetch(url, fetchOptions);
@@ -86,7 +86,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!responseText || responseText.trim() === '') {
                     console.warn(`[LawBot] Empty response body on attempt ${attempt}`);
                     if (attempt < maxRetries) {
-                        await new Promise(r => setTimeout(r, 2000));
+                        const waitMs = 3000 * attempt; // 3s, 6s
+                        console.log(`[LawBot] Retrying in ${waitMs}ms...`);
+                        await new Promise(r => setTimeout(r, waitMs));
                         continue;
                     }
                     throw new Error('Server returned an empty response. Please try again.');
@@ -100,7 +102,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.warn(`[LawBot] JSON parse error on attempt ${attempt}:`, parseErr.message);
                     console.warn(`[LawBot] Raw response (first 500 chars):`, responseText.substring(0, 500));
                     if (attempt < maxRetries) {
-                        await new Promise(r => setTimeout(r, 2000));
+                        const waitMs = 3000 * attempt;
+                        console.log(`[LawBot] Retrying in ${waitMs}ms...`);
+                        await new Promise(r => setTimeout(r, waitMs));
                         continue;
                     }
                     throw new Error('Server returned an invalid response. Please try again.');
@@ -112,12 +116,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 lastError = err;
                 if (err.name === 'AbortError') {
                     console.warn(`[LawBot] Request timed out on attempt ${attempt}`);
-                    lastError = new Error('Request timed out after 120 seconds. Please try again.');
+                    lastError = new Error('Request timed out. The AI service may be busy — please try again.');
                 } else {
                     console.warn(`[LawBot] Attempt ${attempt} failed:`, err.message);
                 }
                 if (attempt < maxRetries) {
-                    await new Promise(r => setTimeout(r, 2000));
+                    const waitMs = 3000 * attempt;
+                    console.log(`[LawBot] Retrying in ${waitMs}ms...`);
+                    await new Promise(r => setTimeout(r, waitMs));
                 }
             }
         }

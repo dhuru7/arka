@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description"
         content="Arka – AI-powered flowchart generator. Describe your flowchart in plain English and watch it come to life.">
-    <title>ARKA | AI Flowchart Generator</title>
+    <title>ARKA | AI Diagram Generator</title>
 
     <!-- Google Fonts for Nothing OS Aesthetic -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -48,13 +48,37 @@
             <div class="sidebar-header">
                 <div class="logo-text">
                     <h1>ARKA</h1>
-                    <span>AI Flowchart Generator</span>
+                    <span id="subtitle-text">AI Flowchart Generator</span>
+                </div>
+            </div>
+
+            <!-- Mode Toggle -->
+            <div class="mode-toggle-section">
+                <div class="mode-toggle" id="mode-toggle">
+                    <div class="mode-toggle-indicator" id="mode-indicator"></div>
+                    <button class="mode-toggle-btn active" id="mode-flowchart" data-mode="flowchart">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14"
+                            height="14">
+                            <path d="M6 3h12M6 3v6m12-3v6M6 9h12M6 15h12M6 15v6m12-6v6M6 21h12"></path>
+                        </svg>
+                        Flowchart
+                    </button>
+                    <button class="mode-toggle-btn" id="mode-block" data-mode="block">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14"
+                            height="14">
+                            <rect x="3" y="3" width="7" height="7" rx="1"></rect>
+                            <rect x="14" y="3" width="7" height="7" rx="1"></rect>
+                            <rect x="3" y="14" width="7" height="7" rx="1"></rect>
+                            <rect x="14" y="14" width="7" height="7" rx="1"></rect>
+                        </svg>
+                        Block Diagram
+                    </button>
                 </div>
             </div>
 
             <!-- Prompt Input -->
             <div class="prompt-section">
-                <label for="prompt-input">Describe your flow</label>
+                <label for="prompt-input" id="prompt-label">Describe your flow</label>
                 <div class="prompt-input-wrap">
                     <textarea id="prompt-input" class="prompt-input"
                         placeholder="e.g. A user login flow with email validation, password check, and 2FA verification..."
@@ -62,13 +86,13 @@
                 </div>
                 <button class="generate-btn primary" id="generate-btn">
                     <div class="spinner"></div>
-                    <span class="btn-text">Generate Flowchart</span>
+                    <span class="btn-text" id="generate-btn-text">Generate Flowchart</span>
                     <span class="btn-loading-text">Processing...</span>
                 </button>
             </div>
 
-            <!-- Quick Examples -->
-            <div class="examples-section">
+            <!-- Quick Examples - Flowchart -->
+            <div class="examples-section" id="examples-flowchart">
                 <label>Quick Presets</label>
                 <div class="example-chips">
                     <button class="example-chip"
@@ -83,6 +107,28 @@
                         data-prompt="CI/CD pipeline with testing and deployment stages">CI/CD</button>
                     <button class="example-chip"
                         data-prompt="Customer support ticket handling workflow">Support</button>
+                </div>
+            </div>
+
+            <!-- Quick Examples - Block Diagram -->
+            <div class="examples-section" id="examples-block" style="display: none;">
+                <label>Quick Presets</label>
+                <div class="example-chips">
+                    <button class="example-chip"
+                        data-prompt="Microservice architecture with API gateway, auth service, and database">Microservices</button>
+                    <button class="example-chip"
+                        data-prompt="Cloud infrastructure with load balancer, web servers, and database cluster">Cloud
+                        Infra</button>
+                    <button class="example-chip"
+                        data-prompt="Client-server architecture with frontend, backend API, and database">Client-Server</button>
+                    <button class="example-chip"
+                        data-prompt="IoT system with sensors, gateway, cloud processing, and dashboard">IoT
+                        System</button>
+                    <button class="example-chip"
+                        data-prompt="Data pipeline with ingestion, processing, storage, and visualization layers">Data
+                        Pipeline</button>
+                    <button class="example-chip"
+                        data-prompt="Network topology with router, switches, servers, and clients">Network</button>
                 </div>
             </div>
 
@@ -209,9 +255,9 @@
             <!-- Canvas Container (SVG will be injected here by renderer) -->
             <div class="canvas-container" id="canvas-container">
                 <div class="empty-state" id="empty-state">
-                    <span class="bracket-text">[ ]</span>
-                    <h2>AWAITING PROMPT</h2>
-                    <p>Describe what you need in the sidebar to initialize rendering.</p>
+                    <span class="bracket-text" id="empty-icon">[ ]</span>
+                    <h2 id="empty-title">AWAITING PROMPT</h2>
+                    <p id="empty-desc">Describe what you need in the sidebar to initialize rendering.</p>
                     <p class="hint-text">Double-click nodes to edit text. Drag to reposition. Ctrl+Z to undo.</p>
                 </div>
             </div>
@@ -226,7 +272,7 @@
                     <span id="edge-count">EDGES: 0</span>
                 </div>
                 <div class="status-right">
-                    <span>ARKA V2.0</span>
+                    <span>ARKA V2.4</span>
                 </div>
             </div>
         </main>
