@@ -34,6 +34,7 @@ const propsContent = document.getElementById('prop-content');
 const btnUndo = document.getElementById('btn-undo');
 const btnRedo = document.getElementById('btn-redo');
 const btnDeleteSelected = document.getElementById('btn-delete-selected');
+const btnEditText = document.getElementById('btn-edit-text');
 
 // ── Instances ───────────────────────────────────────────────────────────────
 const parser = new BridgeParser();
@@ -103,18 +104,26 @@ function setupEventListeners() {
         node.raw = newRaw;
     });
 
+    // Edge label edit from renderer
+    renderer.svg.addEventListener('edgeedit', (e) => {
+        // Could sync code here if needed in the future
+    });
+
     // Selection change → show/hide properties panel
     renderer.svg.addEventListener('selectionchange', (e) => {
         const { node, edge } = e.detail;
         if (node) {
             showNodeProperties(node);
             btnDeleteSelected.disabled = false;
+            btnEditText.disabled = (node.type === 'connector');
         } else if (edge) {
             showEdgeProperties(edge);
             btnDeleteSelected.disabled = false;
+            btnEditText.disabled = false;
         } else {
             hideProperties();
             btnDeleteSelected.disabled = true;
+            btnEditText.disabled = true;
         }
     });
 
@@ -143,6 +152,15 @@ function setupEventListeners() {
         }
     });
 
+    // Edit text on selected node/edge
+    btnEditText.addEventListener('click', () => {
+        if (renderer.selectedNode && renderer.selectedNode.type !== 'connector') {
+            renderer._startInlineEdit(renderer.selectedNode);
+        } else if (renderer.selectedEdge) {
+            renderer._editEdgeLabel(renderer.selectedEdge);
+        }
+    });
+
     // Auto layout
     document.getElementById('btn-auto-layout').addEventListener('click', () => {
         renderer.autoLayout();
@@ -158,7 +176,6 @@ function setupEventListeners() {
     // Code viewer
     document.getElementById('btn-code-view').addEventListener('click', handleOpenCodeEditor);
     document.getElementById('code-editor-apply').addEventListener('click', handleApplyCodeEdit);
-    document.getElementById('code-editor-cancel').addEventListener('click', () => closeAllModals());
 
     document.getElementById('btn-save').addEventListener('click', () => openModal('save-modal'));
     document.getElementById('btn-load').addEventListener('click', handleOpenLoad);
@@ -537,13 +554,7 @@ function showEdgeProperties(edge) {
     `;
 
     document.getElementById('prop-edit-edge-label').addEventListener('click', () => {
-        const newLabel = prompt('Arrow label:', edge.label || '');
-        if (newLabel !== null) {
-            edge.label = newLabel.trim() || null;
-            renderer._saveUndoState();
-            renderer._drawAll();
-            showEdgeProperties(edge);
-        }
+        renderer._editEdgeLabel(edge);
     });
 
     document.getElementById('prop-delete-edge').addEventListener('click', () => {

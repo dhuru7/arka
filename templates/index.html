@@ -207,6 +207,12 @@
                 <div class="toolbar-divider"></div>
 
                 <div class="toolbar-right">
+                    <!-- Edit Text -->
+                    <button class="toolbar-btn icon-btn" id="btn-edit-text" title="Edit Text" disabled>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
+                        </svg>
+                    </button>
                     <button class="toolbar-btn icon-btn" id="btn-delete-selected" title="Delete Selected" disabled>
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <polyline points="3 6 5 6 21 6"></polyline>
@@ -381,7 +387,6 @@
                     placeholder="No code generated yet. Generate a flowchart first."></textarea>
             </div>
             <div class="modal-footer">
-                <button class="modal-cancel" id="code-editor-cancel">Close</button>
                 <button class="primary" id="code-editor-apply">Apply Changes</button>
             </div>
         </div>

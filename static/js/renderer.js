@@ -196,8 +196,13 @@ class FlowchartRenderer {
         this.selectedNode = null;
         this.selectedEdge = null;
 
-        this._saveUndoState();
+        // Clear undo/redo stacks for a fresh diagram
+        this.undoStack = [];
+        this.redoStack = [];
+
         this._layoutNodes();
+        // Save initial state AFTER layout so positions are correct
+        this._saveUndoState();
         this._drawAll();
         this._centerGraph();
     }
@@ -610,19 +615,41 @@ class FlowchartRenderer {
         g.setAttribute('data-edge-from', edge.from);
         g.setAttribute('data-edge-to', edge.to);
 
-        const from = this._getAnchor(fromNode, 'bottom');
-        const to = this._getAnchor(toNode, 'top');
-
-        // Calculate anchor offsets for parallel edges
+        // Determine outgoing and incoming info
         const outgoing = this.edges.filter(e => e.from === edge.from && !e.isBackRef);
         const incoming = this.edges.filter(e => e.to === edge.to && !e.isBackRef);
+        const outIdx = outgoing.indexOf(edge);
 
-        if (outgoing.length > 1) {
-            const idx = outgoing.indexOf(edge);
-            const spread = 20;
-            const offset = (idx - (outgoing.length - 1) / 2) * spread;
-            from.x += offset;
+        // ── Smart anchor selection for decision blocks ──
+        let from, to;
+        let useDecisionSideExit = false;
+
+        if (fromNode.type === 'decision' && outgoing.length > 1 && outIdx > 0) {
+            // Secondary edges from diamonds exit from left or right side
+            // Determine side based on target position relative to source
+            const fromCx = fromNode.x + fromNode.width / 2;
+            const toCx = toNode.x + toNode.width / 2;
+
+            if (toCx < fromCx) {
+                from = this._getAnchor(fromNode, 'left');
+            } else {
+                from = this._getAnchor(fromNode, 'right');
+            }
+            to = this._getAnchor(toNode, 'top');
+            useDecisionSideExit = true;
+        } else {
+            from = this._getAnchor(fromNode, 'bottom');
+            to = this._getAnchor(toNode, 'top');
+
+            // Offset when multiple non-decision outgoing from same node
+            if (outgoing.length > 1 && fromNode.type !== 'decision') {
+                const spread = 20;
+                const offset = (outIdx - (outgoing.length - 1) / 2) * spread;
+                from.x += offset;
+            }
         }
+
+        // Offset incoming if multiple edges target same node
         if (incoming.length > 1) {
             const idx = incoming.indexOf(edge);
             const spread = 20;
@@ -657,6 +684,18 @@ class FlowchartRenderer {
             const tgtColors = this.config.colors[toNode.type] || this.config.colors.process;
             arrowColor = tgtColors.border;
             markerId = this._getMarkerIdForColor(arrowColor);
+        } else if (useDecisionSideExit) {
+            // L-shaped path from diamond side to target top
+            // Go horizontal first, then vertical down, then horizontal to target
+            const fromCx = fromNode.x + fromNode.width / 2;
+            const isLeftSide = from.x < fromCx;
+            const horizExtend = isLeftSide ? -30 : 30;
+
+            // Path: exit side horizontally → go down to target Y level → horizontal to target X → down to target
+            const midX = from.x + horizExtend;
+            const midY = to.y - 25;
+
+            pathD = `M${from.x},${from.y} L${midX},${from.y} L${midX},${midY} L${to.x},${midY} L${to.x},${to.y}`;
         } else {
             const dx = to.x - from.x;
             const dy = to.y - from.y;
@@ -672,13 +711,6 @@ class FlowchartRenderer {
                 const curveOffset = Math.max(30, dy * 0.4);
                 pathD = `M${from.x},${from.y} C${from.x},${from.y + curveOffset} ${to.x},${to.y - curveOffset} ${to.x},${to.y}`;
             }
-        }
-
-        // ── If user has custom waypoints, use polyline through them ──
-        if (edge.waypoints && edge.waypoints.length > 0) {
-            const pts = [from, ...edge.waypoints, to];
-            const segments = pts.map(p => `${p.x},${p.y}`).join(' L');
-            pathD = `M${segments}`;
         }
 
         const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
@@ -702,80 +734,6 @@ class FlowchartRenderer {
         hitPath.setAttribute('class', 'edge-hit-area');
         hitPath.style.cursor = 'pointer';
         g.appendChild(hitPath);
-
-        // ── Draggable midpoint / waypoint handles ──
-        if (edge.waypoints && edge.waypoints.length > 0) {
-            // Render a handle for each user waypoint
-            edge.waypoints.forEach((wp, idx) => {
-                const handle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-                handle.setAttribute('cx', wp.x);
-                handle.setAttribute('cy', wp.y);
-                handle.setAttribute('r', '5');
-                handle.setAttribute('fill', '#6366f1');
-                handle.setAttribute('stroke', '#fff');
-                handle.setAttribute('stroke-width', '1.5');
-                handle.setAttribute('class', 'edge-drag-handle');
-                handle.setAttribute('data-edge-from', edge.from);
-                handle.setAttribute('data-edge-to', edge.to);
-                handle.setAttribute('data-wp-index', idx);
-                handle.style.cursor = 'move';
-                g.appendChild(handle);
-            });
-        } else {
-            // Default: single midpoint handle at path center for creating first waypoint
-            let midX, midY;
-            if (edge.isBackRef) {
-                const pts = pathD.match(/[ML](-?[\d.]+),(-?[\d.]+)/g);
-                if (pts && pts.length >= 2) {
-                    const coords = pts.map(p => {
-                        const m = p.match(/(-?[\d.]+),(-?[\d.]+)/);
-                        return { x: parseFloat(m[1]), y: parseFloat(m[2]) };
-                    });
-                    midX = (coords[Math.floor(coords.length / 2)].x);
-                    midY = (coords[Math.floor(coords.length / 2)].y);
-                } else {
-                    midX = (from.x + to.x) / 2;
-                    midY = (from.y + to.y) / 2;
-                }
-            } else {
-                const dx = to.x - from.x;
-                const dy = to.y - from.y;
-                if (Math.abs(dx) < 5) {
-                    midX = (from.x + to.x) / 2;
-                    midY = (from.y + to.y) / 2;
-                } else {
-                    let cp1x, cp1y, cp2x, cp2y;
-                    if (dy < 0) {
-                        cp1x = from.x; cp1y = from.y + 40;
-                        cp2x = to.x; cp2y = to.y - 40;
-                    } else {
-                        const curveOff = Math.max(30, dy * 0.4);
-                        cp1x = from.x; cp1y = from.y + curveOff;
-                        cp2x = to.x; cp2y = to.y - curveOff;
-                    }
-                    midX = 0.125 * from.x + 0.375 * cp1x + 0.375 * cp2x + 0.125 * to.x;
-                    midY = 0.125 * from.y + 0.375 * cp1y + 0.375 * cp2y + 0.125 * to.y;
-                }
-            }
-
-            const handle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-            handle.setAttribute('cx', midX);
-            handle.setAttribute('cy', midY);
-            handle.setAttribute('r', '5');
-            handle.setAttribute('fill', '#6366f1');
-            handle.setAttribute('stroke', '#fff');
-            handle.setAttribute('stroke-width', '1.5');
-            handle.setAttribute('class', 'edge-drag-handle');
-            handle.setAttribute('data-edge-from', edge.from);
-            handle.setAttribute('data-edge-to', edge.to);
-            handle.setAttribute('data-wp-index', '-1'); // means create new
-            handle.style.cursor = 'move';
-            handle.style.opacity = '0';
-            handle.addEventListener('mouseenter', () => { handle.style.opacity = '1'; });
-            g.addEventListener('mouseenter', () => { handle.style.opacity = '0.6'; });
-            g.addEventListener('mouseleave', () => { if (!this.isDraggingEdge) handle.style.opacity = '0'; });
-            g.appendChild(handle);
-        }
 
         // Edge label
         if (edge.label) {
@@ -870,10 +828,6 @@ class FlowchartRenderer {
         if (this.selectedEdge && this.selectedEdge.from === edge.from && this.selectedEdge.to === edge.to) {
             path.setAttribute('stroke', '#fff');
             path.setAttribute('stroke-width', '3');
-            // Make waypoint handles permanently visible when selected
-            g.querySelectorAll('.edge-drag-handle').forEach(h => {
-                h.style.opacity = '1';
-            });
         }
 
         this.edgeLayer.appendChild(g);
@@ -931,33 +885,6 @@ class FlowchartRenderer {
 
         // ── Mouse interactions ──
         this.svg.addEventListener('mousedown', (e) => {
-            // ── Edge drag handle? ──
-            const dragHandle = e.target.closest('.edge-drag-handle');
-            if (dragHandle) {
-                const fromId = parseInt(dragHandle.dataset.edgeFrom);
-                const toId = parseInt(dragHandle.dataset.edgeTo);
-                const wpIdx = parseInt(dragHandle.dataset.wpIndex);
-                const edge = this.edges.find(ed => ed.from === fromId && ed.to === toId);
-                if (edge) {
-                    this.isDraggingEdge = true;
-                    this.dragEdge = edge;
-
-                    if (wpIdx === -1) {
-                        // Create a new waypoint at the current handle position
-                        if (!edge.waypoints) edge.waypoints = [];
-                        const cx = parseFloat(dragHandle.getAttribute('cx'));
-                        const cy = parseFloat(dragHandle.getAttribute('cy'));
-                        edge.waypoints.push({ x: cx, y: cy });
-                        this.dragEdgePointIndex = edge.waypoints.length - 1;
-                    } else {
-                        this.dragEdgePointIndex = wpIdx;
-                    }
-
-                    e.preventDefault();
-                    e.stopPropagation();
-                    return;
-                }
-            }
 
             const nodeGroup = e.target.closest('.node-group');
             const edgeGroup = e.target.closest('.edge-group');
@@ -1002,19 +929,6 @@ class FlowchartRenderer {
         });
 
         window.addEventListener('mousemove', (e) => {
-            // Edge waypoint dragging
-            if (this.isDraggingEdge && this.dragEdge) {
-                const rect = this.svg.getBoundingClientRect();
-                const mx = (e.clientX - rect.left - this.offsetX) / this.scale;
-                const my = (e.clientY - rect.top - this.offsetY) / this.scale;
-                const wp = this.dragEdge.waypoints[this.dragEdgePointIndex];
-                if (wp) {
-                    wp.x = mx;
-                    wp.y = my;
-                    this._drawAll();
-                }
-                return;
-            }
 
             if (this.isDragging && this.dragNode) {
                 const rect = this.svg.getBoundingClientRect();
@@ -1041,14 +955,6 @@ class FlowchartRenderer {
         });
 
         window.addEventListener('mouseup', (e) => {
-            // Edge waypoint drag end
-            if (this.isDraggingEdge && this.dragEdge) {
-                this._saveUndoState();
-                this.isDraggingEdge = false;
-                this.dragEdge = null;
-                this.dragEdgePointIndex = -1;
-                return;
-            }
 
             if (this.isDragging && this.dragNode) {
                 // Save undo state after drag
@@ -1245,12 +1151,72 @@ class FlowchartRenderer {
         const toNode = this.nodes.find(n => n.id === edge.to);
         if (!fromNode || !toNode) return;
 
-        const newLabel = prompt('Edit arrow label:', edge.label || '');
-        if (newLabel !== null) {
-            edge.label = newLabel.trim() || null;
-            this._saveUndoState();
-            this._drawAll();
-        }
+        // Calculate the midpoint of the edge for positioning the editor
+        const fromAnchor = this._getAnchor(fromNode, 'bottom');
+        const toAnchor = this._getAnchor(toNode, 'top');
+        const midX = (fromAnchor.x + toAnchor.x) / 2;
+        const midY = (fromAnchor.y + toAnchor.y) / 2;
+
+        const rect = this.svg.getBoundingClientRect();
+        const screenX = midX * this.scale + this.offsetX + rect.left - 90;
+        const screenY = midY * this.scale + this.offsetY + rect.top - 18;
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = edge.label || '';
+        input.placeholder = 'Arrow label...';
+        input.className = 'inline-editor inline-edge-editor';
+        input.style.cssText = `
+            position: fixed;
+            left: ${screenX}px;
+            top: ${screenY}px;
+            width: 180px;
+            height: 36px;
+            z-index: 10000;
+            background: rgba(17, 24, 39, 0.95);
+            border: 2px solid #6366f1;
+            color: #e0e0ff;
+            font-family: Inter, system-ui, sans-serif;
+            font-size: 13px;
+            text-align: center;
+            padding: 4px 12px;
+            border-radius: 8px;
+            outline: none;
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.4);
+        `;
+
+        document.body.appendChild(input);
+        input.focus();
+        input.select();
+
+        const commit = () => {
+            if (input._committed) return;
+            input._committed = true;
+            const newLabel = input.value.trim();
+            const oldLabel = edge.label;
+            edge.label = newLabel || null;
+            if (edge.label !== oldLabel) {
+                this._saveUndoState();
+                this._drawAll();
+                // Fire event for app.js to sync code
+                this.svg.dispatchEvent(new CustomEvent('edgeedit', {
+                    detail: { edge, oldLabel: oldLabel || '', newLabel: edge.label || '' }
+                }));
+            }
+            input.remove();
+        };
+
+        input.addEventListener('blur', commit);
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                commit();
+            }
+            if (e.key === 'Escape') {
+                input._committed = true;
+                input.remove();
+            }
+        });
     }
 
     // ═══ Undo / Redo ════════════════════════════════════════════════════════

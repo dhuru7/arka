@@ -34,7 +34,9 @@ CORS(app)
 SARVAM_API_KEY = "sk_h10vkdry_WChEvgrtvbYb4iQPe1hNVmWT"
 SARVAM_API_URL = "https://api.sarvam.ai/v1/chat/completions"
 
-# ── Bridge Language System Prompt ────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════════════════════
+# FLOWCHART Bridge Language System Prompt
+# ═══════════════════════════════════════════════════════════════════════════════
 BRIDGE_LANGUAGE_SYSTEM_PROMPT = """You are a flowchart code generator. You ONLY output code in a custom "Bridge Language" DSL. You NEVER explain, comment, or add anything outside the DSL code. Your entire response must be ONLY valid Bridge Language code.
 
 BLOCK TYPES (use these exactly):
@@ -48,53 +50,48 @@ BLOCK TYPES (use these exactly):
 
 ARROWS (always required between consecutive blocks):
 - a>           → Forward/downward arrow (no label)
-- a*label*>    → Labeled forward arrow (MUST have closing * before >)
+- a*label>     → Labeled forward arrow
 - a<           → Backward arrow
-- a*label*<    → Labeled backward arrow (MUST have closing * before <)
-
-CRITICAL ARROW LABEL RULES:
-- Labels MUST be enclosed between two * characters: a*Yes*> NOT a*Yes>
-- The closing * before the direction symbol (> or <) is REQUIRED
-- Each arrow label applies ONLY to the very next connection
-- Never omit the closing * — it will break the parser
+- a*label<     → Labeled backward arrow
 
 BRANCHING from decisions:
 To create Yes/No branches from a decision, RESTATE the exact decision block code and add the branch arrow:
 
 d<"Is valid?">
-a*Yes*>
+a*Yes>
 p["Process Data"]
 a>
 te()
 d<"Is valid?">
-a*No*>
+a*No>
 p["Fix Errors"]
 a>
 te()
 
 BRANCHING to multiple blocks at once (ma syntax):
-When one block connects to multiple targets, use ma*label*> and list targets inside []:
+When one block connects to multiple targets, use ma*label>[ and list targets inside []:
 d<"Check">
-ma*Yes*>[
+ma*Yes>[
 p["Action A"]
-a*No*
+a*No>
 p["Action B"]
 ]
-NOTE: Inside ma blocks, each target node gets the group label unless overridden with a*custom label* on the line BEFORE the target node.
+NOTE: Inside ma blocks, each target gets the group label unless overridden with a*custom label> on the line BEFORE the target node.
 
 LOOPS (back-reference jumps):
-p["Fix Errors"]a*Retry*>!d<"Is valid?">
+p["Fix Errors"]a*Retry>!d<"Is valid?">
 
 STRICT FORMATTING RULES:
 1. Phase 1 (Declaration): List ALL unique blocks one per line. NO arrows. NO duplicates.
 2. Separator: Exactly five dots on their own line: .....
-3. Phase 2 (Connections): Connect blocks with arrows. EVERY pair of consecutive blocks MUST have an arrow (a> or a*label*>) between them. NEVER list two blocks on consecutive lines without an arrow between them.
+3. Phase 2 (Connections): Connect blocks with arrows. EVERY pair of consecutive blocks MUST have an arrow (a> or a*label>) between them. NEVER list two blocks on consecutive lines without an arrow between them.
 4. Phase 2 text MUST EXACTLY match Phase 1 text character-for-character.
 5. Output ONLY valid Bridge Language code. No markdown fences, no explanations, no comments.
 6. Keep flowcharts clean: 4-10 blocks is ideal, avoid unnecessary complexity.
 7. Every block in Phase 1 must appear at least once in Phase 2.
 8. A decision block can appear multiple times in Phase 2 to create different branches.
-9. Arrow labels must ALWAYS use the format a*text*> with closing * — never a*text>
+9. NEVER create duplicate arrows between the same two blocks.
+10. MULTILINGUAL: If the user's prompt is in Hindi, Tamil, Telugu, or any non-English language, use that SAME language for ALL block text inside the quotes.
 
 COMPLETE EXAMPLE - User Login Flow:
 ts()
@@ -111,25 +108,27 @@ a>
 l["Enter credentials"]
 a>
 d<"Valid credentials?">
-a*Yes*>
+a*Yes>
 p["Grant access"]
 a>
 te()
 d<"Valid credentials?">
-a*No*>
+a*No>
 p["Show error message"]
 a>
 d<"Retry limit reached?">
-a*Yes*>
+a*Yes>
 p["Lock account"]
 a>
 te()
 d<"Retry limit reached?">
-a*No*>
-p["Show error message"]a*Retry*>!l["Enter credentials"]
+a*No>
+p["Show error message"]a*Retry>!l["Enter credentials"]
 """
 
-# ── Block Diagram Bridge Language System Prompt ──────────────────────────────
+# ═══════════════════════════════════════════════════════════════════════════════
+# BLOCK DIAGRAM Bridge Language System Prompt
+# ═══════════════════════════════════════════════════════════════════════════════
 BLOCK_DIAGRAM_SYSTEM_PROMPT = """You are a block diagram code generator. You ONLY output code in a custom "Bridge Language" DSL. You NEVER explain, comment, or add anything outside the DSL code. Your entire response must be ONLY valid Bridge Language code.
 
 BLOCK TYPES (use these exactly):
@@ -149,45 +148,40 @@ BLOCK TYPES (use these exactly):
 
 ARROWS (always required between connected blocks):
 - a>           → Forward/downward arrow (no label)
-- a*label*>    → Labeled forward arrow (MUST have closing * before >)
+- a*label>     → Labeled forward arrow
 - a<           → Backward/upward arrow
-- a*label*<    → Labeled backward arrow (MUST have closing * before <)
-
-CRITICAL ARROW LABEL RULES:
-- Labels MUST be enclosed between two * characters: a*Request*> NOT a*Request>
-- The closing * before the direction symbol (> or <) is REQUIRED
-- Never omit the closing * — it will break the parser
+- a*label<     → Labeled backward arrow
 
 BRANCHING OUT (one block sends to multiple):
 p["Load Balancer"]
-ma*routes to*>[
+ma*routes to>[
 p["Server A"]
-a*also routes to*
+a*also routes to>
 p["Server B"]
 ]
-NOTE: Inside ma blocks, each target gets the group label unless overridden with a*custom label* on the line BEFORE the target node.
+NOTE: Inside ma blocks, each target gets the group label unless overridden with a*custom label> on the line BEFORE the target node.
 
 MERGING IN (multiple blocks feed into one):
-t("Central Database")ma*saves data*<[
+t("Central Database")ma*saves data<[
 p["Server A"]
 p["Server B"]
 ]
 
 JUMP ARROWS (connect to previously declared blocks):
-p["Module C"]a*feedback*>!p["Module A"]
+p["Module C"]a*feedback>!p["Module A"]
 
 STRICT FORMATTING RULES:
 1. Phase 1 (Declaration): List ALL unique blocks one per line. NO arrows. NO duplicates.
 2. Separator: Exactly five dots on their own line: .....
-3. Phase 2 (Connections): Connect blocks with arrows. EVERY pair of consecutive blocks MUST have an arrow (a> or a*label*>) between them. NEVER write two block codes on consecutive lines without an arrow between them.
+3. Phase 2 (Connections): Connect blocks with arrows. EVERY pair of consecutive blocks MUST have an arrow (a> or a*label>) between them. NEVER write two block codes on consecutive lines without an arrow between them.
 4. Phase 2 text MUST EXACTLY match Phase 1 text character-for-character.
 5. Output ONLY valid Bridge Language code. No markdown fences, no explanations, no comments.
 6. Do NOT use ts() or te(). Those are flowchart-only. Use t("text"), p["text"], etc.
 7. Use appropriate shapes for different component types in the architecture.
 8. Keep diagrams clean: 4-12 blocks is ideal.
-9. Arrow labels must ALWAYS use the format a*text*> with closing * — never a*text>
-10. CRITICAL: EVERY block declared in Phase 1 MUST be connected to at least one other block in Phase 2. No orphan/disconnected blocks allowed. If a block exists, it must have at least one arrow going to or from it.
-11. In Phase 2, make sure the data/control flow is complete. Every block should be reachable from at least one other block.
+9. CRITICAL: EVERY block declared in Phase 1 MUST be connected to at least one other block in Phase 2. No orphan/disconnected blocks allowed.
+10. NEVER create duplicate arrows between the same two blocks.
+11. MULTILINGUAL: If the user's prompt is in Hindi, Tamil, Telugu, or any non-English language, use that SAME language for ALL block text and arrow labels.
 
 COMPLETE EXAMPLE - Microservice Architecture:
 p["Client App"]
@@ -199,26 +193,68 @@ t("PostgreSQL DB")
 t("Redis Cache")
 .....
 p["Client App"]
-a*HTTP Request*>
+a*HTTP Request>
 l["API Gateway"]
-a*Authenticate*>
+a*Authenticate>
 d<"Auth Service">
-ma*Authorized*>[
+ma*Authorized>[
 p["User Service"]
-a*Route Order*
+a*Route Order>
 p["Order Service"]
 ]
 p["User Service"]
-a*Query*>
+a*Query>
 t("PostgreSQL DB")
 p["Order Service"]
-a*Query*>
+a*Query>
 t("PostgreSQL DB")
 d<"Auth Service">
-a*Cache Token*>
+a*Cache Token>
 t("Redis Cache")
-d<"Auth Service">a*Rejected*>!p["Client App"]
+d<"Auth Service">a*Rejected>!p["Client App"]
 """
+
+
+def clean_bridge_code(code):
+    """Post-process AI-generated bridge code to fix common mistakes."""
+    if not code:
+        return code
+
+    # 1. Remove markdown fencing
+    if '```' in code:
+        lines = code.split('\n')
+        lines = [l for l in lines if not l.strip().startswith('```')]
+        code = '\n'.join(lines).strip()
+
+    # 2. Remove comment/explanation lines
+    valid_lines = []
+    for line in code.split('\n'):
+        stripped = line.strip()
+        if not stripped:
+            continue
+        # Skip obvious comment lines
+        if stripped.startswith('//') or stripped.startswith('#') or stripped.startswith('Note:'):
+            continue
+        valid_lines.append(stripped)
+
+    # 3. Remove consecutive duplicate lines
+    deduped = []
+    for line in valid_lines:
+        if not deduped or line != deduped[-1]:
+            deduped.append(line)
+
+    # 4. Fix common AI mistakes with arrow syntax
+    fixed = []
+    for line in deduped:
+        # Fix a*label*> to a*label> (remove extra closing *)
+        # The parser handles both, but normalize to language spec format
+        line = re.sub(r'^(a\*[^*]+)\*([><])', r'\1\2', line)
+        # Fix ma*label*>[ to ma*label>[
+        line = re.sub(r'^(ma\*[^*]+)\*([><]\[)', r'\1\2', line)
+        fixed.append(line)
+
+    return '\n'.join(fixed)
+
 
 @app.route('/')
 def index():
@@ -274,13 +310,7 @@ def generate_flowchart():
 
         result = response.json()
         bridge_code = result['choices'][0]['message']['content'].strip()
-
-        # Clean up any accidental markdown fencing the LLM might add
-        if bridge_code.startswith('```'):
-            lines = bridge_code.split('\n')
-            # Remove first line (```...) and last line (```)
-            lines = [l for l in lines if not l.strip().startswith('```')]
-            bridge_code = '\n'.join(lines).strip()
+        bridge_code = clean_bridge_code(bridge_code)
 
         return jsonify({
             'success': True,
@@ -344,11 +374,7 @@ def generate_block_diagram():
 
         result = response.json()
         bridge_code = result['choices'][0]['message']['content'].strip()
-
-        if bridge_code.startswith('```'):
-            lines = bridge_code.split('\n')
-            lines = [l for l in lines if not l.strip().startswith('```')]
-            bridge_code = '\n'.join(lines).strip()
+        bridge_code = clean_bridge_code(bridge_code)
 
         return jsonify({
             'success': True,
@@ -407,11 +433,7 @@ def refine_block_diagram():
 
         result = response.json()
         bridge_code = result['choices'][0]['message']['content'].strip()
-
-        if bridge_code.startswith('```'):
-            lines = bridge_code.split('\n')
-            lines = [l for l in lines if not l.strip().startswith('```')]
-            bridge_code = '\n'.join(lines).strip()
+        bridge_code = clean_bridge_code(bridge_code)
 
         return jsonify({
             'success': True,
@@ -466,12 +488,7 @@ def refine_flowchart():
 
         result = response.json()
         bridge_code = result['choices'][0]['message']['content'].strip()
-
-        # Clean up markdown fencing
-        if bridge_code.startswith('```'):
-            lines = bridge_code.split('\n')
-            lines = [l for l in lines if not l.strip().startswith('```')]
-            bridge_code = '\n'.join(lines).strip()
+        bridge_code = clean_bridge_code(bridge_code)
 
         return jsonify({
             'success': True,

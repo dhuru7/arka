@@ -269,15 +269,22 @@ class BridgeParser {
     _processMultiConnect(anchorNode, innerLines, groupLabel, groupDir, mode) {
         let currentLabel = null;
         let isFirstTarget = true;
+        let lastInnerNode = null;
+        let chainArrow = false;
 
         for (const il of innerLines) {
             const trimmed = il.trim();
             if (!trimmed) continue;
 
-            // Check if it's an arrow line (a>, a<, a*label*>, a*label*<)
+            // Check if it's an arrow line (a>, a<, a*label>, a*label<)
             const arrowMatch = this._matchArrowLine(trimmed);
             if (arrowMatch) {
-                currentLabel = arrowMatch.label;
+                if (lastInnerNode) {
+                    chainArrow = true;
+                    currentLabel = arrowMatch.label;
+                } else {
+                    currentLabel = arrowMatch.label;
+                }
                 continue;
             }
 
@@ -291,32 +298,38 @@ class BridgeParser {
             // It's a node reference
             const node = this._findNodeByCode(trimmed);
             if (node && anchorNode) {
-                // Label priority: explicit currentLabel > groupLabel (only for first target) > null
-                let label;
-                if (currentLabel !== null) {
-                    label = currentLabel;
-                } else if (isFirstTarget) {
-                    label = groupLabel;
+                if (chainArrow && lastInnerNode) {
+                    // Sequential chain: previous inner node -> this node
+                    this._addEdge(lastInnerNode.id, node.id, currentLabel);
                 } else {
-                    label = null;
-                }
-
-                if (mode === 'outgoing') {
-                    if (groupDir === 'forward') {
-                        this._addEdge(anchorNode.id, node.id, label);
+                    // Normal ma connection: anchor <-> node
+                    let label;
+                    if (currentLabel !== null) {
+                        label = currentLabel;
+                    } else if (isFirstTarget) {
+                        label = groupLabel;
                     } else {
-                        this._addEdge(node.id, anchorNode.id, label);
+                        label = null;
                     }
-                } else {
-                    // incoming/merging
-                    if (groupDir === 'backward') {
-                        this._addEdge(node.id, anchorNode.id, label);
+
+                    if (mode === 'outgoing') {
+                        if (groupDir === 'forward') {
+                            this._addEdge(anchorNode.id, node.id, label);
+                        } else {
+                            this._addEdge(node.id, anchorNode.id, label);
+                        }
                     } else {
-                        this._addEdge(anchorNode.id, node.id, label);
+                        if (groupDir === 'backward') {
+                            this._addEdge(node.id, anchorNode.id, label);
+                        } else {
+                            this._addEdge(anchorNode.id, node.id, label);
+                        }
                     }
                 }
             }
+            lastInnerNode = node;
             currentLabel = null;
+            chainArrow = false;
             isFirstTarget = false;
         }
     }
@@ -333,14 +346,52 @@ class BridgeParser {
 
     _findNodeByCode(code) {
         code = code.trim();
-        // Exact match first
+        if (!code) return null;
+
+        // 1. Exact match
         let node = this.nodes.find(n => n.raw === code);
         if (node) return node;
 
-        // Normalized match (strip whitespace)
+        // 2. Normalized match (strip all whitespace)
         const norm = code.replace(/\s+/g, '');
         node = this.nodes.find(n => n.raw.replace(/\s+/g, '') === norm);
-        return node || null;
+        if (node) return node;
+
+        // 3. Try re-parsing the code as a block and matching by type+text
+        //    This handles cases where the user edits text in Phase 1 but Phase 2
+        //    still references the old text, OR vice versa.
+        const parsed = this._parseBlock(code);
+        if (parsed) {
+            // 3a. Exact type+text match
+            node = this.nodes.find(n => n.type === parsed.type && n.text === parsed.text);
+            if (node) return node;
+
+            // 3b. Type match + case-insensitive text match
+            const lowerText = parsed.text.toLowerCase();
+            node = this.nodes.find(n => n.type === parsed.type && n.text.toLowerCase() === lowerText);
+            if (node) return node;
+        }
+
+        // 4. Extract just the text content and find any node with that text
+        const textContent = this._extractTextFromCode(code);
+        if (textContent) {
+            node = this.nodes.find(n => n.text === textContent);
+            if (node) return node;
+
+            // Case-insensitive text fallback
+            const lowerTC = textContent.toLowerCase();
+            node = this.nodes.find(n => n.text.toLowerCase() === lowerTC);
+            if (node) return node;
+        }
+
+        return null;
+    }
+
+    _extractTextFromCode(code) {
+        // Pull the text content out of block codes like p["text"], d<"text">, t("text"), etc.
+        let match = code.match(/^(?:p\[|d<|t\(|l\[)(.+?)(?:\]|>|\))$/);
+        if (match) return this._extractText(match[1]);
+        return null;
     }
 
     _extractText(raw) {
@@ -377,9 +428,9 @@ class BridgeParser {
     }
 
     _addEdge(fromId, toId, label = null, isBackRef = false) {
-        // Avoid duplicate edges
+        // Avoid duplicate edges between the same pair of nodes
         const exists = this.edges.some(e =>
-            e.from === fromId && e.to === toId && e.label === label
+            e.from === fromId && e.to === toId
         );
         if (!exists) {
             this.edges.push({ from: fromId, to: toId, label, isBackRef });
