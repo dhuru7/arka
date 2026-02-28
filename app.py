@@ -35,43 +35,27 @@ SARVAM_API_KEY = "sk_h10vkdry_WChEvgrtvbYb4iQPe1hNVmWT"
 SARVAM_API_URL = "https://api.sarvam.ai/v1/chat/completions"
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# FLOWCHART Mermaid System Prompt
+# Mermaid System Prompts definition
 # ═══════════════════════════════════════════════════════════════════════════════
-MERMAID_FLOWCHART_SYSTEM_PROMPT = """You are a Mermaid flowchart code generator. You ONLY output valid Mermaid JS code. You NEVER explain, comment, or add anything outside the Mermaid code. Your entire response must be ONLY valid Mermaid flowchart code.
+MERMAID_SYSTEM_PROMPTS = {
+    'flowchart': "You are a Mermaid flowchart code generator. You ONLY output valid Mermaid JS code. You NEVER explain, comment, or add anything outside the Mermaid code. Your entire response must be ONLY valid Mermaid flowchart code.\n\nUse standard Mermaid syntax:\ngraph TD\n  A[Start] --> B{Condition?}\n  B -- Yes --> C[Process]\n  B -- No --> D[Error]\n  C --> E[End]\n  D --> E\n\nDo not use markdown blocks in the output. Just raw mermaid.",
+    'block': "You are a Mermaid block diagram code generator. You ONLY output valid Mermaid JS code. You NEVER explain, comment, or add anything outside the Mermaid code. Your entire response must be ONLY valid Mermaid flowchart/graph code representing an architecture block diagram.\n\nUse standard Mermaid syntax, utilize subgraphs and appropriate node shapes (database, etc.).\nExample:\ngraph LR\n  subgraph Client\n    A[Browser]\n  end\n  subgraph Backend\n    B[API Gateway]\n    C[Service Core]\n    D[(Database)]\n  end\n  A -->|HTTP / API| B\n  B --> C\n  C --> D\n\nDo not use markdown blocks in the output. Just raw mermaid.",
+    'architecture': "You are a Mermaid architecture diagram code generator. You ONLY output valid Mermaid JS code. You NEVER explain, comment, or add anything outside the Mermaid code. Your entire response must be ONLY valid Mermaid flowchart/graph or architecture-beta code representing high-level architecture. Do not use markdown blocks in the output. Just raw mermaid.",
+    'sequence': "You are a Mermaid sequence diagram generator. You ONLY output valid Mermaid JS code. You NEVER explain, comment, or add anything outside the Mermaid code. Your entire response must be ONLY valid Mermaid sequenceDiagram code with actors and participants. Do not use markdown blocks in the output. Just raw mermaid.",
+    'timeline': "You are a Mermaid timeline generator. You ONLY output valid Mermaid JS code. You NEVER explain, comment, or add anything outside the Mermaid code. Your entire response must be ONLY valid Mermaid timeline code. Do not use markdown blocks in the output. Just raw mermaid.",
+    'gantt': "You are a Mermaid Gantt chart generator. You ONLY output valid Mermaid JS code. You NEVER explain, comment, or add anything outside the Mermaid code. Your entire response must be ONLY valid Mermaid gantt code. Do not use markdown blocks in the output. Just raw mermaid.",
+    'pie': "You are a Mermaid pie chart generator. You ONLY output valid Mermaid JS code. You NEVER explain, comment, or add anything outside the Mermaid code. Your entire response must be ONLY valid Mermaid pie chart code. Do not use markdown blocks in the output. Just raw mermaid.",
+    'xy': "You are a Mermaid XY/Bar chart generator (xychart-beta). You ONLY output valid Mermaid JS code. You NEVER explain, comment, or add anything outside the Mermaid code. Your entire response must be ONLY valid Mermaid xychart-beta code. Do not use markdown blocks in the output. Just raw mermaid.",
+    'er': "You are a Mermaid Entity Relationship (ER) diagram generator. You ONLY output valid Mermaid JS code. You NEVER explain, comment, or add anything outside the Mermaid code. Your entire response must be ONLY valid Mermaid erDiagram code. Do not use markdown blocks in the output. Just raw mermaid.",
+    'state': "You are a Mermaid state diagram generator. You ONLY output valid Mermaid JS code. You NEVER explain, comment, or add anything outside the Mermaid code. Your entire response must be ONLY valid Mermaid stateDiagram-v2 code. Do not use markdown blocks in the output. Just raw mermaid.",
+    'class': "You are a Mermaid class diagram generator. You ONLY output valid Mermaid JS code. You NEVER explain, comment, or add anything outside the Mermaid code. Your entire response must be ONLY valid Mermaid classDiagram code. Do not use markdown blocks in the output. Just raw mermaid.",
+    'git': "You are a Mermaid gitgraph generator. You ONLY output valid Mermaid JS code. You NEVER explain, comment, or add anything outside the Mermaid code. Your entire response must be ONLY valid Mermaid gitGraph code. Do not use markdown blocks in the output. Just raw mermaid.",
+    'quadrant': "You are a Mermaid quadrant chart generator. You ONLY output valid Mermaid JS code. You NEVER explain, comment, or add anything outside the Mermaid code. Your entire response must be ONLY valid Mermaid quadrantChart code. Do not use markdown blocks in the output. Just raw mermaid.",
+    'treemap': "You are a Mermaid mindmap/treemap generator. You ONLY output valid Mermaid JS code. You NEVER explain, comment, or add anything outside the Mermaid code. Your entire response must be ONLY valid Mermaid mindmap or graph code. Do not use markdown blocks in the output. Just raw mermaid."
+}
 
-Use standard Mermaid syntax:
-graph TD
-  A[Start] --> B{Condition?}
-  B -- Yes --> C[Process]
-  B -- No --> D[Error]
-  C --> E[End]
-  D --> E
-
-Do not use markdown blocks in the output. Just raw mermaid.
-"""
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# BLOCK DIAGRAM Mermaid System Prompt
-# ═══════════════════════════════════════════════════════════════════════════════
-MERMAID_BLOCK_DIAGRAM_SYSTEM_PROMPT = """You are a Mermaid block diagram code generator. You ONLY output valid Mermaid JS code. You NEVER explain, comment, or add anything outside the Mermaid code. Your entire response must be ONLY valid Mermaid flowchart/graph code representing an architecture block diagram.
-
-Use standard Mermaid syntax, utilize subgraphs and appropriate node shapes (database, etc.).
-Example:
-graph LR
-  subgraph Client
-    A[Browser]
-  end
-  subgraph Backend
-    B[API Gateway]
-    C[Service Core]
-    D[(Database)]
-  end
-  A -->|HTTP / API| B
-  B --> C
-  C --> D
-
-Do not use markdown blocks in the output. Just raw mermaid.
-"""
+def get_system_prompt(mode):
+    return MERMAID_SYSTEM_PROMPTS.get(mode, MERMAID_SYSTEM_PROMPTS['flowchart'])
 
 
 def clean_mermaid_code(code):
@@ -92,7 +76,7 @@ def index():
 
 
 @app.route('/api/generate', methods=['POST'])
-def generate_flowchart():
+def generate_diagram():
     """
     Receives a natural language description from the user,
     sends it to SarvamM to translate into Bridge Language,
@@ -101,9 +85,10 @@ def generate_flowchart():
     try:
         data = request.get_json()
         user_prompt = data.get('prompt', '')
+        mode = data.get('mode', 'flowchart')
 
         if not user_prompt.strip():
-            return jsonify({'error': 'Please provide a description for the flowchart.'}), 400
+            return jsonify({'error': 'Please provide a description.'}), 400
 
         # Call Sarvam M API
         headers = {
@@ -116,11 +101,11 @@ def generate_flowchart():
             'messages': [
                 {
                     'role': 'system',
-                    'content': MERMAID_FLOWCHART_SYSTEM_PROMPT
+                    'content': get_system_prompt(mode)
                 },
                 {
                     'role': 'user',
-                    'content': f"Generate a flowchart in Mermaid JS for: {user_prompt}"
+                    'content': f"Generate a {mode} diagram in Mermaid JS for: {user_prompt}"
                 }
             ],
             'temperature': 0.3,
@@ -154,129 +139,9 @@ def generate_flowchart():
     except Exception as e:
         print(f"Server error: {str(e)}")
         return jsonify({'error': f'Server error: {str(e)}'}), 500
-
-
-@app.route('/api/generate-block', methods=['POST'])
-def generate_block_diagram():
-    """
-    Receives a natural language description from the user,
-    sends it to SarvamM to translate into Bridge Language for block diagrams,
-    and returns the Bridge Language code to the frontend.
-    """
-    try:
-        data = request.get_json()
-        user_prompt = data.get('prompt', '')
-
-        if not user_prompt.strip():
-            return jsonify({'error': 'Please provide a description for the block diagram.'}), 400
-
-        headers = {
-            'Content-Type': 'application/json',
-            'api-subscription-key': SARVAM_API_KEY
-        }
-
-        payload = {
-            'model': 'sarvam-m',
-            'messages': [
-                {
-                    'role': 'system',
-                    'content': MERMAID_BLOCK_DIAGRAM_SYSTEM_PROMPT
-                },
-                {
-                    'role': 'user',
-                    'content': f"Generate a block diagram in Mermaid JS for: {user_prompt}"
-                }
-            ],
-            'temperature': 0.3,
-            'max_tokens': 2048
-        }
-
-        response = requests.post(SARVAM_API_URL, headers=headers, json=payload, timeout=60)
-
-        if response.status_code != 200:
-            error_detail = response.text
-            print(f"Sarvam API Error [{response.status_code}]: {error_detail}")
-            return jsonify({
-                'error': f'AI service returned status {response.status_code}',
-                'detail': error_detail
-            }), 502
-
-        result = response.json()
-        bridge_code = result['choices'][0]['message']['content'].strip()
-        bridge_code = clean_mermaid_code(bridge_code)
-
-        return jsonify({
-            'success': True,
-            'code': bridge_code,
-            'usage': result.get('usage', {})
-        })
-
-    except requests.exceptions.Timeout:
-        return jsonify({'error': 'The AI service timed out. Please try again.'}), 504
-    except requests.exceptions.ConnectionError:
-        return jsonify({'error': 'Could not connect to the AI service.'}), 503
-    except Exception as e:
-        print(f"Server error: {str(e)}")
-        return jsonify({'error': f'Server error: {str(e)}'}), 500
-
-
-@app.route('/api/refine-block', methods=['POST'])
-def refine_block_diagram():
-    """
-    Takes existing Bridge Language code for a block diagram and a refinement instruction,
-    sends both to SarvamM to produce an updated version.
-    """
-    try:
-        data = request.get_json()
-        current_code = data.get('current_code', '')
-        instruction = data.get('instruction', '')
-
-        if not instruction.strip():
-            return jsonify({'error': 'Please provide a refinement instruction.'}), 400
-
-        headers = {
-            'Content-Type': 'application/json',
-            'api-subscription-key': SARVAM_API_KEY
-        }
-
-        payload = {
-            'model': 'sarvam-m',
-            'messages': [
-                {
-                    'role': 'system',
-                    'content': MERMAID_BLOCK_DIAGRAM_SYSTEM_PROMPT
-                },
-                {
-                    'role': 'user',
-                    'content': f"Here is my current block diagram code:\n{current_code}\n\nPlease modify it with this instruction: {instruction}\n\nOutput ONLY the complete updated Mermaid JS code."
-                }
-            ],
-            'temperature': 0.3,
-            'max_tokens': 2048
-        }
-
-        response = requests.post(SARVAM_API_URL, headers=headers, json=payload, timeout=60)
-
-        if response.status_code != 200:
-            return jsonify({'error': f'AI service returned status {response.status_code}'}), 502
-
-        result = response.json()
-        bridge_code = result['choices'][0]['message']['content'].strip()
-        bridge_code = clean_mermaid_code(bridge_code)
-
-        return jsonify({
-            'success': True,
-            'code': bridge_code,
-            'usage': result.get('usage', {})
-        })
-
-    except Exception as e:
-        print(f"Refine block diagram error: {str(e)}")
-        return jsonify({'error': f'Server error: {str(e)}'}), 500
-
 
 @app.route('/api/refine', methods=['POST'])
-def refine_flowchart():
+def refine_diagram():
     """
     Takes existing Bridge Language code and a refinement instruction,
     sends both to SarvamM to produce an updated version.
@@ -285,6 +150,7 @@ def refine_flowchart():
         data = request.get_json()
         current_code = data.get('current_code', '')
         instruction = data.get('instruction', '')
+        mode = data.get('mode', 'flowchart')
 
         if not instruction.strip():
             return jsonify({'error': 'Please provide a refinement instruction.'}), 400
@@ -299,11 +165,11 @@ def refine_flowchart():
             'messages': [
                 {
                     'role': 'system',
-                    'content': MERMAID_FLOWCHART_SYSTEM_PROMPT
+                    'content': get_system_prompt(mode)
                 },
                 {
                     'role': 'user',
-                    'content': f"Here is my current flowchart code:\n{current_code}\n\nPlease modify it with this instruction: {instruction}\n\nOutput ONLY the complete updated Mermaid JS code."
+                    'content': f"Here is my current {mode} diagram code:\n{current_code}\n\nPlease modify it with this instruction: {instruction}\n\nOutput ONLY the complete updated Mermaid JS code."
                 }
             ],
             'temperature': 0.3,

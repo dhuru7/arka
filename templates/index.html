@@ -55,25 +55,49 @@
 
             <!-- Mode Toggle -->
             <div class="mode-toggle-section">
-                <div class="mode-toggle" id="mode-toggle">
-                    <div class="mode-toggle-indicator" id="mode-indicator"></div>
-                    <button class="mode-toggle-btn active" id="mode-flowchart" data-mode="flowchart">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14"
-                            height="14">
-                            <path d="M6 3h12M6 3v6m12-3v6M6 9h12M6 15h12M6 15v6m12-6v6M6 21h12"></path>
+                <label
+                    style="font-size: 0.75rem; color: var(--fg-muted); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 8px; display: block; font-weight: 500;">DIAGRAM
+                    TYPE</label>
+                <div class="dropdown-wrapper" id="mode-dropdown-wrapper" style="width: 100%;">
+                    <button id="btn-mode-select"
+                        style="width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; cursor: pointer; text-align: left; background: rgba(255, 255, 255, 0.04); border: 1px solid var(--border); border-radius: 8px; color: var(--fg); font-family: var(--font-body); transition: background 0.2s, border-color 0.2s;">
+                        <span id="btn-mode-text" style="font-weight: 500;">Flowchart</span>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16"
+                            height="16">
+                            <polyline points="6 9 12 15 18 9"></polyline>
                         </svg>
-                        Flowchart
                     </button>
-                    <button class="mode-toggle-btn" id="mode-block" data-mode="block">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14"
-                            height="14">
-                            <rect x="3" y="3" width="7" height="7" rx="1"></rect>
-                            <rect x="14" y="3" width="7" height="7" rx="1"></rect>
-                            <rect x="3" y="14" width="7" height="7" rx="1"></rect>
-                            <rect x="14" y="14" width="7" height="7" rx="1"></rect>
-                        </svg>
-                        Block Diagram
-                    </button>
+                    <div class="dropdown-menu" id="mode-dropdown-menu"
+                        style="width: 100%; top: calc(100% + 4px); right: 0;">
+                        <button class="dropdown-item mode-option" data-mode="flowchart"
+                            style="width: 100%;">Flowchart</button>
+                        <button class="dropdown-item mode-option" data-mode="block" style="width: 100%;">Block
+                            Diagram</button>
+                        <button class="dropdown-item mode-option" data-mode="architecture"
+                            style="width: 100%;">Architecture Diagrams</button>
+                        <button class="dropdown-item mode-option" data-mode="sequence" style="width: 100%;">Sequence
+                            Diagrams</button>
+                        <button class="dropdown-item mode-option" data-mode="timeline"
+                            style="width: 100%;">Timelines</button>
+                        <button class="dropdown-item mode-option" data-mode="gantt" style="width: 100%;">Gantt
+                            Charts</button>
+                        <button class="dropdown-item mode-option" data-mode="pie" style="width: 100%;">Pie
+                            Charts</button>
+                        <button class="dropdown-item mode-option" data-mode="xy" style="width: 100%;">XY/Bar
+                            Charts</button>
+                        <button class="dropdown-item mode-option" data-mode="er" style="width: 100%;">ER
+                            Diagrams</button>
+                        <button class="dropdown-item mode-option" data-mode="state" style="width: 100%;">State
+                            Diagrams</button>
+                        <button class="dropdown-item mode-option" data-mode="class" style="width: 100%;">Class
+                            Diagrams</button>
+                        <button class="dropdown-item mode-option" data-mode="git"
+                            style="width: 100%;">Gitgraphs</button>
+                        <button class="dropdown-item mode-option" data-mode="quadrant" style="width: 100%;">Quadrant
+                            Charts</button>
+                        <button class="dropdown-item mode-option" data-mode="treemap"
+                            style="width: 100%;">Treemaps</button>
+                    </div>
                 </div>
             </div>
 
@@ -323,6 +347,9 @@
                             </button>
                             <button class="dropdown-item theme-option" data-theme="retro">
                                 <span>Retro</span>
+                            </button>
+                            <button class="dropdown-item theme-option" data-theme="handdrawn">
+                                <span>Hand-drawn</span>
                             </button>
                             <button class="dropdown-item theme-option" data-theme="minimalist">
                                 <span>Minimalist</span>

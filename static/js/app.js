@@ -39,10 +39,9 @@ let currentScale = 1;
 let selectedNodeOriginalText = '';
 let selectedNodeElement = null;
 
-const appState = {
-    flowchart: { code: '', prompt: '', history: [], historyIndex: -1 },
-    block: { code: '', prompt: '', history: [], historyIndex: -1 }
-};
+const MODES = ['flowchart', 'block', 'architecture', 'sequence', 'timeline', 'gantt', 'pie', 'xy', 'er', 'state', 'class', 'git', 'quadrant', 'treemap'];
+const appState = {};
+MODES.forEach(m => appState[m] = { code: '', prompt: '', history: [], historyIndex: -1 });
 
 // ═══ Initialization ═════════════════════════════════════════════════════════
 
@@ -253,66 +252,81 @@ function setupAppThemeToggle() {
 // ═══ Mode Toggle ════════════════════════════════════════════════════════════
 
 function setupModeToggle() {
-    const modeFlowchartBtn = document.getElementById('mode-flowchart');
-    const modeBlockBtn = document.getElementById('mode-block');
-    const indicator = document.getElementById('mode-indicator');
+    const btn = document.getElementById('btn-mode-select');
+    const menu = document.getElementById('mode-dropdown-menu');
+    if (!btn || !menu) return;
 
-    modeFlowchartBtn.addEventListener('click', () => switchMode('flowchart'));
-    modeBlockBtn.addEventListener('click', () => switchMode('block'));
+    btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        menu.classList.toggle('active');
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('#mode-dropdown-wrapper')) {
+            menu.classList.remove('active');
+        }
+    });
+
+    menu.querySelectorAll('.mode-option').forEach(option => {
+        option.addEventListener('click', () => {
+            const mode = option.getAttribute('data-mode');
+            switchMode(mode);
+            menu.classList.remove('active');
+        });
+    });
 }
 
 function switchMode(mode) {
     if (mode === currentMode) return;
+
+    // Save previous state
+    appState[currentMode].code = currentMermaidCode;
+    appState[currentMode].prompt = promptInput.value;
+
     currentMode = mode;
 
-    const modeFlowchartBtn = document.getElementById('mode-flowchart');
-    const modeBlockBtn = document.getElementById('mode-block');
-    const indicator = document.getElementById('mode-indicator');
     const subtitleText = document.getElementById('subtitle-text');
     const promptLabel = document.getElementById('prompt-label');
     const generateBtnText = document.getElementById('generate-btn-text');
     const emptyIcon = document.getElementById('empty-icon');
     const emptyTitle = document.getElementById('empty-title');
     const emptyDesc = document.getElementById('empty-desc');
+    const btnModeText = document.getElementById('btn-mode-text');
     const examplesFlowchart = document.getElementById('examples-flowchart');
     const examplesBlock = document.getElementById('examples-block');
 
-    if (mode === 'block') {
-        modeFlowchartBtn.classList.remove('active');
-        modeBlockBtn.classList.add('active');
-        indicator.classList.add('right');
+    const modeConfigs = {
+        'flowchart': { title: 'AI Flowchart Generator', label: 'Describe your flow', btn: 'Generate Flowchart', place: 'e.g. A user login flow...', empty: '[ ]', text: 'Flowchart' },
+        'block': { title: 'AI Block Diagram Generator', label: 'Describe your system', btn: 'Generate Diagram', place: 'e.g. A microservice architecture...', empty: '[ □ ]', text: 'Block Diagram' },
+        'architecture': { title: 'AI Architecture Generator', label: 'Describe architecture', btn: 'Generate Architecture', place: 'e.g. Cloud AWS deployment...', empty: '[ ✦ ]', text: 'Architecture Diagram' },
+        'sequence': { title: 'AI Sequence Generator', label: 'Describe actor sequence', btn: 'Generate Sequence', place: 'e.g. API auth handshake...', empty: '[ ⇵ ]', text: 'Sequence Diagrams' },
+        'timeline': { title: 'AI Timeline Generator', label: 'Describe timeline events', btn: 'Generate Timeline', place: 'e.g. Project history 2020-2023...', empty: '[ ⧖ ]', text: 'Timelines' },
+        'gantt': { title: 'AI Gantt Generator', label: 'Describe project tasks', btn: 'Generate Gantt', place: 'e.g. Website development phase...', empty: '[ ▤ ]', text: 'Gantt Charts' },
+        'pie': { title: 'AI Pie Chart Generator', label: 'Describe breakdown %', btn: 'Generate Pie Chart', place: 'e.g. Market share apple 40%...', empty: '[ ◓ ]', text: 'Pie Charts' },
+        'xy': { title: 'AI XY/Bar Generator', label: 'Describe chart data', btn: 'Generate Data Chart', place: 'e.g. Revenue per month in 2023...', empty: '[ 📊 ]', text: 'XY/Bar Charts' },
+        'er': { title: 'AI ER Diagram Generator', label: 'Describe database entities', btn: 'Generate ER Diagram', place: 'e.g. User has many Orders...', empty: '[ ⚿ ]', text: 'ER Diagrams' },
+        'state': { title: 'AI State Diagram Generator', label: 'Describe states', btn: 'Generate State Diagram', place: 'e.g. Application lifecycle states...', empty: '[ ⭮ ]', text: 'State Diagrams' },
+        'class': { title: 'AI Class Diagram Generator', label: 'Describe classes', btn: 'Generate Class Diagram', place: 'e.g. User class with name, email...', empty: '[ 🗔 ]', text: 'Class Diagrams' },
+        'git': { title: 'AI Gitgraph Generator', label: 'Describe git history', btn: 'Generate Gitgraph', place: 'e.g. Master branch, feature branch...', empty: '[ ⎇ ]', text: 'Gitgraphs' },
+        'quadrant': { title: 'AI Quadrant Chart Generator', label: 'Describe quadrants', btn: 'Generate Quadrant Chart', place: 'e.g. Urgent vs Important matrix...', empty: '[ ⊞ ]', text: 'Quadrant Charts' },
+        'treemap': { title: 'AI Treemap / Mindmap', label: 'Describe hierarchy', btn: 'Generate Mindmap', place: 'e.g. Project architecture overview...', empty: '[ 🗃 ]', text: 'Treemaps' }
+    };
 
-        subtitleText.textContent = 'AI Block Diagram Generator';
-        promptLabel.textContent = 'Describe your system';
-        generateBtnText.textContent = 'Generate Block Diagram';
-        promptInput.placeholder = 'e.g. A microservice architecture...';
-        emptyIcon.textContent = '[ □ ]';
-        emptyTitle.textContent = 'AWAITING SYSTEM DESCRIPTION';
-        emptyDesc.textContent = 'Describe your system architecture in the sidebar to generate a block diagram.';
-        examplesFlowchart.style.display = 'none';
-        examplesBlock.style.display = 'block';
-    } else {
-        modeBlockBtn.classList.remove('active');
-        modeFlowchartBtn.classList.add('active');
-        indicator.classList.remove('right');
+    const config = modeConfigs[mode] || modeConfigs['flowchart'];
 
-        subtitleText.textContent = 'AI Flowchart Generator';
-        promptLabel.textContent = 'Describe your flow';
-        generateBtnText.textContent = 'Generate Flowchart';
-        promptInput.placeholder = 'e.g. A user login flow...';
-        emptyIcon.textContent = '[ ]';
-        emptyTitle.textContent = 'AWAITING PROMPT';
-        emptyDesc.textContent = 'Describe what you need in the sidebar to initialize rendering.';
-        examplesFlowchart.style.display = 'block';
-        examplesBlock.style.display = 'none';
-    }
+    subtitleText.textContent = config.title;
+    promptLabel.textContent = config.label;
+    generateBtnText.textContent = config.btn;
+    promptInput.placeholder = config.place;
+    emptyIcon.textContent = config.empty;
+    emptyTitle.textContent = 'AWAITING GENERATION';
+    emptyDesc.textContent = 'Describe what you need in the sidebar to initialize rendering.';
+    if (btnModeText) btnModeText.textContent = config.text;
+
+    if (examplesFlowchart) examplesFlowchart.style.display = mode === 'flowchart' ? 'block' : 'none';
+    if (examplesBlock) examplesBlock.style.display = mode === 'block' ? 'block' : 'none';
 
     bindExampleChips();
-
-    // Save previous state
-    const previousMode = mode === 'block' ? 'flowchart' : 'block';
-    appState[previousMode].code = currentMermaidCode;
-    appState[previousMode].prompt = promptInput.value;
 
     // Load new state
     currentMermaidCode = appState[mode].code || '';
@@ -326,6 +340,7 @@ function switchMode(mode) {
 
     resetSelection();
     updateStatus('ready', 'Ready');
+    updateHistoryButtons();
 }
 
 function bindExampleChips() {
@@ -339,12 +354,12 @@ function bindExampleChips() {
     });
 }
 
-// ═══ Core: Generate Flowchart ═══════════════════════════════════════════════
+// ═══ Core: Generate Diagram ═══════════════════════════════════════════════
 
 async function handleGenerate() {
     const prompt = promptInput.value.trim();
     if (!prompt) {
-        showToast(`Please describe the ${currentMode === 'block' ? 'block diagram' : 'flowchart'} you want to create.`, 'error');
+        showToast(`Please describe the ${currentMode} you want to create.`, 'error');
         return;
     }
 
@@ -352,15 +367,13 @@ async function handleGenerate() {
     generateBtn.disabled = true;
     updateStatus('loading', 'Generating...');
 
-    const generateEndpoint = currentMode === 'block'
-        ? 'http://127.0.0.1:5000/api/generate-block'
-        : 'http://127.0.0.1:5000/api/generate';
+    const generateEndpoint = 'http://127.0.0.1:5000/api/generate';
 
     try {
         const response = await fetch(generateEndpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt })
+            body: JSON.stringify({ prompt, mode: currentMode })
         });
 
         const data = await response.json();
@@ -370,9 +383,18 @@ async function handleGenerate() {
         }
 
         currentMermaidCode = data.code;
+
+        // Reset to Default Theme after generation
+        if (currentTheme !== 'default') {
+            const btnText = document.getElementById('btn-theme-text');
+            if (btnText) btnText.textContent = 'Default';
+            currentTheme = 'default';
+            initializeMermaidTheme('default');
+        }
+
         await renderFromCode(currentMermaidCode);
         updateStatus('ready', 'Generated');
-        showToast(`${currentMode === 'block' ? 'Block diagram' : 'Flowchart'} generated successfully!`, 'success');
+        showToast(`${currentMode} generated successfully!`, 'success');
 
     } catch (err) {
         console.error('Generate error:', err);
@@ -384,7 +406,7 @@ async function handleGenerate() {
     }
 }
 
-// ═══ Core: Refine Flowchart ═════════════════════════════════════════════════
+// ═══ Core: Refine Diagram ═════════════════════════════════════════════════
 
 async function handleRefine() {
     const instruction = refineInput.value.trim();
@@ -393,7 +415,7 @@ async function handleRefine() {
         return;
     }
     if (!currentMermaidCode) {
-        showToast(`Generate a ${currentMode === 'block' ? 'block diagram' : 'flowchart'} first.`, 'error');
+        showToast(`Generate a ${currentMode} first.`, 'error');
         return;
     }
 
@@ -401,15 +423,13 @@ async function handleRefine() {
     refineBtn.textContent = 'Refining...';
     updateStatus('loading', 'Refining...');
 
-    const refineEndpoint = currentMode === 'block'
-        ? 'http://127.0.0.1:5000/api/refine-block'
-        : 'http://127.0.0.1:5000/api/refine';
+    const refineEndpoint = 'http://127.0.0.1:5000/api/refine';
 
     try {
         const response = await fetch(refineEndpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ current_code: currentMermaidCode, instruction })
+            body: JSON.stringify({ current_code: currentMermaidCode, instruction, mode: currentMode })
         });
 
         const data = await response.json();
@@ -419,7 +439,7 @@ async function handleRefine() {
         await renderFromCode(currentMermaidCode);
         refineInput.value = '';
         updateStatus('ready', 'Refined');
-        showToast(`${currentMode === 'block' ? 'Block diagram' : 'Flowchart'} refined!`, 'success');
+        showToast(`${currentMode} refined!`, 'success');
 
     } catch (err) {
         showToast(err.message, 'error');
@@ -556,8 +576,8 @@ async function renderFromCode(code, pushToHistory = true) {
                     const editBtn = document.getElementById('btn-edit-text');
                     if (editBtn) {
                         editBtn.disabled = false;
-                        editBtn.style.color = '#ffffff';
-                        editBtn.style.borderColor = '#ffffff';
+                        editBtn.style.color = 'var(--fg)';
+                        editBtn.style.borderColor = 'var(--fg)';
                     }
 
                     const propPanel = document.getElementById('properties-panel');
@@ -622,9 +642,9 @@ async function renderFromCode(code, pushToHistory = true) {
 // ═══ Export Functions ════════════════════════════════════════════════════════
 
 function handleExportSVG() {
-    const exportType = currentMode === 'block' ? 'block-diagram' : 'flowchart';
+    const exportType = currentMode;
     if (!currentMermaidCode) {
-        showToast(`Generate a ${currentMode === 'block' ? 'block diagram' : 'flowchart'} first.`, 'error');
+        showToast(`Generate a ${currentMode} first.`, 'error');
         return;
     }
 
@@ -643,9 +663,9 @@ function handleExportSVG() {
 }
 
 async function handleExportPNG() {
-    const exportType = currentMode === 'block' ? 'block-diagram' : 'flowchart';
+    const exportType = currentMode;
     if (!currentMermaidCode) {
-        showToast(`Generate a ${currentMode === 'block' ? 'block diagram' : 'flowchart'} first.`, 'error');
+        showToast(`Generate a ${currentMode} first.`, 'error');
         return;
     }
 
@@ -781,6 +801,17 @@ const CUSTOM_THEMES = {
             fontFamily: 'Space Mono, monospace'
         }
     },
+    handdrawn: {
+        theme: 'base',
+        look: 'handDrawn',
+        themeVariables: {
+            fontFamily: '"Comic Sans MS", "Chalkboard SE", "Comic Neue", cursive, sans-serif',
+            primaryColor: '#ffffff',
+            primaryTextColor: '#333333',
+            primaryBorderColor: '#333333',
+            lineColor: '#333333'
+        }
+    },
     minimalist: {
         theme: 'base',
         themeVariables: {
@@ -811,7 +842,7 @@ let isPreviewing = false;
 
 function initializeMermaidTheme(themeToUse) {
     let theme = themeToUse || currentTheme;
-    let config = { startOnLoad: false, securityLevel: 'loose' };
+    let config = { startOnLoad: false, securityLevel: 'loose', look: 'classic' };
     if (CUSTOM_THEMES[theme]) {
         config = { ...config, ...CUSTOM_THEMES[theme] };
     } else {
@@ -933,11 +964,11 @@ function handleSave() {
     const name = nameInput.value.trim();
 
     if (!name) {
-        showToast(`Enter a name for the ${currentMode === 'block' ? 'block diagram' : 'flowchart'}.`, 'error');
+        showToast(`Enter a name for the ${currentMode}.`, 'error');
         return;
     }
     if (!currentMermaidCode) {
-        showToast(`Generate a ${currentMode === 'block' ? 'block diagram' : 'flowchart'} first.`, 'error');
+        showToast(`Generate a ${currentMode} first.`, 'error');
         return;
     }
     if (!db) {
