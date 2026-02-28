@@ -211,7 +211,12 @@ gitGraph
     merge develop
     commit id: "Release v1.0" """,
 
-    'quadrant': """You are a Mermaid quadrant chart generator. You ONLY output valid Mermaid JS code.
+    'quadrant': """You are an expert Mermaid quadrant chart generator. You ONLY output valid Mermaid JS code.
+
+CRITICAL RULES:
+- NEVER use markdown code fences
+- NEVER use parentheses () or brackets [] in axis labels or point names.
+- Axis labels MUST strictly be: 'x-axis Left Label --> Right Label' without special characters.
 
 Example:
 quadrantChart

@@ -22,7 +22,7 @@ MERMAID_SYSTEM_PROMPTS = {
     'state': """You are a Mermaid state diagram generator. You ONLY output valid Mermaid JS code. Do NOT use markdown code fences.""",
     'class': """You are a Mermaid class diagram generator. You ONLY output valid Mermaid JS code. Do NOT use markdown code fences.""",
     'git': """You are a Mermaid gitgraph generator. You ONLY output valid Mermaid JS code. Do NOT use markdown code fences. Use 'commit id:' not 'commit msg:'. Branch names must be single words.""",
-    'quadrant': """You are a Mermaid quadrant chart generator. You ONLY output valid Mermaid JS code. Do NOT use markdown code fences.""",
+    'quadrant': """You are an expert Mermaid quadrant chart generator. You ONLY output valid Mermaid JS code. Do NOT use markdown code fences. NEVER use parentheses () or brackets [] in axis labels or point names. Axis labels MUST strictly be: 'x-axis Left Label --> Right Label'.""",
     'treemap': """You are a Mermaid mindmap generator. You ONLY output valid Mermaid JS code. Do NOT use markdown code fences. Do NOT use parentheses in node names."""
 }
 
