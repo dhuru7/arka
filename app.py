@@ -410,6 +410,12 @@ def fix_mermaid_syntax(code, mode):
     # Remove stray backslashes in labels (e.g. "Puberty \" -> "Puberty")
     code = re.sub(r'\\(?!["\\nrt])', '', code)
 
+    if mode in ('flowchart', 'block', 'architecture'):
+        # Fix parser errors caused by unquoted parentheses in node text
+        # Only removes ( and ) that are NOT part of shape markers like [(, ([
+        code = re.sub(r'(?<![\[\]\|])\((?![\[\]\|])', ' ', code)
+        code = re.sub(r'(?<![\[\]\|])\)(?![\[\]\|])', ' ', code)
+
     if mode == 'gantt':
         code = _fix_gantt(code)
     elif mode == 'timeline':

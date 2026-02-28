@@ -145,8 +145,13 @@
 
         // Guest (Anonymous) Login
         guestBtn.addEventListener('click', async function () {
+            if (localStorage.getItem('arka_guest_used')) {
+                showError("Guest limit reached for this device. Please sign up or log in to continue.");
+                return;
+            }
             try {
                 await firebase.auth().signInAnonymously();
+                localStorage.setItem('arka_guest_used', 'true');
                 window.location.href = 'index.html';
             } catch (error) {
                 showError(error.message);

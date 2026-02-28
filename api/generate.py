@@ -272,6 +272,10 @@ def clean_mermaid_code(code, mode='flowchart'):
     cleaned = cleaned.replace('\\n', ' ').replace('\\t', ' ')
     cleaned = re.sub(r'\\(?!["\\nrt])', '', cleaned)
 
+    if mode in ('flowchart', 'block', 'architecture'):
+        cleaned = re.sub(r'(?<![\[\]\|])\((?![\[\]\|])', ' ', cleaned)
+        cleaned = re.sub(r'(?<![\[\]\|])\)(?![\[\]\|])', ' ', cleaned)
+
     if mode == 'gantt':
         cleaned = _fix_gantt(cleaned)
     elif mode == 'timeline':
