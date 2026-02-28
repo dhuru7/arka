@@ -1,8 +1,8 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- *  Arka – Main Application Logic v2.4
- *  Handles UI interactions, API calls, Firebase, properties panel,
- *  undo/redo, and orchestration.
+ *  Arka – Main Application Logic v3.0 (Mermaid JS)
+ *  Handles UI interactions, API calls, Firebase, 
+ *  and Mermaid orchestration.
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
@@ -29,29 +29,31 @@ const sidebarToggle = document.getElementById('sidebar-toggle');
 const sidebar = document.getElementById('sidebar');
 const refineInput = document.getElementById('refine-input');
 const refineBtn = document.getElementById('refine-btn');
-const propsPanel = document.getElementById('properties-panel');
-const propsContent = document.getElementById('prop-content');
-const btnUndo = document.getElementById('btn-undo');
-const btnRedo = document.getElementById('btn-redo');
-const btnDeleteSelected = document.getElementById('btn-delete-selected');
-const btnEditText = document.getElementById('btn-edit-text');
-
-// ── Instances ───────────────────────────────────────────────────────────────
-const parser = new BridgeParser();
-const renderer = new FlowchartRenderer(canvasContainer);
 
 // ── State ───────────────────────────────────────────────────────────────
-let currentBridgeCode = '';
+let currentMermaidCode = '';
 let db = null; // Firebase Realtime DB reference
 let currentMode = 'flowchart'; // 'flowchart' or 'block'
+let currentScale = 1;
 
 // ═══ Initialization ═════════════════════════════════════════════════════════
 
 document.addEventListener('DOMContentLoaded', () => {
     initFirebase();
+    mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'loose' });
     setupEventListeners();
     setupModeToggle();
     updateStatus('ready', 'Ready');
+
+    // Hide property panel since we don't use it for mermaid
+    document.getElementById('properties-panel').style.display = 'none';
+
+    // Disable unneeded toolbars
+    document.getElementById('btn-undo').disabled = true;
+    document.getElementById('btn-redo').disabled = true;
+    document.getElementById('btn-delete-selected').disabled = true;
+    document.getElementById('btn-edit-text').disabled = true;
+    document.getElementById('btn-auto-layout').disabled = true;
 });
 
 // ── Firebase Init ───────────────────────────────────────────────────────────
@@ -84,94 +86,25 @@ function setupEventListeners() {
     });
 
     // Zoom controls
-    document.getElementById('zoom-in').addEventListener('click', () => renderer.zoomIn());
-    document.getElementById('zoom-out').addEventListener('click', () => renderer.zoomOut());
-    document.getElementById('zoom-fit').addEventListener('click', () => renderer.fitToScreen());
-
-    // Zoom level display
-    renderer.svg.addEventListener('zoomchange', (e) => {
-        zoomLevelEl.textContent = Math.round(e.detail.scale * 100) + '%';
+    document.getElementById('zoom-in').addEventListener('click', () => {
+        currentScale += 0.1;
+        applyZoom();
     });
-
-    // Node edit from renderer
-    renderer.svg.addEventListener('nodeedit', (e) => {
-        const { node, oldText, newText } = e.detail;
-        if (!currentBridgeCode) return;
-
-        // Sync the bridge code
-        const newRaw = node.raw.replace(oldText, newText);
-        currentBridgeCode = currentBridgeCode.replace(node.raw, newRaw);
-        node.raw = newRaw;
+    document.getElementById('zoom-out').addEventListener('click', () => {
+        currentScale = Math.max(0.1, currentScale - 0.1);
+        applyZoom();
     });
-
-    // Edge label edit from renderer
-    renderer.svg.addEventListener('edgeedit', (e) => {
-        // Could sync code here if needed in the future
-    });
-
-    // Selection change → show/hide properties panel
-    renderer.svg.addEventListener('selectionchange', (e) => {
-        const { node, edge } = e.detail;
-        if (node) {
-            showNodeProperties(node);
-            btnDeleteSelected.disabled = false;
-            btnEditText.disabled = (node.type === 'connector');
-        } else if (edge) {
-            showEdgeProperties(edge);
-            btnDeleteSelected.disabled = false;
-            btnEditText.disabled = false;
-        } else {
-            hideProperties();
-            btnDeleteSelected.disabled = true;
-            btnEditText.disabled = true;
-        }
-    });
-
-    // History state change → update undo/redo buttons
-    renderer.svg.addEventListener('historystatechange', (e) => {
-        btnUndo.disabled = !e.detail.canUndo;
-        btnRedo.disabled = !e.detail.canRedo;
-    });
-
-    // Data change (node/edge deleted)
-    renderer.svg.addEventListener('datachange', (e) => {
-        nodeCountEl.textContent = 'NODES: ' + e.detail.nodes.length;
-        edgeCountEl.textContent = 'EDGES: ' + e.detail.edges.length;
-    });
-
-    // Undo / Redo buttons
-    btnUndo.addEventListener('click', () => renderer.undo());
-    btnRedo.addEventListener('click', () => renderer.redo());
-
-    // Delete selected
-    btnDeleteSelected.addEventListener('click', () => {
-        if (renderer.selectedNode) {
-            renderer.deleteSelectedNode();
-        } else if (renderer.selectedEdge) {
-            renderer.deleteSelectedEdge();
-        }
-    });
-
-    // Edit text on selected node/edge
-    btnEditText.addEventListener('click', () => {
-        if (renderer.selectedNode && renderer.selectedNode.type !== 'connector') {
-            renderer._startInlineEdit(renderer.selectedNode);
-        } else if (renderer.selectedEdge) {
-            renderer._editEdgeLabel(renderer.selectedEdge);
-        }
-    });
-
-    // Auto layout
-    document.getElementById('btn-auto-layout').addEventListener('click', () => {
-        renderer.autoLayout();
-        showToast('Layout reorganized', 'success');
+    document.getElementById('zoom-fit').addEventListener('click', () => {
+        currentScale = 1;
+        applyZoom();
     });
 
     // Toolbar buttons — download dropdown
     setupDownloadDropdown();
-    document.getElementById('btn-export-png').addEventListener('click', () => { closeDownloadDropdown(); handleExportPNG(); });
     document.getElementById('btn-export-svg').addEventListener('click', () => { closeDownloadDropdown(); handleExportSVG(); });
-    document.getElementById('btn-export-json').addEventListener('click', () => { closeDownloadDropdown(); handleExportJSON(); });
+    // Disable PNG and JSON export as they require canvas rendering logic
+    document.getElementById('btn-export-png').style.display = 'none';
+    document.getElementById('btn-export-json').style.display = 'none';
 
     // Code viewer
     document.getElementById('btn-code-view').addEventListener('click', handleOpenCodeEditor);
@@ -217,6 +150,16 @@ function setupEventListeners() {
     document.getElementById('save-confirm').addEventListener('click', handleSave);
 }
 
+function applyZoom() {
+    zoomLevelEl.textContent = Math.round(currentScale * 100) + '%';
+    const svgEl = canvasContainer.querySelector('svg');
+    if (svgEl) {
+        svgEl.style.transform = `scale(${currentScale})`;
+        svgEl.style.transformOrigin = 'center center';
+        svgEl.style.transition = 'transform 0.2s';
+    }
+}
+
 // ═══ Mode Toggle ════════════════════════════════════════════════════════════
 
 function setupModeToggle() {
@@ -245,7 +188,6 @@ function switchMode(mode) {
     const examplesBlock = document.getElementById('examples-block');
 
     if (mode === 'block') {
-        // Switch to Block Diagram mode
         modeFlowchartBtn.classList.remove('active');
         modeBlockBtn.classList.add('active');
         indicator.classList.add('right');
@@ -253,14 +195,13 @@ function switchMode(mode) {
         subtitleText.textContent = 'AI Block Diagram Generator';
         promptLabel.textContent = 'Describe your system';
         generateBtnText.textContent = 'Generate Block Diagram';
-        promptInput.placeholder = 'e.g. A microservice architecture with API gateway, authentication, and database cluster...';
+        promptInput.placeholder = 'e.g. A microservice architecture...';
         emptyIcon.textContent = '[ □ ]';
         emptyTitle.textContent = 'AWAITING SYSTEM DESCRIPTION';
         emptyDesc.textContent = 'Describe your system architecture in the sidebar to generate a block diagram.';
         examplesFlowchart.style.display = 'none';
         examplesBlock.style.display = 'block';
     } else {
-        // Switch to Flowchart mode
         modeBlockBtn.classList.remove('active');
         modeFlowchartBtn.classList.add('active');
         indicator.classList.remove('right');
@@ -268,7 +209,7 @@ function switchMode(mode) {
         subtitleText.textContent = 'AI Flowchart Generator';
         promptLabel.textContent = 'Describe your flow';
         generateBtnText.textContent = 'Generate Flowchart';
-        promptInput.placeholder = 'e.g. A user login flow with email validation, password check, and 2FA verification...';
+        promptInput.placeholder = 'e.g. A user login flow...';
         emptyIcon.textContent = '[ ]';
         emptyTitle.textContent = 'AWAITING PROMPT';
         emptyDesc.textContent = 'Describe what you need in the sidebar to initialize rendering.';
@@ -276,18 +217,10 @@ function switchMode(mode) {
         examplesBlock.style.display = 'none';
     }
 
-    // Re-bind example chips for the newly visible section
     bindExampleChips();
 
-    // Clear diagram but PRESERVE the user's typed input
-    currentBridgeCode = '';
-    emptyState.style.display = 'block';
-    renderer.svg.style.display = 'none';
-    renderer.nodes = [];
-    renderer.edges = [];
-    nodeCountEl.textContent = 'NODES: 0';
-    edgeCountEl.textContent = 'EDGES: 0';
-    hideProperties();
+    currentMermaidCode = '';
+    showEmptyState();
     updateStatus('ready', 'Ready');
 
     showToast(`Switched to ${mode === 'block' ? 'Block Diagram' : 'Flowchart'} mode`, 'info');
@@ -295,7 +228,6 @@ function switchMode(mode) {
 
 function bindExampleChips() {
     document.querySelectorAll('.example-chip').forEach(chip => {
-        // Remove old listeners by cloning
         const newChip = chip.cloneNode(true);
         chip.parentNode.replaceChild(newChip, chip);
         newChip.addEventListener('click', () => {
@@ -321,7 +253,6 @@ async function handleGenerate() {
     const generateEndpoint = currentMode === 'block'
         ? 'http://127.0.0.1:5000/api/generate-block'
         : 'http://127.0.0.1:5000/api/generate';
-    const modeLabel = currentMode === 'block' ? 'block diagram' : 'flowchart';
 
     try {
         const response = await fetch(generateEndpoint, {
@@ -336,8 +267,8 @@ async function handleGenerate() {
             throw new Error(data.error || 'Generation failed');
         }
 
-        currentBridgeCode = data.bridge_code;
-        renderFromCode(currentBridgeCode);
+        currentMermaidCode = data.code;
+        await renderFromCode(currentMermaidCode);
         updateStatus('ready', 'Generated');
         showToast(`${currentMode === 'block' ? 'Block diagram' : 'Flowchart'} generated successfully!`, 'success');
 
@@ -359,7 +290,7 @@ async function handleRefine() {
         showToast('Enter a refinement instruction.', 'error');
         return;
     }
-    if (!currentBridgeCode) {
+    if (!currentMermaidCode) {
         showToast(`Generate a ${currentMode === 'block' ? 'block diagram' : 'flowchart'} first.`, 'error');
         return;
     }
@@ -376,14 +307,14 @@ async function handleRefine() {
         const response = await fetch(refineEndpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ current_code: currentBridgeCode, instruction })
+            body: JSON.stringify({ current_code: currentMermaidCode, instruction })
         });
 
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'Refinement failed');
 
-        currentBridgeCode = data.bridge_code;
-        renderFromCode(currentBridgeCode);
+        currentMermaidCode = data.code;
+        await renderFromCode(currentMermaidCode);
         refineInput.value = '';
         updateStatus('ready', 'Refined');
         showToast(`${currentMode === 'block' ? 'Block diagram' : 'Flowchart'} refined!`, 'success');
@@ -397,208 +328,57 @@ async function handleRefine() {
     }
 }
 
-// ═══ Render Bridge Code ═════════════════════════════════════════════════════
+// ═══ Render Mermaid Code ═════════════════════════════════════════════════════
 
-function renderFromCode(code) {
+function showEmptyState() {
+    canvasContainer.innerHTML = '';
+    canvasContainer.appendChild(emptyState);
+    emptyState.style.display = 'block';
+    nodeCountEl.textContent = 'NODES: 0';
+    edgeCountEl.textContent = 'EDGES: 0';
+}
+
+async function renderFromCode(code) {
     if (!code || !code.trim()) {
-        emptyState.style.display = 'block';
-        renderer.svg.style.display = 'none';
-        nodeCountEl.textContent = 'NODES: 0';
-        edgeCountEl.textContent = 'EDGES: 0';
+        showEmptyState();
         return;
     }
 
     try {
-        const parsed = parser.parse(code);
-
-        if (parsed.nodes.length === 0) {
-            emptyState.style.display = 'block';
-            renderer.svg.style.display = 'none';
-            showToast('No valid blocks found in the code.', 'error');
-            return;
-        }
-
+        const { svg } = await mermaid.render('mermaid-svg-graph', code);
+        canvasContainer.innerHTML = svg;
+        canvasContainer.appendChild(emptyState); // Re-append it so it's not destroyed
         emptyState.style.display = 'none';
-        renderer.svg.style.display = 'block';
-        renderer.render(parsed);
 
-        nodeCountEl.textContent = 'NODES: ' + parsed.nodes.length;
-        edgeCountEl.textContent = 'EDGES: ' + parsed.edges.length;
-        zoomLevelEl.textContent = Math.round(renderer.scale * 100) + '%';
+        // Count rough metrics
+        const matchesNodes = code.match(/\[|\]|\(|\)|\{|\}/g);
+        const matchesEdges = code.match(/--|==|-\.>|-->|==>|\.-/g);
+        nodeCountEl.textContent = 'NODES: ' + (matchesNodes ? Math.floor(matchesNodes.length / 2) : '?');
+        edgeCountEl.textContent = 'EDGES: ' + (matchesEdges ? matchesEdges.length : '?');
+
+        currentScale = 1;
+        applyZoom();
 
     } catch (err) {
         console.error('Parse/render error:', err);
-        showToast('Error parsing the Bridge Language code.', 'error');
+        showToast('Error parsing the Mermaid code: ' + err.message, 'error');
     }
-}
-
-// ═══ Properties Panel ═══════════════════════════════════════════════════════
-
-function showNodeProperties(node) {
-    propsPanel.style.display = 'block';
-
-    const shapeOptions = [
-        { value: 'process', label: 'Rectangle' },
-        { value: 'terminator', label: 'Oval' },
-        { value: 'decision', label: 'Diamond' },
-        { value: 'io', label: 'Parallelogram' },
-    ];
-
-    const colorOptions = [
-        { value: 'blue', label: 'Blue', color: '#3b82f6' },
-        { value: 'violet', label: 'Violet', color: '#7c3aed' },
-        { value: 'red', label: 'Red', color: '#ef4444' },
-        { value: 'amber', label: 'Amber', color: '#f59e0b' },
-        { value: 'cyan', label: 'Cyan', color: '#06b6d4' },
-        { value: 'green', label: 'Green', color: '#22c55e' },
-        { value: 'pink', label: 'Pink', color: '#ec4899' },
-        { value: 'reset', label: 'Default', color: '#888' },
-    ];
-
-    const shapeHtml = shapeOptions.map(s =>
-        `<button class="prop-shape-btn ${(node.shapeOverride || node.type) === s.value ? 'active' : ''}" 
-                data-shape="${s.value}" title="${s.label}">${s.label}</button>`
-    ).join('');
-
-    const colorHtml = colorOptions.map(c =>
-        `<button class="prop-color-swatch" data-color="${c.value}" title="${c.label}"
-                style="background: ${c.color}; ${c.value === 'reset' ? 'border: 1px dashed #666;' : ''}"></button>`
-    ).join('');
-
-    propsContent.innerHTML = `
-        <div class="prop-group">
-            <div class="prop-label">Text</div>
-            <div class="prop-value">${escapeHtml(node.text)}</div>
-        </div>
-        <div class="prop-group">
-            <div class="prop-label">Shape</div>
-            <div class="prop-shape-row">${shapeHtml}</div>
-        </div>
-        <div class="prop-group">
-            <div class="prop-label">Color</div>
-            <div class="prop-color-row">${colorHtml}</div>
-        </div>
-        <div class="prop-group">
-            <div class="prop-label">Size</div>
-            <div class="prop-size-row">
-                <button class="prop-size-btn" data-dw="-20" data-dh="0" title="Narrower">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
-                        <polyline points="15 18 9 12 15 6"></polyline>
-                    </svg>
-                </button>
-                <span class="prop-size-label">${Math.round(node.width)} x ${Math.round(node.height)}</span>
-                <button class="prop-size-btn" data-dw="20" data-dh="0" title="Wider">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
-                        <polyline points="9 18 15 12 9 6"></polyline>
-                    </svg>
-                </button>
-                <span style="margin: 0 4px;">|</span>
-                <button class="prop-size-btn" data-dw="0" data-dh="-10" title="Shorter">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
-                        <polyline points="18 15 12 9 6 15"></polyline>
-                    </svg>
-                </button>
-                <button class="prop-size-btn" data-dw="0" data-dh="10" title="Taller">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
-                        <polyline points="6 9 12 15 18 9"></polyline>
-                    </svg>
-                </button>
-            </div>
-        </div>
-    `;
-
-    // Attach shape handlers
-    propsContent.querySelectorAll('.prop-shape-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            renderer.changeNodeShape(node.id, btn.dataset.shape);
-            showNodeProperties(node); // refresh
-        });
-    });
-
-    // Attach color handlers
-    propsContent.querySelectorAll('.prop-color-swatch').forEach(btn => {
-        btn.addEventListener('click', () => {
-            renderer.changeNodeColor(node.id, btn.dataset.color);
-        });
-    });
-
-    // Attach size handlers
-    propsContent.querySelectorAll('.prop-size-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const dw = parseInt(btn.dataset.dw) || 0;
-            const dh = parseInt(btn.dataset.dh) || 0;
-            renderer.resizeNode(node.id, dw, dh);
-            showNodeProperties(node); // refresh
-        });
-    });
-}
-
-function showEdgeProperties(edge) {
-    propsPanel.style.display = 'block';
-    const fromNode = renderer.nodes.find(n => n.id === edge.from);
-    const toNode = renderer.nodes.find(n => n.id === edge.to);
-
-    propsContent.innerHTML = `
-        <div class="prop-group">
-            <div class="prop-label">Arrow</div>
-            <div class="prop-value">${escapeHtml(fromNode?.text || '?')} → ${escapeHtml(toNode?.text || '?')}</div>
-        </div>
-        <div class="prop-group">
-            <div class="prop-label">Label</div>
-            <div class="prop-value">${edge.label ? escapeHtml(edge.label) : '<em style="color:#666">None</em>'}</div>
-        </div>
-        <div class="prop-group">
-            <button class="prop-action-btn" id="prop-edit-edge-label">Edit Label</button>
-            <button class="prop-action-btn danger" id="prop-delete-edge">Delete Arrow</button>
-        </div>
-    `;
-
-    document.getElementById('prop-edit-edge-label').addEventListener('click', () => {
-        renderer._editEdgeLabel(edge);
-    });
-
-    document.getElementById('prop-delete-edge').addEventListener('click', () => {
-        renderer.selectedEdge = edge;
-        renderer.deleteSelectedEdge();
-        hideProperties();
-    });
-}
-
-function hideProperties() {
-    propsPanel.style.display = 'none';
-    propsContent.innerHTML = '';
 }
 
 // ═══ Export Functions ════════════════════════════════════════════════════════
 
-async function handleExportPNG() {
-    const exportType = currentMode === 'block' ? 'block-diagram' : 'flowchart';
-    if (!currentBridgeCode && renderer.nodes.length === 0) {
-        showToast(`Generate a ${currentMode === 'block' ? 'block diagram' : 'flowchart'} first.`, 'error');
-        return;
-    }
-
-    try {
-        const dataUrl = await renderer.exportPNG();
-        const link = document.createElement('a');
-        link.download = `${exportType}.png`;
-        link.href = dataUrl;
-        link.click();
-        showToast('PNG exported!', 'success');
-    } catch (err) {
-        showToast('Export failed: ' + err.message, 'error');
-    }
-}
-
 function handleExportSVG() {
     const exportType = currentMode === 'block' ? 'block-diagram' : 'flowchart';
-    if (!currentBridgeCode && renderer.nodes.length === 0) {
+    if (!currentMermaidCode) {
         showToast(`Generate a ${currentMode === 'block' ? 'block diagram' : 'flowchart'} first.`, 'error');
         return;
     }
 
-    const svgContent = renderer.exportSVG();
-    const blob = new Blob([svgContent], { type: 'image/svg+xml' });
+    const svgEl = canvasContainer.querySelector('svg');
+    if (!svgEl) return;
+
+    const svgData = new XMLSerializer().serializeToString(svgEl);
+    const blob = new Blob([svgData], { type: 'image/svg+xml' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.download = `${exportType}.svg`;
@@ -612,14 +392,8 @@ function handleExportSVG() {
 
 function handleClearCode() {
     if (promptInput) promptInput.value = '';
-    currentBridgeCode = '';
-    emptyState.style.display = 'block';
-    renderer.svg.style.display = 'none';
-    renderer.nodes = [];
-    renderer.edges = [];
-    nodeCountEl.textContent = 'NODES: 0';
-    edgeCountEl.textContent = 'EDGES: 0';
-    hideProperties();
+    currentMermaidCode = '';
+    showEmptyState();
     updateStatus('ready', 'Ready');
 }
 
@@ -634,7 +408,6 @@ function setupDownloadDropdown() {
         menu.classList.toggle('active');
     });
 
-    // Close dropdown when clicking outside
     document.addEventListener('click', (e) => {
         if (!e.target.closest('#download-dropdown-wrapper')) {
             menu.classList.remove('active');
@@ -647,60 +420,34 @@ function closeDownloadDropdown() {
     if (menu) menu.classList.remove('active');
 }
 
-function handleExportJSON() {
-    const exportType = currentMode === 'block' ? 'block-diagram' : 'flowchart';
-    if (!currentBridgeCode && renderer.nodes.length === 0) {
-        showToast(`Generate a ${currentMode === 'block' ? 'block diagram' : 'flowchart'} first.`, 'error');
-        return;
-    }
-
-    const jsonData = {
-        mode: currentMode,
-        bridgeCode: currentBridgeCode,
-        nodes: renderer.nodes.map(n => ({ id: n.id, text: n.text, type: n.type, x: n.x, y: n.y, width: n.width, height: n.height })),
-        edges: renderer.edges.map(e => ({ from: e.from, to: e.to, label: e.label || null })),
-        exportedAt: new Date().toISOString()
-    };
-
-    const blob = new Blob([JSON.stringify(jsonData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.download = `${exportType}.json`;
-    link.href = url;
-    link.click();
-    URL.revokeObjectURL(url);
-    showToast('JSON exported!', 'success');
-}
-
 // ═══ Code Editor ════════════════════════════════════════════════════════════
 
 function handleOpenCodeEditor() {
     const textarea = document.getElementById('code-editor-textarea');
-    textarea.value = currentBridgeCode || '';
+    textarea.value = currentMermaidCode || '';
     openModal('code-editor-modal');
 
-    // Live preview: debounce input to re-render
     if (!textarea._liveHandler) {
         textarea._liveHandler = debounce(() => {
             const code = textarea.value.trim();
             if (code) {
-                currentBridgeCode = code;
-                renderFromCode(currentBridgeCode);
+                currentMermaidCode = code;
+                renderFromCode(currentMermaidCode);
             }
         }, 600);
         textarea.addEventListener('input', textarea._liveHandler);
     }
 }
 
-function handleApplyCodeEdit() {
+async function handleApplyCodeEdit() {
     const textarea = document.getElementById('code-editor-textarea');
     const code = textarea.value.trim();
     if (!code) {
         showToast('Code is empty.', 'error');
         return;
     }
-    currentBridgeCode = code;
-    renderFromCode(currentBridgeCode);
+    currentMermaidCode = code;
+    await renderFromCode(currentMermaidCode);
     closeAllModals();
     showToast('Code applied to diagram!', 'success');
 }
@@ -715,7 +462,7 @@ function handleSave() {
         showToast(`Enter a name for the ${currentMode === 'block' ? 'block diagram' : 'flowchart'}.`, 'error');
         return;
     }
-    if (!currentBridgeCode) {
+    if (!currentMermaidCode) {
         showToast(`Generate a ${currentMode === 'block' ? 'block diagram' : 'flowchart'} first.`, 'error');
         return;
     }
@@ -726,7 +473,7 @@ function handleSave() {
 
     const flowchartData = {
         name,
-        code: currentBridgeCode,
+        code: currentMermaidCode,
         prompt: promptInput.value,
         mode: currentMode,
         createdAt: Date.now()
@@ -789,7 +536,6 @@ function handleOpenLoad() {
                 listEl.appendChild(div);
             });
 
-            // Attach load handlers
             listEl.querySelectorAll('.load-item').forEach(btn => {
                 btn.addEventListener('click', () => loadFlowchart(btn.dataset.id));
             });
@@ -811,13 +557,12 @@ function loadFlowchart(id) {
         .then(snapshot => {
             const data = snapshot.val();
             if (data) {
-                // Switch to the saved mode if available
                 if (data.mode && data.mode !== currentMode) {
                     switchMode(data.mode);
                 }
-                currentBridgeCode = data.code;
+                currentMermaidCode = data.code;
                 promptInput.value = data.prompt || '';
-                renderFromCode(currentBridgeCode);
+                renderFromCode(currentMermaidCode);
                 closeAllModals();
                 showToast(`Loaded "${data.name}"`, 'success');
             }
@@ -829,7 +574,7 @@ function deleteFlowchart(id) {
         db.ref('flowcharts/' + id).remove()
             .then(() => {
                 showToast('Deleted.', 'info');
-                handleOpenLoad(); // Refresh list
+                handleOpenLoad();
             });
     }
 }
@@ -846,7 +591,6 @@ function showToast(message, type = 'info') {
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
 
-    // Use SVG icons instead of text characters
     let iconSvg = '';
     if (type === 'success') {
         iconSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><polyline points="20 6 9 17 4 12"></polyline></svg>';
@@ -857,7 +601,6 @@ function showToast(message, type = 'info') {
     }
 
     toast.innerHTML = `<span class="toast-icon">${iconSvg}</span> ${escapeHtml(message)}`;
-
     container.appendChild(toast);
 
     setTimeout(() => {

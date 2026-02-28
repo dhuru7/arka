@@ -35,225 +35,54 @@ SARVAM_API_KEY = "sk_h10vkdry_WChEvgrtvbYb4iQPe1hNVmWT"
 SARVAM_API_URL = "https://api.sarvam.ai/v1/chat/completions"
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# FLOWCHART Bridge Language System Prompt
+# FLOWCHART Mermaid System Prompt
 # ═══════════════════════════════════════════════════════════════════════════════
-BRIDGE_LANGUAGE_SYSTEM_PROMPT = """You are a flowchart code generator. You ONLY output code in a custom "Bridge Language" DSL. You NEVER explain, comment, or add anything outside the DSL code. Your entire response must be ONLY valid Bridge Language code.
+MERMAID_FLOWCHART_SYSTEM_PROMPT = """You are a Mermaid flowchart code generator. You ONLY output valid Mermaid JS code. You NEVER explain, comment, or add anything outside the Mermaid code. Your entire response must be ONLY valid Mermaid flowchart code.
 
-BLOCK TYPES (use these exactly):
-- ts()         → Start terminator (auto-text "Start")  
-- te()         → End terminator (auto-text "End")
-- t("text")    → General oval/terminator
-- p["text"]    → Process/Action rectangle
-- d<"text">    → Decision diamond
-- l["text"]    → Input/Output parallelogram
-- c[)          → Connector circle
+Use standard Mermaid syntax:
+graph TD
+  A[Start] --> B{Condition?}
+  B -- Yes --> C[Process]
+  B -- No --> D[Error]
+  C --> E[End]
+  D --> E
 
-ARROWS (always required between consecutive blocks):
-- a>           → Forward/downward arrow (no label)
-- a*label>     → Labeled forward arrow
-- a<           → Backward arrow
-- a*label<     → Labeled backward arrow
-
-BRANCHING from decisions:
-To create Yes/No branches from a decision, RESTATE the exact decision block code and add the branch arrow:
-
-d<"Is valid?">
-a*Yes>
-p["Process Data"]
-a>
-te()
-d<"Is valid?">
-a*No>
-p["Fix Errors"]
-a>
-te()
-
-BRANCHING to multiple blocks at once (ma syntax):
-When one block connects to multiple targets, use ma*label>[ and list targets inside []:
-d<"Check">
-ma*Yes>[
-p["Action A"]
-a*No>
-p["Action B"]
-]
-NOTE: Inside ma blocks, each target gets the group label unless overridden with a*custom label> on the line BEFORE the target node.
-
-LOOPS (back-reference jumps):
-p["Fix Errors"]a*Retry>!d<"Is valid?">
-
-STRICT FORMATTING RULES:
-1. Phase 1 (Declaration): List ALL unique blocks one per line. NO arrows. NO duplicates.
-2. Separator: Exactly five dots on their own line: .....
-3. Phase 2 (Connections): Connect blocks with arrows. EVERY pair of consecutive blocks MUST have an arrow (a> or a*label>) between them. NEVER list two blocks on consecutive lines without an arrow between them.
-4. Phase 2 text MUST EXACTLY match Phase 1 text character-for-character.
-5. Output ONLY valid Bridge Language code. No markdown fences, no explanations, no comments.
-6. Keep flowcharts clean: 4-10 blocks is ideal, avoid unnecessary complexity.
-7. Every block in Phase 1 must appear at least once in Phase 2.
-8. A decision block can appear multiple times in Phase 2 to create different branches.
-9. NEVER create duplicate arrows between the same two blocks.
-10. MULTILINGUAL: If the user's prompt is in Hindi, Tamil, Telugu, or any non-English language, use that SAME language for ALL block text inside the quotes.
-
-COMPLETE EXAMPLE - User Login Flow:
-ts()
-l["Enter credentials"]
-d<"Valid credentials?">
-p["Grant access"]
-p["Show error message"]
-d<"Retry limit reached?">
-p["Lock account"]
-te()
-.....
-ts()
-a>
-l["Enter credentials"]
-a>
-d<"Valid credentials?">
-a*Yes>
-p["Grant access"]
-a>
-te()
-d<"Valid credentials?">
-a*No>
-p["Show error message"]
-a>
-d<"Retry limit reached?">
-a*Yes>
-p["Lock account"]
-a>
-te()
-d<"Retry limit reached?">
-a*No>
-p["Show error message"]a*Retry>!l["Enter credentials"]
+Do not use markdown blocks in the output. Just raw mermaid.
 """
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# BLOCK DIAGRAM Bridge Language System Prompt
+# BLOCK DIAGRAM Mermaid System Prompt
 # ═══════════════════════════════════════════════════════════════════════════════
-BLOCK_DIAGRAM_SYSTEM_PROMPT = """You are a block diagram code generator. You ONLY output code in a custom "Bridge Language" DSL. You NEVER explain, comment, or add anything outside the DSL code. Your entire response must be ONLY valid Bridge Language code.
+MERMAID_BLOCK_DIAGRAM_SYSTEM_PROMPT = """You are a Mermaid block diagram code generator. You ONLY output valid Mermaid JS code. You NEVER explain, comment, or add anything outside the Mermaid code. Your entire response must be ONLY valid Mermaid flowchart/graph code representing an architecture block diagram.
 
-BLOCK TYPES (use these exactly):
-- t("text")    → Oval shape (for hubs, databases, endpoints)
-- p["text"]    → Rectangle shape (for servers, modules, services)
-- d<"text">    → Diamond shape (for load balancers, routers, decision points)
-- l["text"]    → Parallelogram shape (for external APIs, I/O, external services)
-- c[)          → Small connector circle (merge point)
-- B{           → Complex container block with positional text:
-    *tm: "Top Middle"
-    *bm: "Bottom Middle"
-    *tl: "Top Left"
-    *tr: "Top Right"
-    *bl: "Bottom Left"
-    *br: "Bottom Right"
-  }
+Use standard Mermaid syntax, utilize subgraphs and appropriate node shapes (database, etc.).
+Example:
+graph LR
+  subgraph Client
+    A[Browser]
+  end
+  subgraph Backend
+    B[API Gateway]
+    C[Service Core]
+    D[(Database)]
+  end
+  A -->|HTTP / API| B
+  B --> C
+  C --> D
 
-ARROWS (always required between connected blocks):
-- a>           → Forward/downward arrow (no label)
-- a*label>     → Labeled forward arrow
-- a<           → Backward/upward arrow
-- a*label<     → Labeled backward arrow
-
-BRANCHING OUT (one block sends to multiple):
-p["Load Balancer"]
-ma*routes to>[
-p["Server A"]
-a*also routes to>
-p["Server B"]
-]
-NOTE: Inside ma blocks, each target gets the group label unless overridden with a*custom label> on the line BEFORE the target node.
-
-MERGING IN (multiple blocks feed into one):
-t("Central Database")ma*saves data<[
-p["Server A"]
-p["Server B"]
-]
-
-JUMP ARROWS (connect to previously declared blocks):
-p["Module C"]a*feedback>!p["Module A"]
-
-STRICT FORMATTING RULES:
-1. Phase 1 (Declaration): List ALL unique blocks one per line. NO arrows. NO duplicates.
-2. Separator: Exactly five dots on their own line: .....
-3. Phase 2 (Connections): Connect blocks with arrows. EVERY pair of consecutive blocks MUST have an arrow (a> or a*label>) between them. NEVER write two block codes on consecutive lines without an arrow between them.
-4. Phase 2 text MUST EXACTLY match Phase 1 text character-for-character.
-5. Output ONLY valid Bridge Language code. No markdown fences, no explanations, no comments.
-6. Do NOT use ts() or te(). Those are flowchart-only. Use t("text"), p["text"], etc.
-7. Use appropriate shapes for different component types in the architecture.
-8. Keep diagrams clean: 4-12 blocks is ideal.
-9. CRITICAL: EVERY block declared in Phase 1 MUST be connected to at least one other block in Phase 2. No orphan/disconnected blocks allowed.
-10. NEVER create duplicate arrows between the same two blocks.
-11. MULTILINGUAL: If the user's prompt is in Hindi, Tamil, Telugu, or any non-English language, use that SAME language for ALL block text and arrow labels.
-
-COMPLETE EXAMPLE - Microservice Architecture:
-p["Client App"]
-l["API Gateway"]
-d<"Auth Service">
-p["User Service"]
-p["Order Service"]
-t("PostgreSQL DB")
-t("Redis Cache")
-.....
-p["Client App"]
-a*HTTP Request>
-l["API Gateway"]
-a*Authenticate>
-d<"Auth Service">
-ma*Authorized>[
-p["User Service"]
-a*Route Order>
-p["Order Service"]
-]
-p["User Service"]
-a*Query>
-t("PostgreSQL DB")
-p["Order Service"]
-a*Query>
-t("PostgreSQL DB")
-d<"Auth Service">
-a*Cache Token>
-t("Redis Cache")
-d<"Auth Service">a*Rejected>!p["Client App"]
+Do not use markdown blocks in the output. Just raw mermaid.
 """
 
 
-def clean_bridge_code(code):
-    """Post-process AI-generated bridge code to fix common mistakes."""
+def clean_mermaid_code(code):
+    """Post-process AI-generated codebase to extract rough mermaid blocks."""
     if not code:
         return code
 
-    # 1. Remove markdown fencing
-    if '```' in code:
-        lines = code.split('\n')
-        lines = [l for l in lines if not l.strip().startswith('```')]
-        code = '\n'.join(lines).strip()
-
-    # 2. Remove comment/explanation lines
-    valid_lines = []
-    for line in code.split('\n'):
-        stripped = line.strip()
-        if not stripped:
-            continue
-        # Skip obvious comment lines
-        if stripped.startswith('//') or stripped.startswith('#') or stripped.startswith('Note:'):
-            continue
-        valid_lines.append(stripped)
-
-    # 3. Remove consecutive duplicate lines
-    deduped = []
-    for line in valid_lines:
-        if not deduped or line != deduped[-1]:
-            deduped.append(line)
-
-    # 4. Fix common AI mistakes with arrow syntax
-    fixed = []
-    for line in deduped:
-        # Fix a*label*> to a*label> (remove extra closing *)
-        # The parser handles both, but normalize to language spec format
-        line = re.sub(r'^(a\*[^*]+)\*([><])', r'\1\2', line)
-        # Fix ma*label*>[ to ma*label>[
-        line = re.sub(r'^(ma\*[^*]+)\*([><]\[)', r'\1\2', line)
-        fixed.append(line)
-
-    return '\n'.join(fixed)
+    # Remove markdown fencing
+    lines = code.split('\n')
+    lines = [l for l in lines if not l.strip().startswith('```')]
+    return '\n'.join(lines).strip()
 
 
 @app.route('/')
@@ -287,11 +116,11 @@ def generate_flowchart():
             'messages': [
                 {
                     'role': 'system',
-                    'content': BRIDGE_LANGUAGE_SYSTEM_PROMPT
+                    'content': MERMAID_FLOWCHART_SYSTEM_PROMPT
                 },
                 {
                     'role': 'user',
-                    'content': f"Generate a flowchart in Bridge Language for: {user_prompt}"
+                    'content': f"Generate a flowchart in Mermaid JS for: {user_prompt}"
                 }
             ],
             'temperature': 0.3,
@@ -310,11 +139,11 @@ def generate_flowchart():
 
         result = response.json()
         bridge_code = result['choices'][0]['message']['content'].strip()
-        bridge_code = clean_bridge_code(bridge_code)
+        bridge_code = clean_mermaid_code(bridge_code)
 
         return jsonify({
             'success': True,
-            'bridge_code': bridge_code,
+            'code': bridge_code,
             'usage': result.get('usage', {})
         })
 
@@ -351,11 +180,11 @@ def generate_block_diagram():
             'messages': [
                 {
                     'role': 'system',
-                    'content': BLOCK_DIAGRAM_SYSTEM_PROMPT
+                    'content': MERMAID_BLOCK_DIAGRAM_SYSTEM_PROMPT
                 },
                 {
                     'role': 'user',
-                    'content': f"Generate a block diagram in Bridge Language for: {user_prompt}"
+                    'content': f"Generate a block diagram in Mermaid JS for: {user_prompt}"
                 }
             ],
             'temperature': 0.3,
@@ -374,11 +203,11 @@ def generate_block_diagram():
 
         result = response.json()
         bridge_code = result['choices'][0]['message']['content'].strip()
-        bridge_code = clean_bridge_code(bridge_code)
+        bridge_code = clean_mermaid_code(bridge_code)
 
         return jsonify({
             'success': True,
-            'bridge_code': bridge_code,
+            'code': bridge_code,
             'usage': result.get('usage', {})
         })
 
@@ -415,11 +244,11 @@ def refine_block_diagram():
             'messages': [
                 {
                     'role': 'system',
-                    'content': BLOCK_DIAGRAM_SYSTEM_PROMPT
+                    'content': MERMAID_BLOCK_DIAGRAM_SYSTEM_PROMPT
                 },
                 {
                     'role': 'user',
-                    'content': f"Here is my current block diagram code:\n{current_code}\n\nPlease modify it with this instruction: {instruction}\n\nOutput ONLY the complete updated Bridge Language code."
+                    'content': f"Here is my current block diagram code:\n{current_code}\n\nPlease modify it with this instruction: {instruction}\n\nOutput ONLY the complete updated Mermaid JS code."
                 }
             ],
             'temperature': 0.3,
@@ -433,11 +262,11 @@ def refine_block_diagram():
 
         result = response.json()
         bridge_code = result['choices'][0]['message']['content'].strip()
-        bridge_code = clean_bridge_code(bridge_code)
+        bridge_code = clean_mermaid_code(bridge_code)
 
         return jsonify({
             'success': True,
-            'bridge_code': bridge_code,
+            'code': bridge_code,
             'usage': result.get('usage', {})
         })
 
@@ -470,11 +299,11 @@ def refine_flowchart():
             'messages': [
                 {
                     'role': 'system',
-                    'content': BRIDGE_LANGUAGE_SYSTEM_PROMPT
+                    'content': MERMAID_FLOWCHART_SYSTEM_PROMPT
                 },
                 {
                     'role': 'user',
-                    'content': f"Here is my current flowchart code:\n{current_code}\n\nPlease modify it with this instruction: {instruction}\n\nOutput ONLY the complete updated Bridge Language code."
+                    'content': f"Here is my current flowchart code:\n{current_code}\n\nPlease modify it with this instruction: {instruction}\n\nOutput ONLY the complete updated Mermaid JS code."
                 }
             ],
             'temperature': 0.3,
@@ -488,11 +317,11 @@ def refine_flowchart():
 
         result = response.json()
         bridge_code = result['choices'][0]['message']['content'].strip()
-        bridge_code = clean_bridge_code(bridge_code)
+        bridge_code = clean_mermaid_code(bridge_code)
 
         return jsonify({
             'success': True,
-            'bridge_code': bridge_code,
+            'code': bridge_code,
             'usage': result.get('usage', {})
         })
 
