@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Arka - Next Generation AI Diagram Designer.">
+    <title>ARKA | The AI Diagram Generator</title>
+
+    <!-- Google Fonts for Nothing OS Aesthetic -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Orbitron:wght@500;700&family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/about.css">
+
+    <!-- Mermaid JS for landing page examples -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script>
+        mermaid.initialize({ startOnLoad: false, theme: 'dark' });
+    </script>
+</head>
+
+<body>
+    <!-- Background Grid Environment -->
+    <div class="bg-grid interactive-grid"></div>
+    <div class="noise-overlay"></div>
+
+    <!-- Navigation -->
+    <nav class="lander-nav">
+        <div class="logo-text">
+            <h1>ARKA</h1>
+        </div>
+        <div class="nav-links">
+            <a href="login.html" class="nav-link">Log In</a>
+            <a href="signup.html" class="primary auth-btn-sm">Start Creating</a>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="lander-main">
+
+        <!-- Hero Section -->
+        <section class="hero-section">
+            <h1 class="hero-title">
+                <div class="line">FROM <span class="accent-text typing-effect">PROMPT</span></div>
+                <div class="line">TO <span class="glitch-text" data-text="PERFECTION.">PERFECTION.</span></div>
+            </h1>
+
+            <p class="hero-subtitle">
+                The ultimate brutalist AI diagramming tool.
+                Describe your architecture, workflow, or logic in plain language,
+                and watch the engine render precise, professional diagrams instantly.
+            </p>
+
+            <div class="hero-ctas">
+                <a href="signup.html" class="primary large-btn">
+                    INITIALIZE ENGINE
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                        <polyline points="12 5 19 12 12 19"></polyline>
+                    </svg>
+                </a>
+                <a href="index.html" class="secondary large-btn">GUEST ACCESS</a>
+            </div>
+        </section>
+
+        <!-- Marquee Divider -->
+        <div class="marquee-container">
+            <div class="marquee-content">
+                <span>FLOWCHARTS</span> <span class="separator">/</span>
+                <span>BLOCK DIAGRAMS</span> <span class="separator">/</span>
+                <span>SEQUENCE</span> <span class="separator">/</span>
+                <span>STATE MACHINES</span> <span class="separator">/</span>
+                <span>GANTT CHARTS</span> <span class="separator">/</span>
+                <span>ER DIAGRAMS</span> <span class="separator">/</span>
+                <span>TIMELINES</span> <span class="separator">/</span>
+                <span>ARCHITECTURE</span> <span class="separator">/</span>
+                <span>FLOWCHARTS</span> <span class="separator">/</span>
+                <span>BLOCK DIAGRAMS</span> <span class="separator">/</span>
+                <span>SEQUENCE</span> <span class="separator">/</span>
+                <span>STATE MACHINES</span> <span class="separator">/</span>
+                <span>GANTT CHARTS</span> <span class="separator">/</span>
+                <span>ER DIAGRAMS</span> <span class="separator">/</span>
+                <span>TIMELINES</span> <span class="separator">/</span>
+                <span>ARCHITECTURE</span> <span class="separator">/</span>
+            </div>
+        </div>
+
+        <!-- Interactive Showcase Section -->
+        <section class="showcase-section">
+            <div class="showcase-header">
+                <h2>SEE IT <span class="accent-text">IN ACTION.</span></h2>
+            </div>
+
+            <div class="showcase-container">
+                <!-- Left: Prompt Generator -->
+                <div class="showcase-left">
+                    <div class="prompt-window">
+                        <div class="prompt-header">
+                            <span class="dot"></span>
+                            <span class="dot"></span>
+                            <span class="dot"></span>
+                            <span class="term-title">user_input.exe</span>
+                        </div>
+                        <div class="prompt-body">
+                            <div class="prompt-line">
+                                <span class="prompt-prefix">>_</span>
+                                <span id="typewriter-text"></span><span class="cursor"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Rendered Outputs -->
+                <div class="showcase-right">
+                    <div class="diagram-window">
+                        <div class="diagram-header">
+                            <span class="term-title">output_render // <span id="render-type">processing...</span></span>
+                        </div>
+                        <div class="diagram-body" id="mermaid-container">
+                            <!-- Mermaid SVG inserted here by JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Staggered Features Section -->
+        <section class="features-alt-section">
+            <div class="feature-row">
+                <div class="feature-num">01</div>
+                <div class="feature-text">
+                    <h3>INSTANT GENERATION</h3>
+                    <p>Powered by advanced AI models, ARKA translates complex explanations into beautifully structured
+                        Logic components in under a second. Save hours of manual dragging and dropping.</p>
+                </div>
+            </div>
+
+            <div class="feature-row reverse">
+                <div class="feature-num">02</div>
+                <div class="feature-text">
+                    <h3>GLOBAL LANGUAGES</h3>
+                    <p>Harness the power of AI in your native tongue. Whether you write your prompt in English, Hindi,
+                        Spanish, or Japanese, the engine comprehends the context and generates perfect diagrams
+                        indiscriminately.</p>
+                </div>
+            </div>
+
+            <div class="feature-row">
+                <div class="feature-num">03</div>
+                <div class="feature-text">
+                    <h3>14+ PRO DIAGRAMS</h3>
+                    <p>From architectural maps and intricate network topologies, to simple daily pie charts, Gantt
+                        trackers, and Git graphs. ARKA's versatility ensures you're equipped for any presentation.</p>
+                </div>
+            </div>
+
+            <div class="feature-row reverse">
+                <div class="feature-num">04</div>
+                <div class="feature-text">
+                    <h3>LIVE REFINEMENT</h3>
+                    <p>Don't want to rewrite the entire prompt? Just hit it with a micro-command: <i>"Add an
+                            authentication layer before the database."</i> The AI updates the node graph precisely where
+                        requested.</p>
+                </div>
+            </div>
+
+            <div class="feature-row">
+                <div class="feature-num">05</div>
+                <div class="feature-text">
+                    <h3>POWERED BY SARVAM M</h3>
+                    <p>At the core of ARKA lies Sarvam M—India's first foundational AI model. Specially fine-tuned for
+                        structured logic, multilingual comprehension, and rapid code-generation capabilities required
+                        for complex engineering tools.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="lander-footer">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <h2>ARKA</h2>
+                    <p>The premium brutalist diagram generator.</p>
+                </div>
+                <div class="footer-links">
+                    <a href="login.html">Login</a>
+                    <a href="signup.html">Register</a>
+                    <a href="index.html">Launch App</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 ARKA Systems. All rights reserved.</p>
+            </div>
+        </footer>
+
+    </main>
+
+    <!-- Showcase Animation Script -->
+    <script>
+        const examples = [
+            {
+                prompt: "Show a bar chart comparing latency between 4G, 5G, and WiFi for IoT devices...",
+                type: "XY CHART",
+                code: `xychart-beta
+    title "IoT Connectivity Latency Comparison (ms)"
+    x-axis ["4G LTE", "WiFi 6", "5G Sub-6", "5G mmWave"]
+    y-axis "Latency (ms)" 0 --> 60
+    bar [45, 15, 8, 2]`
+            },
+            {
+                prompt: "Create a sequence diagram of a smart lock authenticating a user via a mobile app...",
+                type: "SEQUENCE DIAGRAM",
+                code: `sequenceDiagram
+    actor U as User
+    participant App as Mobile App
+    participant Cloud as Auth Server
+    participant Lock as Smart Lock
+
+    U->>App: Taps 'Unlock'
+    App->>Cloud: POST /auth (Token)
+    Cloud-->>App: Challenge Request
+    App->>Cloud: Signed Challenge Result
+    
+    rect rgb(20, 40, 60)
+        Cloud->>Cloud: Verify Signature
+    end
+    
+    Cloud->>Lock: MQTT Command (Unlock)
+    Lock-->>Cloud: Ack (Status: Unlocked)
+    Cloud-->>App: Webhook (Success)
+    App-->>U: "Door Unlocked" visual feedback`
+            },
+            {
+                prompt: "Make a block diagram of a basic home automation IoT setup...",
+                type: "BLOCK DIAGRAM",
+                code: `graph LR
+    subgraph Local Network
+        Hub[Smart Home Hub]
+        Light[Smart Bulb]
+        Temp[Thermostat]
+    end
+    
+    subgraph Internet
+        API[Vendor Cloud API]
+    end
+
+    App((Mobile Phone)) --> API
+    API --> Hub
+    Hub --> Light
+    Hub --> Temp`
+            },
+            {
+                prompt: "Show me a pie chart of an IoT gateway's power consumption breakdown...",
+                type: "PIE CHART",
+                code: `pie title "IoT Gateway Power Draw"
+    "Cellular Modem (LTE)" : 45
+    "Main CPU processing" : 30
+    "Wi-Fi / BLE Radios" : 15
+    "LEDs / Peripherals" : 10`
+            }
+        ];
+
+        let currentExampleIdx = 0;
+        const twText = document.getElementById('typewriter-text');
+        const diagramContainer = document.getElementById('mermaid-container');
+        const renderTypeLabel = document.getElementById('render-type');
+
+        async function typeWriterEffect(text, speed = 50) {
+            twText.innerHTML = '';
+            for (let i = 0; i < text.length; i++) {
+                twText.innerHTML += text.charAt(i);
+                await new Promise(r => setTimeout(r, speed));
+            }
+        }
+
+        async function eraseEffect(speed = 30) {
+            let text = twText.innerHTML;
+            while (text.length > 0) {
+                text = text.substring(0, text.length - 1);
+                twText.innerHTML = text;
+                await new Promise(r => setTimeout(r, speed));
+            }
+        }
+
+        async function renderMermaid(code) {
+            diagramContainer.innerHTML = '';
+            renderTypeLabel.innerText = "rendering...";
+
+            // Generate a unique ID for mermaid to avoid DOM conflicts
+            const id = 'mermaid-' + Date.now();
+
+            try {
+                const { svg } = await mermaid.render(id, code);
+                diagramContainer.innerHTML = svg;
+
+                // Add an animation class to the SVG to fade it in
+                const svgElement = diagramContainer.querySelector('svg');
+                if (svgElement) {
+                    svgElement.style.animation = 'fadeIn 0.5s ease-out forwards';
+                    svgElement.style.maxWidth = '100%';
+                    svgElement.style.height = 'auto';
+                }
+
+                renderTypeLabel.innerText = examples[currentExampleIdx].type;
+            } catch (err) {
+                console.error("Mermaid sync error: ", err);
+            }
+        }
+
+        async function runShowcaseLoop() {
+            while (true) {
+                const example = examples[currentExampleIdx];
+
+                // Reset diagram side
+                diagramContainer.innerHTML = '<div style="color: var(--fg-muted); font-family: var(--font-mono); opacity: 0.5; padding: 40px; text-align: center;">[ AWAITING INPUT ]</div>';
+                renderTypeLabel.innerText = "idle";
+
+                // 1. Type the prompt
+                await typeWriterEffect(example.prompt, 40);
+
+                // 2. Pause
+                await new Promise(r => setTimeout(r, 600));
+
+                // 3. Render diagram
+                await renderMermaid(example.code);
+
+                // 4. Wait to show it off
+                await new Promise(r => setTimeout(r, 4500));
+
+                // 5. Erase prompt
+                await eraseEffect(20);
+
+                // Next example
+                currentExampleIdx = (currentExampleIdx + 1) % examples.length;
+            }
+        }
+
+        // Start loop on load
+        window.addEventListener('load', () => {
+            runShowcaseLoop();
+        });
+    </script>
+</body>
+
+</html>

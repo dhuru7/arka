@@ -287,21 +287,16 @@ function setupAppThemeToggle() {
 function setupModeToggle() {
     const btn = document.getElementById('btn-mode-select');
     const menu = document.getElementById('mode-dropdown-menu');
-    const scrollHint = document.getElementById('mode-scroll-hint');
     if (!btn || !menu) return;
 
     btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        const isActive = menu.classList.toggle('active');
-        if (scrollHint) {
-            scrollHint.style.display = isActive ? 'block' : 'none';
-        }
+        menu.classList.toggle('active');
     });
 
     document.addEventListener('click', (e) => {
         if (!e.target.closest('#mode-dropdown-wrapper')) {
             menu.classList.remove('active');
-            if (scrollHint) scrollHint.style.display = 'none';
         }
     });
 
@@ -310,7 +305,6 @@ function setupModeToggle() {
             const mode = option.getAttribute('data-mode');
             switchMode(mode);
             menu.classList.remove('active');
-            if (scrollHint) scrollHint.style.display = 'none';
         });
     });
 }
@@ -909,15 +903,11 @@ function resetThemePreview() {
 function setupThemeDropdown() {
     const btn = document.getElementById('btn-theme');
     const menu = document.getElementById('theme-dropdown-menu');
-    const scrollHint = document.getElementById('theme-scroll-hint');
     if (!btn || !menu) return;
 
     btn.addEventListener('click', (e) => {
         e.stopPropagation();
         const isActive = menu.classList.toggle('active');
-        if (scrollHint) {
-            scrollHint.style.display = isActive ? 'block' : 'none';
-        }
         if (!isActive) {
             resetThemePreview();
         }
@@ -928,7 +918,6 @@ function setupThemeDropdown() {
             if (menu.classList.contains('active')) {
                 resetThemePreview();
                 menu.classList.remove('active');
-                if (scrollHint) scrollHint.style.display = 'none';
             }
         }
     });

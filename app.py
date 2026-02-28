@@ -70,6 +70,7 @@ def clean_mermaid_code(code):
 
 
 @app.route('/')
+@app.route('/index.html')
 def index():
     """Serve the main frontend page."""
     return render_template('index.html')
@@ -243,6 +244,24 @@ ADDITIONAL GUIDELINES:
 def law_bot():
     """Serve the Law Bot frontend page."""
     return render_template('law_bot.html')
+
+@app.route('/login')
+@app.route('/login.html')
+def login():
+    """Serve the Login page."""
+    return render_template('login.html')
+
+@app.route('/signup')
+@app.route('/signup.html')
+def signup():
+    """Serve the Signup page."""
+    return render_template('signup.html')
+
+@app.route('/about')
+@app.route('/about.html')
+def about():
+    """Serve the About Landing page."""
+    return render_template('about.html')
 
 @app.route('/api/law-chat', methods=['POST'])
 def law_chat():
