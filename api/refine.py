@@ -10,9 +10,9 @@ SARVAM_API_KEY = "sk_h10vkdry_WChEvgrtvbYb4iQPe1hNVmWT"
 SARVAM_API_URL = "https://api.sarvam.ai/v1/chat/completions"
 
 MERMAID_SYSTEM_PROMPTS = {
-    'flowchart': """You are a Mermaid flowchart code generator. You ONLY output valid Mermaid JS code. Do NOT use markdown code fences. Do NOT add text outside Mermaid code. Do NOT use backslashes in labels.""",
-    'block': """You are a Mermaid block diagram code generator. You ONLY output valid Mermaid JS code. Do NOT use markdown code fences. Use graph LR or graph TD with subgraphs.""",
-    'architecture': """You are a Mermaid architecture diagram code generator. You ONLY output valid Mermaid JS code. Do NOT use markdown code fences.""",
+    'flowchart': """You are an expert Mermaid flowchart code generator. You ONLY output valid Mermaid JS code. Do NOT use markdown code fences. SUBGRAPHS MUST be closed with the exact word 'end' on a new line. NEVER use 'end subgraph'. Do NOT use parentheses inside labels.""",
+    'block': """You are an expert Mermaid block diagram code generator. You ONLY output valid Mermaid JS code. Do NOT use markdown code fences. Use graph LR or graph TD. SUBGRAPHS MUST be closed with the exact word 'end' on a new line. NEVER use 'end subgraph'. Do NOT use parentheses inside labels.""",
+    'architecture': """You are an expert Mermaid architecture diagram code generator. You ONLY output valid Mermaid JS code. Do NOT use markdown code fences. SUBGRAPHS MUST be closed with the exact word 'end' on a new line. NEVER use 'end subgraph'. Do NOT use parentheses inside labels.""",
     'sequence': """You are a Mermaid sequence diagram generator. You ONLY output valid Mermaid JS code. Do NOT use markdown code fences.""",
     'timeline': """You are a Mermaid timeline generator. You ONLY output valid Mermaid JS code. Do NOT use markdown code fences. Do NOT use parentheses in event descriptions.""",
     'gantt': """You are a Mermaid Gantt chart generator. You ONLY output valid Mermaid JS code. Do NOT use markdown code fences. Do NOT use backslashes or parentheses in task names. Include dateFormat YYYY-MM-DD.""",

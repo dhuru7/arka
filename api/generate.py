@@ -10,36 +10,40 @@ SARVAM_API_KEY = "sk_h10vkdry_WChEvgrtvbYb4iQPe1hNVmWT"
 SARVAM_API_URL = "https://api.sarvam.ai/v1/chat/completions"
 
 MERMAID_SYSTEM_PROMPTS = {
-    'flowchart': """You are a Mermaid flowchart code generator. You ONLY output valid Mermaid JS code. You NEVER explain, comment, or add anything outside the Mermaid code.
+    'flowchart': """You are an expert Mermaid flowchart generator. You ONLY output valid, pristine Mermaid JS syntax.
 
-RULES:
-- Do NOT use markdown code fences (no ```)
-- Do NOT add any text, comments, or explanations
-- Do NOT use backslashes (\\) in text labels
-- Use only plain alphanumeric text and simple punctuation in labels
-- Always use graph TD or flowchart TD as the first line
+CRITICAL RULES:
+- NEVER use markdown blocks (no ```)
+- NEVER explain, comment, or output anything except the diagram code
+- ALWAYS start with 'graph TD' or 'flowchart TD'
+- SUBGRAPHS MUST be closed with the exact word 'end' on a new line. NEVER use 'end subgraph' or 'END'.
+- NODE IDs MUST be simple (e.g., A, B, C) without spaces or special characters.
+- LABELS MUST NOT contain parentheses (), brackets [], or quotes "".
+- AVOID complex nesting if possible.
 
 Example:
-graph TD
-  A[Start] --> B{Condition?}
-  B -- Yes --> C[Process]
-  B -- No --> D[Error]
-  C --> E[End]
+flowchart TD
+  A[Start Process] --> B{Check Condition}
+  B -->|Yes| C[Process Request]
+  B -->|No| D[Reject Request]
+  C --> E[End Process]
   D --> E""",
 
-    'block': """You are a Mermaid block diagram code generator. You ONLY output valid Mermaid JS code.
+    'block': """You are an expert Mermaid block diagram code generator. You ONLY output valid Mermaid JS code.
 
-RULES:
-- Do NOT use markdown code fences
-- Do NOT use backslashes in text labels
-- Use graph LR or graph TD with subgraphs
+CRITICAL RULES:
+- NEVER use markdown blocks (no ```)
+- ALWAYS start with 'graph LR' or 'graph TD'
+- SUBGRAPHS MUST be closed with the exact word 'end' on a new line. NEVER use 'end subgraph', 'End', or 'END'.
+- LABELS MUST NOT contain parentheses () or backslashes.
+- Node IDs must be simple alphanumeric strings without spaces.
 
 Example:
 graph LR
   subgraph Client
     A[Browser]
   end
-  subgraph Backend
+  subgraph Backend Area
     B[API Gateway]
     C[Service Core]
     D[(Database)]
@@ -48,15 +52,17 @@ graph LR
   B --> C
   C --> D""",
 
-    'architecture': """You are a Mermaid architecture diagram code generator. You ONLY output valid Mermaid JS code.
+    'architecture': """You are an expert Mermaid architecture diagram code generator. You ONLY output valid Mermaid JS code.
 
-RULES:
-- Do NOT use markdown code fences
-- Use graph TD/LR with subgraphs for architecture representation
+CRITICAL RULES:
+- NEVER use markdown blocks (no ```)
+- Use 'graph TD' or 'graph LR'
+- SUBGRAPHS MUST be closed with the exact word 'end' on a new line. NEVER use 'end subgraph' or 'END'.
+- Do NOT use parentheses inside node labels.
 
 Example:
-graph TB
-  subgraph Cloud
+graph TD
+  subgraph Cloud Infrastructure
     LB[Load Balancer]
     subgraph App Tier
       S1[Server 1]
