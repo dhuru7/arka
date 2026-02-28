@@ -863,13 +863,20 @@ function applyColorToNode(element, color) {
     });
 
     // Also try to apply via Mermaid style directive in the code so it persists
-    const nodeId = element.id;
-    if (nodeId && currentMermaidCode) {
-        // Add style directive to the end of the code
-        const styleDirective = `\n    style ${nodeId} fill:${color},color:#fff`;
+    const svgId = element.id;
+    if (svgId && currentMermaidCode) {
+        // Extract real Mermaid ID from SVG DOM ID (e.g., 'flowchart-C-3' -> 'C')
+        let realId = svgId;
+        const parts = svgId.split('-');
+        if (parts.length >= 3 && (svgId.startsWith('flowchart-') || svgId.startsWith('state-'))) {
+            realId = parts.slice(1, -1).join('-');
+        }
+
         // Only add for flowchart/graph types
         const firstLine = currentMermaidCode.trim().split('\n')[0].toLowerCase();
         if (firstLine.startsWith('graph') || firstLine.startsWith('flowchart')) {
+            // Check if a style for this node already exists, if so, we just append a new one (Mermaid uses the last one)
+            const styleDirective = `\n    style ${realId} fill:${color},color:#fff`;
             currentMermaidCode += styleDirective;
         }
     }
