@@ -815,6 +815,10 @@ function showColorTray(element) {
         swatch.title = label;
         swatch.style.cssText = `
             width: 24px; height: 24px;
+            min-width: 24px; min-height: 24px;
+            padding: 0; margin: 0;
+            flex-shrink: 0;
+            box-sizing: border-box;
             border-radius: 50%;
             border: 2px solid rgba(255,255,255,0.15);
             background: ${color};

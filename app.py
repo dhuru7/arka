@@ -296,7 +296,7 @@ gitGraph
     commit id: "Add feature B"
     checkout main
     merge develop
-    commit id: "Release v1.0"""",
+    commit id: "Release v1.0" """,
 
     'quadrant': """You are a Mermaid quadrant chart generator. You ONLY output valid Mermaid JS code. You NEVER explain, comment, or add anything outside the Mermaid code.
 
