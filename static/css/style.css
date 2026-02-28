@@ -598,7 +598,20 @@ textarea::placeholder {
 }
 
 .node-group {
-    transition: opacity 0.15s ease;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.node-group rect,
+.node-group circle,
+.node-group ellipse,
+.node-group polygon,
+.node-group path {
+    filter: drop-shadow(4px 4px 0px rgba(0, 0, 0, 0.4));
+    stroke-width: 2px !important;
+    rx: 8px;
+    /* Rounded corners for rectangles */
+    ry: 8px;
+    transition: all 0.2s ease-in-out;
 }
 
 .node-group:hover {
@@ -607,17 +620,25 @@ textarea::placeholder {
 
 .node-group:hover rect,
 .node-group:hover polygon,
-.node-group:hover circle {
-    stroke-width: 2.5;
-    filter: url(#glow);
+.node-group:hover circle,
+.node-group:hover ellipse,
+.node-group:hover path {
+    stroke-width: 3px !important;
+    filter: drop-shadow(6px 6px 0px rgba(255, 255, 255, 0.2)) brightness(1.1);
+    transform: translateY(-2px);
 }
 
 .edge-path {
     transition: stroke-width 0.15s ease;
 }
 
+.edgePath .path {
+    stroke-width: 2px !important;
+    filter: drop-shadow(2px 2px 2px rgba(0, 0, 0, 0.3));
+}
+
 .edge-group:hover .edge-path {
-    stroke-width: 3;
+    stroke-width: 4px !important;
 }
 
 .selection-indicator {

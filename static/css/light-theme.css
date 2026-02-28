@@ -1,0 +1,92 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Arka – Light Theme Expansion
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+body.light-theme {
+    --bg: #f7f7f8;
+    --fg: #111111;
+    --fg-muted: #555555;
+    --border: #e0e0e0;
+    --border-light: #cccccc;
+    --accent: #E52E2E;
+    --accent-hover: #ff4444;
+}
+
+body.light-theme .bg-grid {
+    background-image: radial-gradient(var(--border-light) 1px, transparent 1px);
+    opacity: 0.6;
+}
+
+body.light-theme .sidebar {
+    background: rgba(255, 255, 255, 0.9);
+}
+
+body.light-theme .toolbar {
+    background: rgba(255, 255, 255, 0.85);
+}
+
+body.light-theme input[type="text"],
+body.light-theme textarea {
+    background: rgba(255, 255, 255, 0.9);
+    color: var(--fg);
+}
+
+body.light-theme .mode-toggle {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+body.light-theme .prop-shape-btn.active {
+    background: rgba(0, 0, 0, 0.08);
+}
+
+body.light-theme .prop-shape-btn:hover,
+body.light-theme .prop-size-btn:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+body.light-theme .prop-color-swatch:hover {
+    border-color: #000;
+}
+
+body.light-theme .modal {
+    background: var(--bg);
+}
+
+body.light-theme .modal-overlay {
+    background: rgba(255, 255, 255, 0.8);
+}
+
+body.light-theme .icon-btn:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+body.light-theme #app-theme-toggle {
+    border: 1px solid var(--border-light) !important;
+    background: rgba(0, 0, 0, 0.03) !important;
+    color: var(--fg);
+}
+
+body.light-theme #app-theme-toggle:hover {
+    border-color: #999 !important;
+}
+
+body.light-theme .generate-btn .spinner {
+    border: 2px solid rgba(0, 0, 0, 0.3);
+    border-top-color: #000;
+}
+
+body.light-theme .dropdown-menu {
+    background: var(--bg);
+    border-color: var(--border-light);
+}
+
+body.light-theme .dropdown-item:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+body.light-theme .inline-editor input {
+    background: rgba(255, 255, 255, 0.85) !important;
+    color: #111 !important;
+    border-color: #E52E2E !important;
+    box-shadow: 0 0 10px rgba(229, 46, 46, 0.5) !important;
+}

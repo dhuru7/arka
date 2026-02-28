@@ -34,21 +34,31 @@ const refineBtn = document.getElementById('refine-btn');
 let currentMermaidCode = '';
 let db = null; // Firebase Realtime DB reference
 let currentMode = 'flowchart'; // 'flowchart' or 'block'
+let currentTheme = 'default';
 let currentScale = 1;
 let selectedNodeOriginalText = '';
 let selectedNodeElement = null;
 
 const appState = {
-    flowchart: { code: '', prompt: '' },
-    block: { code: '', prompt: '' }
+    flowchart: { code: '', prompt: '', history: [], historyIndex: -1 },
+    block: { code: '', prompt: '', history: [], historyIndex: -1 }
 };
 
 // ═══ Initialization ═════════════════════════════════════════════════════════
 
 document.addEventListener('DOMContentLoaded', () => {
     initFirebase();
-    mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'loose' });
+
+    // Ensure the theme name dynamically updates on load
+    const btnText = document.getElementById('btn-theme-text');
+    if (btnText) {
+        btnText.textContent = currentTheme.charAt(0).toUpperCase() + currentTheme.slice(1);
+    }
+
+    initializeMermaidTheme();
     setupEventListeners();
+    setupThemeDropdown();
+    setupAppThemeToggle();
     setupModeToggle();
     updateStatus('ready', 'Ready');
 
@@ -56,11 +66,10 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('properties-panel').style.display = 'none';
 
     // Disable unneeded toolbars initially
-    document.getElementById('btn-undo').disabled = true;
-    document.getElementById('btn-redo').disabled = true;
     document.getElementById('btn-delete-selected').disabled = true;
     document.getElementById('btn-edit-text').disabled = true;
     document.getElementById('btn-auto-layout').disabled = true;
+    updateHistoryButtons();
 });
 
 // ── Firebase Init ───────────────────────────────────────────────────────────
@@ -103,6 +112,21 @@ function setupEventListeners() {
         if (panZoomInstance) { panZoomInstance.fit(); panZoomInstance.center(); applyZoom(); }
     });
 
+    // Undo / Redo
+    document.getElementById('btn-undo').addEventListener('click', handleUndo);
+    document.getElementById('btn-redo').addEventListener('click', handleRedo);
+
+    // Keyboard shortcuts for Undo and Redo
+    document.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.key.toLowerCase() === 'z') {
+            e.preventDefault();
+            handleUndo();
+        } else if (e.ctrlKey && e.key.toLowerCase() === 'y') {
+            e.preventDefault();
+            handleRedo();
+        }
+    });
+
     // Toolbar buttons — download dropdown
     setupDownloadDropdown();
     document.getElementById('btn-export-svg').addEventListener('click', () => { closeDownloadDropdown(); handleExportSVG(); });
@@ -135,23 +159,32 @@ function setupEventListeners() {
     });
 
     // Custom Edit Modal Binding
-    document.getElementById('btn-edit-text').addEventListener('click', () => {
+    document.getElementById('btn-edit-text').addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         if (!selectedNodeOriginalText || !selectedNodeElement) return;
 
-        showInlineEdit(selectedNodeElement, selectedNodeOriginalText, (newText) => {
-            if (newText && newText !== selectedNodeOriginalText) {
-                if (currentMermaidCode.includes(selectedNodeOriginalText)) {
-                    // Direct code replacement
-                    currentMermaidCode = currentMermaidCode.replace(selectedNodeOriginalText, newText);
-                    renderFromCode(currentMermaidCode);
-                } else {
-                    // Fallback to AI Refine
-                    refineInput.value = `Change "${selectedNodeOriginalText}" to "${newText}"`;
-                    handleRefine();
-                }
-                resetSelection();
+        const editInput = document.getElementById('edit-node-text-input');
+        editInput.value = selectedNodeOriginalText;
+        openModal('edit-text-modal');
+        editInput.focus();
+    });
+
+    document.getElementById('edit-text-confirm').addEventListener('click', () => {
+        const newText = document.getElementById('edit-node-text-input').value.trim();
+        if (newText && newText !== selectedNodeOriginalText) {
+            if (currentMermaidCode.includes(selectedNodeOriginalText)) {
+                // Direct code replacement
+                currentMermaidCode = currentMermaidCode.replace(selectedNodeOriginalText, newText);
+                renderFromCode(currentMermaidCode);
+            } else {
+                // Fallback to AI Refine
+                refineInput.value = `Change "${selectedNodeOriginalText}" to "${newText}"`;
+                handleRefine();
             }
-        });
+            resetSelection();
+        }
+        closeAllModals();
     });
 
     // Refine
@@ -186,6 +219,36 @@ function applyZoom() {
 }
 
 // Modify the initial zoom controls logic replacing currentScale
+
+// ═══ Global App Theme Toggle ════════════════════════════════════════════════
+
+function setupAppThemeToggle() {
+    const btn = document.getElementById('app-theme-toggle');
+    const sunIcon = document.getElementById('theme-icon-sun');
+    const moonIcon = document.getElementById('theme-icon-moon');
+    if (!btn || !sunIcon || !moonIcon) return;
+
+    // Check localStorage
+    const savedTheme = localStorage.getItem('app-theme') || 'dark';
+    if (savedTheme === 'light') {
+        document.body.classList.add('light-theme');
+        sunIcon.style.display = 'none';
+        moonIcon.style.display = 'block';
+    }
+
+    btn.addEventListener('click', () => {
+        const isLight = document.body.classList.toggle('light-theme');
+        if (isLight) {
+            sunIcon.style.display = 'none';
+            moonIcon.style.display = 'block';
+            localStorage.setItem('app-theme', 'light');
+        } else {
+            sunIcon.style.display = 'block';
+            moonIcon.style.display = 'none';
+            localStorage.setItem('app-theme', 'dark');
+        }
+    });
+}
 
 // ═══ Mode Toggle ════════════════════════════════════════════════════════════
 
@@ -377,11 +440,50 @@ function showEmptyState() {
     edgeCountEl.textContent = 'EDGES: 0';
 }
 
-async function renderFromCode(code) {
+function updateHistoryButtons() {
+    const state = appState[currentMode];
+    const undoBtn = document.getElementById('btn-undo');
+    const redoBtn = document.getElementById('btn-redo');
+    if (undoBtn) undoBtn.disabled = state.historyIndex <= 0;
+    if (redoBtn) redoBtn.disabled = state.historyIndex >= state.history.length - 1;
+}
+
+function handleUndo() {
+    const state = appState[currentMode];
+    if (state.historyIndex > 0) {
+        state.historyIndex--;
+        currentMermaidCode = state.history[state.historyIndex];
+        renderFromCode(currentMermaidCode, false);
+    }
+}
+
+function handleRedo() {
+    const state = appState[currentMode];
+    if (state.historyIndex < state.history.length - 1) {
+        state.historyIndex++;
+        currentMermaidCode = state.history[state.historyIndex];
+        renderFromCode(currentMermaidCode, false);
+    }
+}
+
+async function renderFromCode(code, pushToHistory = true) {
+    const state = appState[currentMode];
+
     if (!code || !code.trim()) {
         showEmptyState();
         return;
     }
+
+    if (pushToHistory) {
+        if (state.historyIndex < state.history.length - 1) {
+            state.history.length = state.historyIndex + 1; // truncate future
+        }
+        if (state.history.length === 0 || state.history[state.history.length - 1] !== code) {
+            state.history.push(code);
+            state.historyIndex++;
+        }
+    }
+    updateHistoryButtons();
 
     try {
         const { svg } = await mermaid.render('mermaid-svg-graph', code);
@@ -420,6 +522,16 @@ async function renderFromCode(code) {
                     selectedNodeOriginalText = element.textContent.trim();
                     selectedNodeElement = element;
                     if (!selectedNodeOriginalText) return;
+
+                    // Double click to instantly edit text without toolbar
+                    element.addEventListener('dblclick', (dblEvent) => {
+                        dblEvent.stopPropagation();
+                        dblEvent.preventDefault();
+                        const editBtn = document.getElementById('btn-edit-text');
+                        if (editBtn && !editBtn.disabled) {
+                            editBtn.click();
+                        }
+                    }, { once: true });
 
                     const isEdge = element.classList.contains('edgeLabel');
                     if (isEdge) {
@@ -469,6 +581,13 @@ async function renderFromCode(code) {
                         propContent.querySelectorAll('.prop-color-swatch').forEach(swtch => {
                             swtch.addEventListener('click', () => {
                                 const color = swtch.getAttribute('data-color');
+
+                                // Instant visual representation
+                                const shapes = selectedNodeElement.querySelectorAll('rect, circle, polygon, path');
+                                shapes.forEach(shape => {
+                                    shape.style.fill = color;
+                                });
+
                                 refineInput.value = `Change the color of "${selectedNodeOriginalText}" to ${color}`;
                                 handleRefine();
                             });
@@ -562,8 +681,9 @@ async function handleExportPNG() {
         const ctx = canvas.getContext('2d');
         ctx.scale(2, 2);
 
-        // Fill white background cleanly
-        ctx.fillStyle = "#ffffff";
+        // Fill background cleanly based on App Theme
+        const isLightTheme = document.body.classList.contains('light-theme');
+        ctx.fillStyle = isLightTheme ? "#ffffff" : "#000000";
         ctx.fillRect(0, 0, width, height);
 
         const img = new Image();
@@ -620,6 +740,158 @@ function setupDownloadDropdown() {
 function closeDownloadDropdown() {
     const menu = document.getElementById('download-dropdown-menu');
     if (menu) menu.classList.remove('active');
+}
+
+// ═══ Theme Dropdown ═══════════════════════════════════════════════════════
+
+const CUSTOM_THEMES = {
+    cyberpunk: {
+        theme: 'base',
+        themeVariables: {
+            primaryColor: '#ff003c',
+            primaryTextColor: '#fff',
+            primaryBorderColor: '#00f0ff',
+            lineColor: '#fcee0a',
+            secondaryColor: '#120458',
+            tertiaryColor: '#fff',
+            fontFamily: 'Orbitron, sans-serif'
+        }
+    },
+    pastel: {
+        theme: 'base',
+        themeVariables: {
+            primaryColor: '#ffb3ba',
+            primaryTextColor: '#333',
+            primaryBorderColor: '#ffdfba',
+            lineColor: '#baffc9',
+            secondaryColor: '#ffffba',
+            tertiaryColor: '#bae1ff',
+            fontFamily: 'Space Grotesk, sans-serif'
+        }
+    },
+    retro: {
+        theme: 'base',
+        themeVariables: {
+            primaryColor: '#f4a261',
+            primaryTextColor: '#264653',
+            primaryBorderColor: '#e76f51',
+            lineColor: '#2a9d8f',
+            secondaryColor: '#e9c46a',
+            tertiaryColor: '#f4a261',
+            fontFamily: 'Space Mono, monospace'
+        }
+    },
+    minimalist: {
+        theme: 'base',
+        themeVariables: {
+            primaryColor: '#ffffff',
+            primaryTextColor: '#000000',
+            primaryBorderColor: '#000000',
+            lineColor: '#000000',
+            secondaryColor: '#f4f4f4',
+            tertiaryColor: '#ffffff',
+            fontFamily: 'Inter, sans-serif'
+        }
+    },
+    neon: {
+        theme: 'base',
+        themeVariables: {
+            primaryColor: '#0b0c10',
+            primaryTextColor: '#66fcf1',
+            primaryBorderColor: '#45a29e',
+            lineColor: '#c5c6c7',
+            secondaryColor: '#1f2833',
+            tertiaryColor: '#66fcf1',
+            fontFamily: 'Space Mono, monospace'
+        }
+    }
+};
+
+let isPreviewing = false;
+
+function initializeMermaidTheme(themeToUse) {
+    let theme = themeToUse || currentTheme;
+    let config = { startOnLoad: false, securityLevel: 'loose' };
+    if (CUSTOM_THEMES[theme]) {
+        config = { ...config, ...CUSTOM_THEMES[theme] };
+    } else {
+        config.theme = theme;
+    }
+    mermaid.initialize(config);
+}
+
+function previewThemeChange(theme) {
+    if (!currentMermaidCode || currentTheme === theme) return;
+    isPreviewing = true;
+    initializeMermaidTheme(theme);
+    renderFromCode(currentMermaidCode);
+}
+
+function resetThemePreview() {
+    if (!isPreviewing) return;
+    isPreviewing = false;
+    initializeMermaidTheme(currentTheme);
+    if (currentMermaidCode) {
+        renderFromCode(currentMermaidCode);
+    }
+}
+
+function setupThemeDropdown() {
+    const btn = document.getElementById('btn-theme');
+    const menu = document.getElementById('theme-dropdown-menu');
+    if (!btn || !menu) return;
+
+    btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        menu.classList.toggle('active');
+        if (!menu.classList.contains('active')) {
+            resetThemePreview();
+        }
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('#theme-dropdown-wrapper')) {
+            if (menu.classList.contains('active')) {
+                resetThemePreview();
+                menu.classList.remove('active');
+            }
+        }
+    });
+
+    menu.querySelectorAll('.theme-option').forEach(option => {
+        const theme = option.getAttribute('data-theme');
+
+        option.addEventListener('mouseenter', () => {
+            previewThemeChange(theme);
+        });
+
+        option.addEventListener('click', (e) => {
+            changeTheme(theme);
+            menu.classList.remove('active');
+        });
+    });
+
+    menu.addEventListener('mouseleave', () => {
+        resetThemePreview();
+    });
+}
+
+function changeTheme(theme) {
+    if (currentTheme === theme) return;
+    currentTheme = theme;
+    isPreviewing = false;
+
+    // Update button text explicitly
+    const btnText = document.getElementById('btn-theme-text');
+    if (btnText) {
+        btnText.textContent = theme.charAt(0).toUpperCase() + theme.slice(1);
+    }
+
+    initializeMermaidTheme(currentTheme);
+    if (currentMermaidCode) {
+        renderFromCode(currentMermaidCode);
+    }
+    showToast(`Theme changed to ${theme}`, 'success');
 }
 
 // ═══ Code Editor ════════════════════════════════════════════════════════════
@@ -868,64 +1140,3 @@ function resetSelection(nodesAndEdges = null) {
     if (propPanel) propPanel.style.display = 'none';
 }
 
-function showInlineEdit(svgElement, defaultText, onSave) {
-    if (!svgElement) return;
-    const rect = svgElement.getBoundingClientRect();
-
-    // Create an absolute positioned input over the SVG text
-    const inp = document.createElement('input');
-    inp.type = 'text';
-    inp.value = defaultText;
-    inp.style.position = 'fixed';
-    inp.style.left = rect.left + 'px';
-    inp.style.top = rect.top + 'px';
-    inp.style.width = Math.max(rect.width, 100) + 'px';
-    inp.style.height = Math.max(rect.height, 30) + 'px';
-    inp.style.zIndex = '9999';
-    inp.style.background = 'rgba(0, 0, 0, 0.8)';
-    inp.style.color = '#fff';
-    inp.style.border = '2px solid #00ffff';
-    inp.style.outline = 'none';
-    inp.style.textAlign = 'center';
-    inp.style.fontFamily = 'var(--font-body), sans-serif';
-    inp.style.fontSize = '14px';
-    inp.style.borderRadius = '4px';
-    inp.style.boxShadow = '0 0 10px #00ffff';
-
-    // Auto-hide the actual SVG element visually to avoid overlap while typing
-    const oldOpacity = svgElement.style.opacity;
-    svgElement.style.opacity = '0';
-
-    if (typeof panZoomInstance !== 'undefined' && panZoomInstance) {
-        panZoomInstance.disablePan();
-        panZoomInstance.disableZoom();
-    }
-
-    document.body.appendChild(inp);
-    inp.focus();
-    inp.select();
-
-    const finish = (save) => {
-        if (!inp.parentNode) return; // Prevent duplicate execution
-        svgElement.style.opacity = oldOpacity;
-        document.body.removeChild(inp);
-
-        if (typeof panZoomInstance !== 'undefined' && panZoomInstance) {
-            panZoomInstance.enablePan();
-            panZoomInstance.enableZoom();
-        }
-
-        if (save) onSave(inp.value.trim());
-    };
-
-    inp.addEventListener('blur', () => finish(true));
-    inp.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            inp.blur();
-        } else if (e.key === 'Escape') {
-            e.preventDefault();
-            finish(false);
-        }
-    });
-}

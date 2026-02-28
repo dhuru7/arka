@@ -17,6 +17,7 @@
         rel="stylesheet">
 
     <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/light-theme.css">
     <!-- Replaced emoji favicon with a minimalistic SVG -->
     <link rel="icon"
         href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='black'/><text y='50%' x='50%' dominant-baseline='middle' text-anchor='middle' fill='white' font-family='sans-serif' font-size='60' font-weight='bold'>A</text></svg>">
@@ -155,6 +156,30 @@
 
         <!-- ═══ Main Canvas Area ══════════════════════════════════════════ -->
         <main class="main-area">
+
+            <!-- App Theme Toggle Button -->
+            <button class="icon-btn" id="app-theme-toggle" title="Toggle Light/Dark Mode"
+                style="position: absolute; top: 24px; right: 24px; z-index: 1000; padding: 10px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 8px;">
+                <!-- Default shows Sun because body is Dark (meaning "switch to light") -->
+                <svg id="theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    style="display: block; width: 20px; height: 20px;">
+                    <circle cx="12" cy="12" r="5"></circle>
+                    <line x1="12" y1="1" x2="12" y2="3"></line>
+                    <line x1="12" y1="21" x2="12" y2="23"></line>
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                    <line x1="1" y1="12" x2="3" y2="12"></line>
+                    <line x1="21" y1="12" x2="23" y2="12"></line>
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                </svg>
+                <!-- Moon shows when body is Light (meaning "switch to dark") -->
+                <svg id="theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    style="display: none; width: 20px; height: 20px;">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                </svg>
+            </button>
+
             <!-- Floating Toolbar -->
             <div class="toolbar">
                 <div class="toolbar-left">
@@ -269,7 +294,46 @@
                         </div>
                     </div>
 
-                    <!-- Code Viewer -->
+                    <div class="toolbar-divider"></div>
+
+                    <!-- Theme Dropdown -->
+                    <div class="dropdown-wrapper" id="theme-dropdown-wrapper">
+                        <button class="toolbar-btn" id="btn-theme" title="Change Theme"
+                            style="padding: 0 16px; height: 34px; border-color: transparent; border: 1px solid transparent; font-size: 0.75rem; letter-spacing: 0.5px; color: var(--fg-muted); background: transparent;">
+                            <span id="btn-theme-text">Default</span>
+                        </button>
+                        <div class="dropdown-menu" id="theme-dropdown-menu" style="min-width: 140px;">
+                            <button class="dropdown-item theme-option" data-theme="default">
+                                <span>Default</span>
+                            </button>
+                            <button class="dropdown-item theme-option" data-theme="dark">
+                                <span>Dark</span>
+                            </button>
+                            <button class="dropdown-item theme-option" data-theme="forest">
+                                <span>Forest</span>
+                            </button>
+                            <button class="dropdown-item theme-option" data-theme="neutral">
+                                <span>Neutral</span>
+                            </button>
+                            <button class="dropdown-item theme-option" data-theme="cyberpunk">
+                                <span>Cyberpunk</span>
+                            </button>
+                            <button class="dropdown-item theme-option" data-theme="pastel">
+                                <span>Pastel</span>
+                            </button>
+                            <button class="dropdown-item theme-option" data-theme="retro">
+                                <span>Retro</span>
+                            </button>
+                            <button class="dropdown-item theme-option" data-theme="minimalist">
+                                <span>Minimalist</span>
+                            </button>
+                            <button class="dropdown-item theme-option" data-theme="neon">
+                                <span>Neon Grid</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="toolbar-divider"></div>
                     <button class="toolbar-btn icon-btn" id="btn-code-view" title="View / Edit Code">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <polyline points="16 18 22 12 16 6"></polyline>
@@ -391,6 +455,30 @@
             </div>
         </div>
     </div>
+    <!-- ═══ Edit Text Modal ════════════════════════════════════════════════ -->
+    <div class="modal-overlay" id="edit-text-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>EDIT NODE/EDGE TEXT</h2>
+                <button class="icon-btn modal-close">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="edit-node-text-input">Text</label>
+                    <input type="text" id="edit-node-text-input" placeholder="Enter new text...">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="primary" id="edit-text-confirm">Apply Changes</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ═══ Scripts ═══════════════════════════════════════════════════════ -->
     <!-- Firebase (Compat SDK for simplicity) -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
