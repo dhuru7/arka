@@ -33,6 +33,12 @@
             "destination": "/static/:path*"
         }
     ],
+    "functions": {
+        "api/**/*.py": {
+            "runtime": "@vercel/python",
+            "maxDuration": 60
+        }
+    },
     "headers": [
         {
             "source": "/static/(.*)",
@@ -40,6 +46,23 @@
                 {
                     "key": "Cache-Control",
                     "value": "public, max-age=31536000, immutable"
+                }
+            ]
+        },
+        {
+            "source": "/api/(.*)",
+            "headers": [
+                {
+                    "key": "Access-Control-Allow-Origin",
+                    "value": "*"
+                },
+                {
+                    "key": "Access-Control-Allow-Methods",
+                    "value": "POST, OPTIONS"
+                },
+                {
+                    "key": "Access-Control-Allow-Headers",
+                    "value": "Content-Type"
                 }
             ]
         }

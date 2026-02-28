@@ -38,20 +38,314 @@ SARVAM_API_URL = "https://api.sarvam.ai/v1/chat/completions"
 # Mermaid System Prompts definition
 # ═══════════════════════════════════════════════════════════════════════════════
 MERMAID_SYSTEM_PROMPTS = {
-    'flowchart': "You are a Mermaid flowchart code generator. You ONLY output valid Mermaid JS code. You NEVER explain, comment, or add anything outside the Mermaid code. Your entire response must be ONLY valid Mermaid flowchart code.\n\nUse standard Mermaid syntax:\ngraph TD\n  A[Start] --> B{Condition?}\n  B -- Yes --> C[Process]\n  B -- No --> D[Error]\n  C --> E[End]\n  D --> E\n\nDo not use markdown blocks in the output. Just raw mermaid.",
-    'block': "You are a Mermaid block diagram code generator. You ONLY output valid Mermaid JS code. You NEVER explain, comment, or add anything outside the Mermaid code. Your entire response must be ONLY valid Mermaid flowchart/graph code representing an architecture block diagram.\n\nUse standard Mermaid syntax, utilize subgraphs and appropriate node shapes (database, etc.).\nExample:\ngraph LR\n  subgraph Client\n    A[Browser]\n  end\n  subgraph Backend\n    B[API Gateway]\n    C[Service Core]\n    D[(Database)]\n  end\n  A -->|HTTP / API| B\n  B --> C\n  C --> D\n\nDo not use markdown blocks in the output. Just raw mermaid.",
-    'architecture': "You are a Mermaid architecture diagram code generator. You ONLY output valid Mermaid JS code. You NEVER explain, comment, or add anything outside the Mermaid code. Your entire response must be ONLY valid Mermaid flowchart/graph or architecture-beta code representing high-level architecture. Do not use markdown blocks in the output. Just raw mermaid.",
-    'sequence': "You are a Mermaid sequence diagram generator. You ONLY output valid Mermaid JS code. You NEVER explain, comment, or add anything outside the Mermaid code. Your entire response must be ONLY valid Mermaid sequenceDiagram code with actors and participants. Do not use markdown blocks in the output. Just raw mermaid.",
-    'timeline': "You are a Mermaid timeline generator. You ONLY output valid Mermaid JS code. You NEVER explain, comment, or add anything outside the Mermaid code. Your entire response must be ONLY valid Mermaid timeline code. Do not use markdown blocks in the output. Just raw mermaid.",
-    'gantt': "You are a Mermaid Gantt chart generator. You ONLY output valid Mermaid JS code. You NEVER explain, comment, or add anything outside the Mermaid code. Your entire response must be ONLY valid Mermaid gantt code. Do not use markdown blocks in the output. Just raw mermaid.",
-    'pie': "You are a Mermaid pie chart generator. You ONLY output valid Mermaid JS code. You NEVER explain, comment, or add anything outside the Mermaid code. Your entire response must be ONLY valid Mermaid pie chart code. Do not use markdown blocks in the output. Just raw mermaid.",
-    'xy': "You are a Mermaid XY/Bar chart generator (xychart-beta). You ONLY output valid Mermaid JS code. You NEVER explain, comment, or add anything outside the Mermaid code. Your entire response must be ONLY valid Mermaid xychart-beta code. Do not use markdown blocks in the output. Just raw mermaid.",
-    'er': "You are a Mermaid Entity Relationship (ER) diagram generator. You ONLY output valid Mermaid JS code. You NEVER explain, comment, or add anything outside the Mermaid code. Your entire response must be ONLY valid Mermaid erDiagram code. Do not use markdown blocks in the output. Just raw mermaid.",
-    'state': "You are a Mermaid state diagram generator. You ONLY output valid Mermaid JS code. You NEVER explain, comment, or add anything outside the Mermaid code. Your entire response must be ONLY valid Mermaid stateDiagram-v2 code. Do not use markdown blocks in the output. Just raw mermaid.",
-    'class': "You are a Mermaid class diagram generator. You ONLY output valid Mermaid JS code. You NEVER explain, comment, or add anything outside the Mermaid code. Your entire response must be ONLY valid Mermaid classDiagram code. Do not use markdown blocks in the output. Just raw mermaid.",
-    'git': "You are a Mermaid gitgraph generator. You ONLY output valid Mermaid JS code. You NEVER explain, comment, or add anything outside the Mermaid code. Your entire response must be ONLY valid Mermaid gitGraph code. Do not use markdown blocks in the output. Just raw mermaid.",
-    'quadrant': "You are a Mermaid quadrant chart generator. You ONLY output valid Mermaid JS code. You NEVER explain, comment, or add anything outside the Mermaid code. Your entire response must be ONLY valid Mermaid quadrantChart code. Do not use markdown blocks in the output. Just raw mermaid.",
-    'treemap': "You are a Mermaid mindmap/treemap generator. You ONLY output valid Mermaid JS code. You NEVER explain, comment, or add anything outside the Mermaid code. Your entire response must be ONLY valid Mermaid mindmap or graph code. Do not use markdown blocks in the output. Just raw mermaid."
+    'flowchart': """You are a Mermaid flowchart code generator. You ONLY output valid Mermaid JS code. You NEVER explain, comment, or add anything outside the Mermaid code. Your entire response must be ONLY valid Mermaid flowchart code.
+
+RULES:
+- Do NOT use markdown code fences (no ```)
+- Do NOT add any text, comments, or explanations
+- Do NOT use backslashes (\\) in text labels
+- Use only plain alphanumeric text and simple punctuation in labels
+- Always use graph TD or flowchart TD as the first line
+
+Example:
+graph TD
+  A[Start] --> B{Condition?}
+  B -- Yes --> C[Process]
+  B -- No --> D[Error]
+  C --> E[End]
+  D --> E""",
+
+    'block': """You are a Mermaid block diagram code generator. You ONLY output valid Mermaid JS code. You NEVER explain, comment, or add anything outside the Mermaid code.
+
+RULES:
+- Do NOT use markdown code fences (no ```)
+- Do NOT add any text, comments, or explanations
+- Do NOT use backslashes (\\) in text labels
+- Use graph LR or graph TD with subgraphs
+
+Example:
+graph LR
+  subgraph Client
+    A[Browser]
+  end
+  subgraph Backend
+    B[API Gateway]
+    C[Service Core]
+    D[(Database)]
+  end
+  A -->|HTTP| B
+  B --> C
+  C --> D""",
+
+    'architecture': """You are a Mermaid architecture diagram code generator. You ONLY output valid Mermaid JS code. You NEVER explain, comment, or add anything outside the Mermaid code.
+
+RULES:
+- Do NOT use markdown code fences
+- Do NOT add any text or explanations
+- Use graph TD/LR with subgraphs for architecture representation
+- Do NOT use backslashes in labels
+
+Example:
+graph TB
+  subgraph Cloud
+    LB[Load Balancer]
+    subgraph App Tier
+      S1[Server 1]
+      S2[Server 2]
+    end
+    DB[(Database)]
+  end
+  Client[Client] --> LB
+  LB --> S1
+  LB --> S2
+  S1 --> DB
+  S2 --> DB""",
+
+    'sequence': """You are a Mermaid sequence diagram generator. You ONLY output valid Mermaid JS code. You NEVER explain, comment, or add anything outside the Mermaid code.
+
+RULES:
+- Do NOT use markdown code fences
+- Do NOT add any text or explanations
+- Start with sequenceDiagram on first line
+- Use participant or actor declarations
+- Use ->> for solid arrows, -->> for dashed arrows
+
+Example:
+sequenceDiagram
+    participant User
+    participant Server
+    participant DB
+    User->>Server: Login Request
+    Server->>DB: Query User
+    DB-->>Server: User Data
+    Server-->>User: Auth Token""",
+
+    'timeline': """You are a Mermaid timeline generator. You ONLY output valid Mermaid JS code. You NEVER explain, comment, or add anything outside the Mermaid code.
+
+CRITICAL RULES:
+- Do NOT use markdown code fences
+- Do NOT add any text or explanations
+- Start with 'timeline' on the first line
+- The second line MUST be 'title Your Timeline Title'
+- Use sections with 'section Section Name'
+- Each event is on its own line with the format: Year : Event description
+- Do NOT use parentheses () in event descriptions -- replace with dashes or remove them
+- Do NOT use special characters like backslashes
+- Keep event descriptions short, no more than 10 words
+
+Example:
+timeline
+    title History of Social Media
+    section Early Days
+        2002 : LinkedIn launched
+        2004 : Facebook launched
+    section Growth Era
+        2006 : Twitter launched
+        2010 : Instagram launched
+    section Modern Era
+        2016 : TikTok launched
+        2020 : Social media boom""",
+
+    'gantt': """You are a Mermaid Gantt chart generator. You ONLY output valid Mermaid JS code. You NEVER explain, comment, or add anything outside the Mermaid code.
+
+CRITICAL RULES:
+- Do NOT use markdown code fences
+- Do NOT add any text or explanations
+- Start with 'gantt' on the first line
+- Include 'dateFormat YYYY-MM-DD' on the second line
+- Do NOT use backslashes (\\) in task names
+- Do NOT use parentheses () in task names
+- Each task MUST have a valid format: TaskName :status, id, startDate, duration
+- Use simple short task names without special characters
+- Valid statuses: done, active, crit, or leave empty
+- Duration format: 30d (days), 2w (weeks), etc.
+
+Example:
+gantt
+    title Project Plan
+    dateFormat YYYY-MM-DD
+    section Planning
+        Requirements Analysis :done, a1, 2024-01-01, 30d
+        Design Phase :active, a2, after a1, 20d
+    section Development
+        Backend Development :a3, after a2, 40d
+        Frontend Development :a4, after a2, 35d
+    section Testing
+        QA Testing :a5, after a3, 15d
+        Deployment :a6, after a5, 5d""",
+
+    'pie': """You are a Mermaid pie chart generator. You ONLY output valid Mermaid JS code. You NEVER explain, comment, or add anything outside the Mermaid code.
+
+RULES:
+- Do NOT use markdown code fences
+- Do NOT add any text or explanations
+- Start with 'pie' on the first line
+- Optionally add 'title Your Title' on the next line
+- Each slice: "Label" : value
+- Labels must be in double quotes
+- Values must be numbers
+
+Example:
+pie
+    title Browser Market Share
+    "Chrome" : 65
+    "Safari" : 19
+    "Firefox" : 4
+    "Edge" : 4
+    "Others" : 8""",
+
+    'xy': """You are a Mermaid XY/Bar chart generator (xychart-beta). You ONLY output valid Mermaid JS code. You NEVER explain, comment, or add anything outside the Mermaid code.
+
+RULES:
+- Do NOT use markdown code fences
+- Do NOT add any text or explanations
+- Start with 'xychart-beta' on the first line
+- Use 'title' for chart title
+- x-axis with bracket notation for labels
+- y-axis with optional range
+- Use 'bar' or 'line' for data series
+
+Example:
+xychart-beta
+    title Monthly Revenue
+    x-axis [Jan, Feb, Mar, Apr, May, Jun]
+    y-axis "Revenue in USD" 0 --> 10000
+    bar [5000, 6000, 7500, 8200, 9100, 9800]
+    line [5000, 6000, 7500, 8200, 9100, 9800]""",
+
+    'er': """You are a Mermaid Entity Relationship (ER) diagram generator. You ONLY output valid Mermaid JS code. You NEVER explain, comment, or add anything outside the Mermaid code.
+
+RULES:
+- Do NOT use markdown code fences
+- Do NOT add any text or explanations
+- Start with 'erDiagram' on the first line
+- Use proper relationship notation
+
+Example:
+erDiagram
+    USER ||--o{ ORDER : places
+    ORDER ||--|{ LINE_ITEM : contains
+    PRODUCT ||--o{ LINE_ITEM : includes
+    USER {
+        int id
+        string name
+        string email
+    }
+    ORDER {
+        int id
+        date created
+        string status
+    }""",
+
+    'state': """You are a Mermaid state diagram generator. You ONLY output valid Mermaid JS code. You NEVER explain, comment, or add anything outside the Mermaid code.
+
+RULES:
+- Do NOT use markdown code fences
+- Do NOT add any text or explanations
+- Start with 'stateDiagram-v2' on the first line
+- Use [*] for start and end states
+
+Example:
+stateDiagram-v2
+    [*] --> Idle
+    Idle --> Processing : Submit
+    Processing --> Success : Valid
+    Processing --> Error : Invalid
+    Error --> Idle : Retry
+    Success --> [*]""",
+
+    'class': """You are a Mermaid class diagram generator. You ONLY output valid Mermaid JS code. You NEVER explain, comment, or add anything outside the Mermaid code.
+
+RULES:
+- Do NOT use markdown code fences
+- Do NOT add any text or explanations
+- Start with 'classDiagram' on the first line
+
+Example:
+classDiagram
+    class Animal {
+        +String name
+        +int age
+        +makeSound()
+    }
+    class Dog {
+        +String breed
+        +fetch()
+    }
+    Animal <|-- Dog""",
+
+    'git': """You are a Mermaid gitgraph generator. You ONLY output valid Mermaid JS code. You NEVER explain, comment, or add anything outside the Mermaid code.
+
+CRITICAL RULES:
+- Do NOT use markdown code fences
+- Do NOT add any text or explanations
+- Start with 'gitGraph' on the first line
+- Use only these commands: commit, branch, checkout, merge
+- Commit messages must be in double quotes after 'id:'
+- Do NOT use 'commit msg:' -- use 'commit id:' instead
+- Do NOT use parentheses or backslashes in commit messages
+- Branch names must be single words without special chars
+
+Example:
+gitGraph
+    commit id: "Initial Commit"
+    commit id: "Add README"
+    branch develop
+    checkout develop
+    commit id: "Add feature A"
+    commit id: "Add feature B"
+    checkout main
+    merge develop
+    commit id: "Release v1.0"""",
+
+    'quadrant': """You are a Mermaid quadrant chart generator. You ONLY output valid Mermaid JS code. You NEVER explain, comment, or add anything outside the Mermaid code.
+
+RULES:
+- Do NOT use markdown code fences
+- Do NOT add any text or explanations
+- Start with 'quadrantChart' on the first line
+
+Example:
+quadrantChart
+    title Task Priority Matrix
+    x-axis Low Effort --> High Effort
+    y-axis Low Impact --> High Impact
+    quadrant-1 Do First
+    quadrant-2 Schedule
+    quadrant-3 Delegate
+    quadrant-4 Eliminate
+    Task A: [0.3, 0.8]
+    Task B: [0.7, 0.9]
+    Task C: [0.2, 0.3]
+    Task D: [0.8, 0.2]""",
+
+    'treemap': """You are a Mermaid mindmap generator. You ONLY output valid Mermaid JS code. You NEVER explain, comment, or add anything outside the Mermaid code.
+
+CRITICAL RULES:
+- Do NOT use markdown code fences
+- Do NOT add any text or explanations
+- Start with 'mindmap' on the first line
+- Use indentation (spaces) to show hierarchy
+- Root node on the second line with no indent
+- Children indented with more spaces
+- Do NOT use parentheses in node names
+- Do NOT use special characters
+- Keep node names short, 1-4 words
+
+Example:
+mindmap
+    root((Project))
+        Frontend
+            React
+            CSS
+            HTML
+        Backend
+            Node.js
+            Database
+            API
+        DevOps
+            Docker
+            CI/CD"""
 }
 
 def get_system_prompt(mode):
@@ -70,8 +364,8 @@ MERMAID_KEYWORDS = [
     'flowchart TD', 'flowchart LR', 'flowchart TB', 'flowchart RL',
 ]
 
-def clean_mermaid_code(code):
-    """Post-process AI-generated code to extract valid mermaid blocks."""
+def clean_mermaid_code(code, mode='flowchart'):
+    """Post-process AI-generated code to extract valid mermaid blocks and fix common issues."""
     if not code:
         return code
 
@@ -98,7 +392,174 @@ def clean_mermaid_code(code):
     # Remove any trailing conversational text after the diagram
     # (lines that look like plain prose after a gap)
     cleaned = '\n'.join(lines).strip()
+
+    # ── Mode-specific fixes ───────────────────────────────────────────
+    cleaned = fix_mermaid_syntax(cleaned, mode)
+
     return cleaned
+
+
+def fix_mermaid_syntax(code, mode):
+    """Apply mode-specific syntax fixes to common AI generation errors."""
+    if not code:
+        return code
+
+    # Universal fixes
+    # Remove backslashes that aren't part of valid escape sequences
+    code = code.replace('\\n', ' ').replace('\\t', ' ')
+    # Remove stray backslashes in labels (e.g. "Puberty \" -> "Puberty")
+    code = re.sub(r'\\(?!["\\nrt])', '', code)
+
+    if mode == 'gantt':
+        code = _fix_gantt(code)
+    elif mode == 'timeline':
+        code = _fix_timeline(code)
+    elif mode == 'git':
+        code = _fix_gitgraph(code)
+    elif mode == 'pie':
+        code = _fix_pie(code)
+    elif mode == 'treemap':
+        code = _fix_mindmap(code)
+
+    return code
+
+
+def _fix_gantt(code):
+    """Fix common Gantt chart syntax issues."""
+    lines = code.split('\n')
+    fixed = []
+    has_date_format = False
+    has_title = False
+
+    for line in lines:
+        stripped = line.strip()
+
+        # Track if dateFormat exists
+        if stripped.startswith('dateFormat'):
+            has_date_format = True
+
+        if stripped.startswith('title'):
+            has_title = True
+
+        # Remove parentheses from task names (common AI mistake)
+        # e.g. "Early Teenage (13-15)" -> "Early Teenage 13-15"
+        if stripped.startswith('section '):
+            stripped = re.sub(r'[()\\]', '', stripped)
+            line = '    ' + stripped
+
+        # Fix task lines: remove backslashes and parentheses from task names
+        if ':' in stripped and not stripped.startswith('section') and \
+           not stripped.startswith('dateFormat') and not stripped.startswith('title') and \
+           not stripped.startswith('gantt') and not stripped.startswith('axisFormat') and \
+           not stripped.startswith('todayMarker') and not stripped.startswith('tickInterval'):
+            # Clean parentheses and backslashes from the task name part
+            parts = stripped.split(':', 1)
+            task_name = re.sub(r'[()\\]', '', parts[0]).strip()
+            if len(parts) > 1:
+                task_meta = parts[1].strip()
+                # If task meta is empty or invalid, add a default duration
+                if not task_meta or task_meta.isspace():
+                    task_meta = '2024-01-01, 30d'
+                line = '        ' + task_name + ' :' + task_meta
+            else:
+                line = '        ' + task_name + ' :2024-01-01, 30d'
+
+        fixed.append(line)
+
+    result = '\n'.join(fixed)
+
+    # Ensure gantt has a dateFormat line
+    if not has_date_format:
+        result = result.replace('gantt', 'gantt\n    dateFormat YYYY-MM-DD', 1)
+
+    return result
+
+
+def _fix_timeline(code):
+    """Fix common Timeline syntax issues."""
+    lines = code.split('\n')
+    fixed = []
+
+    for line in lines:
+        stripped = line.strip()
+
+        # Remove parentheses from timeline event descriptions
+        # e.g. "2020 : COVID-19 (pandemic)" -> "2020 : COVID-19 pandemic"
+        if ':' in stripped and not stripped.startswith('title') and \
+           not stripped.startswith('timeline') and not stripped.startswith('section'):
+            line = re.sub(r'[()\\]', '', line)
+
+        # Also fix section names
+        if stripped.startswith('section '):
+            line = re.sub(r'[()\\]', '', line)
+
+        fixed.append(line)
+
+    return '\n'.join(fixed)
+
+
+def _fix_gitgraph(code):
+    """Fix common gitGraph syntax issues."""
+    lines = code.split('\n')
+    fixed = []
+
+    for line in lines:
+        stripped = line.strip()
+
+        # Fix 'commit msg:' -> 'commit id:' (common AI mistake)
+        if 'commit msg:' in stripped:
+            line = line.replace('commit msg:', 'commit id:')
+
+        # Remove parentheses from commit messages
+        if 'commit id:' in stripped:
+            line = re.sub(r'[()\\]', '', line)
+
+        # Fix branch names with spaces or special chars
+        if stripped.startswith('branch '):
+            branch_name = stripped[7:].strip()
+            # Replace spaces and special chars with hyphens
+            branch_name = re.sub(r'[^a-zA-Z0-9_/-]', '-', branch_name)
+            line = '    branch ' + branch_name
+
+        fixed.append(line)
+
+    return '\n'.join(fixed)
+
+
+def _fix_pie(code):
+    """Fix common pie chart syntax issues."""
+    lines = code.split('\n')
+    fixed = []
+
+    for line in lines:
+        stripped = line.strip()
+
+        # Ensure labels are in double quotes
+        # e.g. Chrome : 65 -> "Chrome" : 65
+        if ':' in stripped and not stripped.startswith('title') and not stripped.startswith('pie'):
+            parts = stripped.split(':', 1)
+            label = parts[0].strip().strip('"').strip("'")
+            value = parts[1].strip()
+            line = '    "' + label + '" : ' + value
+
+        fixed.append(line)
+
+    return '\n'.join(fixed)
+
+
+def _fix_mindmap(code):
+    """Fix common mindmap syntax issues."""
+    lines = code.split('\n')
+    fixed = []
+
+    for line in lines:
+        # Remove problematic characters from node names
+        if not line.strip().startswith('mindmap'):
+            line = re.sub(r'\\', '', line)
+
+        fixed.append(line)
+
+    return '\n'.join(fixed)
 
 
 @app.route('/')
@@ -170,7 +631,7 @@ def generate_diagram():
                     safe_print(f"[Generate] Empty content on attempt {attempt}, retrying...")
                     time.sleep(2 ** attempt)
                     continue
-                bridge_code = clean_mermaid_code(content)
+                bridge_code = clean_mermaid_code(content, mode)
                 break
             except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
                 safe_print(f"[Generate] {type(e).__name__} on attempt {attempt}")
@@ -239,7 +700,7 @@ def refine_diagram():
 
         result = response.json()
         bridge_code = result['choices'][0]['message']['content'].strip()
-        bridge_code = clean_mermaid_code(bridge_code)
+        bridge_code = clean_mermaid_code(bridge_code, mode)
 
         return jsonify({
             'success': True,

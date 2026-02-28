@@ -402,7 +402,7 @@ async function handleGenerate() {
     updateStatus('loading', 'Generating...');
 
 
-    const generateEndpoint = 'http://127.0.0.1:5000/api/generate';
+    const generateEndpoint = '/api/generate';
 
     try {
         const response = await fetch(generateEndpoint, {
@@ -417,7 +417,7 @@ async function handleGenerate() {
             throw new Error(data.error || 'Generation failed');
         }
 
-        currentMermaidCode = data.code;
+        let generatedCode = data.code;
 
         // Reset to Default Theme after generation
         if (currentTheme !== 'default') {
@@ -429,6 +429,10 @@ async function handleGenerate() {
 
         await incrementUserGenerationCount(user.uid, user.isAnonymous);
 
+        // Update live credits immediately after generation
+        updateLiveCredits(user);
+
+        currentMermaidCode = generatedCode;
         await renderFromCode(currentMermaidCode);
         updateStatus('ready', 'Generated');
         showToast(`${currentMode} generated successfully!`, 'success');
@@ -460,7 +464,10 @@ async function handleRefine() {
     refineBtn.textContent = 'Refining...';
     updateStatus('loading', 'Refining...');
 
-    const refineEndpoint = 'http://127.0.0.1:5000/api/refine';
+    const refineEndpoint = '/api/refine';
+
+    // Backup the current code before refining so we can rollback on failure
+    const backupCode = currentMermaidCode;
 
     try {
         const response = await fetch(refineEndpoint, {
@@ -473,12 +480,30 @@ async function handleRefine() {
         if (!response.ok) throw new Error(data.error || 'Refinement failed');
 
         currentMermaidCode = data.code;
-        await renderFromCode(currentMermaidCode);
+
+        try {
+            await renderFromCode(currentMermaidCode);
+        } catch (renderErr) {
+            // If rendering the refined code fails, rollback to backup
+            console.warn('Refined code failed to render, rolling back:', renderErr);
+            currentMermaidCode = backupCode;
+            await renderFromCode(currentMermaidCode);
+            showToast('Refined code had errors. Reverted to previous version.', 'error');
+            refineBtn.disabled = false;
+            refineBtn.textContent = 'Refine';
+            return;
+        }
+
         refineInput.value = '';
         updateStatus('ready', 'Refined');
         showToast(`${currentMode} refined!`, 'success');
 
     } catch (err) {
+        // Rollback on any failure
+        if (backupCode && backupCode !== currentMermaidCode) {
+            currentMermaidCode = backupCode;
+            try { await renderFromCode(currentMermaidCode); } catch (e) { /* ignore */ }
+        }
         showToast(err.message, 'error');
         updateStatus('error', 'Error');
     } finally {
@@ -549,14 +574,37 @@ async function renderFromCode(code, pushToHistory = true) {
             if (el) el.remove();
         });
 
-        const { svg } = await mermaid.render('mermaid-svg-graph', code);
+        // Client-side code cleanup before render
+        let cleanedCode = cleanMermaidCodeClient(code);
+
+        let svg;
+        try {
+            const result = await mermaid.render('mermaid-svg-graph', cleanedCode);
+            svg = result.svg;
+        } catch (firstErr) {
+            // Try auto-fixing common issues and retry once
+            console.warn('First render attempt failed, trying auto-fix...', firstErr.message);
+            cleanedCode = autoFixMermaidCode(cleanedCode);
+
+            // Clean up failed render artifacts
+            ['mermaid-svg-graph', 'dmermaid-svg-graph'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.remove();
+            });
+
+            const retryResult = await mermaid.render('mermaid-svg-graph', cleanedCode);
+            svg = retryResult.svg;
+            // Update the code with the fixed version
+            currentMermaidCode = cleanedCode;
+        }
+
         canvasContainer.innerHTML = svg;
         canvasContainer.appendChild(emptyState); // Re-append it so it's not destroyed
         emptyState.style.display = 'none';
 
         // Count rough metrics
-        const matchesNodes = code.match(/\[|\]|\(|\)|\{|\}/g);
-        const matchesEdges = code.match(/--|==|-\.>|-->|==>|\.-/g);
+        const matchesNodes = cleanedCode.match(/\[|\]|\(|\)|\{|\}/g);
+        const matchesEdges = cleanedCode.match(/--|==|-\.>|-->|==>|\.-/g);
         nodeCountEl.textContent = 'NODES: ' + (matchesNodes ? Math.floor(matchesNodes.length / 2) : '?');
         edgeCountEl.textContent = 'EDGES: ' + (matchesEdges ? matchesEdges.length : '?');
 
@@ -623,39 +671,8 @@ async function renderFromCode(code, pushToHistory = true) {
                         editBtn.style.borderColor = 'var(--fg)';
                     }
 
-                    const propPanel = document.getElementById('properties-panel');
-                    const propContent = document.getElementById('prop-content');
-                    if (propPanel && propContent) {
-                        propPanel.style.display = 'block';
-                        propContent.innerHTML = `
-                            <div class="prop-group">
-                                <div class="prop-label">Block Color</div>
-                                <div class="prop-color-row">
-                                    <button class="prop-color-swatch" style="background:#222;" data-color="#222222"></button>
-                                    <button class="prop-color-swatch" style="background:#555;" data-color="#555555"></button>
-                                    <button class="prop-color-swatch" style="background:#E52E2E;" data-color="#E52E2E"></button>
-                                    <button class="prop-color-swatch" style="background:#3b82f6;" data-color="#3b82f6"></button>
-                                    <button class="prop-color-swatch" style="background:#10b981;" data-color="#10b981"></button>
-                                    <button class="prop-color-swatch" style="background:#f59e0b;" data-color="#f59e0b"></button>
-                                </div>
-                            </div>
-                        `;
-
-                        propContent.querySelectorAll('.prop-color-swatch').forEach(swtch => {
-                            swtch.addEventListener('click', () => {
-                                const color = swtch.getAttribute('data-color');
-
-                                // Instant visual representation
-                                const shapes = selectedNodeElement.querySelectorAll('rect, circle, polygon, path');
-                                shapes.forEach(shape => {
-                                    shape.style.fill = color;
-                                });
-
-                                refineInput.value = `Change the color of "${selectedNodeOriginalText}" to ${color}`;
-                                handleRefine();
-                            });
-                        });
-                    }
+                    // Show color tray popup near the edit button
+                    showColorTray(element);
                 });
             });
 
@@ -679,6 +696,192 @@ async function renderFromCode(code, pushToHistory = true) {
     } catch (err) {
         console.error('Parse/render error:', err);
         showToast('Error parsing the Mermaid code: ' + err.message, 'error');
+    }
+}
+
+// ═══ Client-Side Mermaid Code Cleanup ═══════════════════════════════════════
+
+function cleanMermaidCodeClient(code) {
+    if (!code) return code;
+    // Remove markdown fences the AI may have wrapped
+    code = code.replace(/```(?:mermaid|json|text)?\s*\n?/g, '').trim();
+    // Remove stray backslashes
+    code = code.replace(/\\(?!["\\nrt])/g, '');
+    // Remove parentheses from gantt/timeline labels
+    return code;
+}
+
+function autoFixMermaidCode(code) {
+    if (!code) return code;
+    // Remove all parentheses from non-flowchart diagrams
+    const lines = code.split('\n');
+    const firstLine = lines[0].trim().toLowerCase();
+
+    if (firstLine.startsWith('gantt') || firstLine.startsWith('timeline')) {
+        // Remove parentheses from all lines (except first)
+        code = lines.map((line, i) => {
+            if (i === 0) return line;
+            return line.replace(/[()\\]/g, '');
+        }).join('\n');
+    }
+
+    if (firstLine.startsWith('gitgraph') || firstLine.startsWith('gitGraph')) {
+        // Fix common git graph issues
+        code = code.replace(/commit msg:/g, 'commit id:');
+        code = lines.map((line, i) => {
+            if (i === 0) return line;
+            return line.replace(/[()\\]/g, '');
+        }).join('\n');
+    }
+
+    return code;
+}
+
+// ═══ Color Tray (appears under Edit icon) ═══════════════════════════════════
+
+function showColorTray(element) {
+    // Remove any existing color tray
+    const existingTray = document.getElementById('floating-color-tray');
+    if (existingTray) existingTray.remove();
+
+    const editBtn = document.getElementById('btn-edit-text');
+    if (!editBtn) return;
+
+    const tray = document.createElement('div');
+    tray.id = 'floating-color-tray';
+    tray.style.cssText = `
+        position: absolute;
+        top: calc(100% + 8px);
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(15, 15, 15, 0.95);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        padding: 8px;
+        display: flex;
+        gap: 6px;
+        z-index: 1000;
+        backdrop-filter: blur(12px);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+        animation: fadeInDown 0.15s ease-out;
+    `;
+
+    const colors = [
+        { color: '#222222', label: 'Dark' },
+        { color: '#555555', label: 'Gray' },
+        { color: '#E52E2E', label: 'Red' },
+        { color: '#3b82f6', label: 'Blue' },
+        { color: '#10b981', label: 'Green' },
+        { color: '#f59e0b', label: 'Amber' },
+        { color: '#8b5cf6', label: 'Purple' },
+        { color: '#ec4899', label: 'Pink' }
+    ];
+
+    colors.forEach(({ color, label }) => {
+        const swatch = document.createElement('button');
+        swatch.title = label;
+        swatch.style.cssText = `
+            width: 24px; height: 24px;
+            border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.15);
+            background: ${color};
+            cursor: pointer;
+            transition: transform 0.15s, border-color 0.15s;
+        `;
+        swatch.addEventListener('mouseenter', () => {
+            swatch.style.transform = 'scale(1.2)';
+            swatch.style.borderColor = '#fff';
+        });
+        swatch.addEventListener('mouseleave', () => {
+            swatch.style.transform = 'scale(1)';
+            swatch.style.borderColor = 'rgba(255,255,255,0.15)';
+        });
+        swatch.addEventListener('click', (e) => {
+            e.stopPropagation();
+            applyColorToNode(element, color);
+        });
+        tray.appendChild(swatch);
+    });
+
+    // Position it relative to the edit button
+    const editBtnWrapper = editBtn.parentElement;
+    editBtnWrapper.style.position = 'relative';
+    editBtnWrapper.appendChild(tray);
+
+    // Close tray when clicking outside
+    const closeTray = (e) => {
+        if (!tray.contains(e.target) && e.target !== editBtn) {
+            tray.remove();
+            document.removeEventListener('click', closeTray);
+        }
+    };
+    setTimeout(() => document.addEventListener('click', closeTray), 50);
+}
+
+function applyColorToNode(element, color) {
+    // Apply color directly to the SVG shapes (instant visual feedback)
+    const shapes = element.querySelectorAll('rect, circle, polygon, path');
+    shapes.forEach(shape => {
+        shape.style.fill = color;
+    });
+
+    // Also try to apply via Mermaid style directive in the code so it persists
+    const nodeId = element.id;
+    if (nodeId && currentMermaidCode) {
+        // Add style directive to the end of the code
+        const styleDirective = `\n    style ${nodeId} fill:${color},color:#fff`;
+        // Only add for flowchart/graph types
+        const firstLine = currentMermaidCode.trim().split('\n')[0].toLowerCase();
+        if (firstLine.startsWith('graph') || firstLine.startsWith('flowchart')) {
+            currentMermaidCode += styleDirective;
+        }
+    }
+
+    showToast(`Color applied to "${selectedNodeOriginalText}"`, 'success');
+
+    // Remove the color tray
+    const tray = document.getElementById('floating-color-tray');
+    if (tray) tray.remove();
+}
+
+// ═══ Live Credits Update ════════════════════════════════════════════════════
+
+async function updateLiveCredits(user) {
+    if (!user) user = firebase.auth().currentUser;
+    if (!user) return;
+
+    try {
+        const data = await checkUserLimits(user.uid, user.isAnonymous);
+        const today = new Date().toISOString().split('T')[0];
+        const todayUsage = (data.dailyUsage && data.dailyUsage[today]) ? data.dailyUsage[today] : 0;
+
+        const statEl = document.getElementById('user-usage-stats');
+        if (!statEl) return;
+
+        if (user.isAnonymous) {
+            const guestTotal = data.totalGuestDiagrams || 0;
+            statEl.innerText = `Credits: ${guestTotal} / 5 Limit`;
+            if (guestTotal >= 5) {
+                statEl.style.color = '#ff4d4d';
+            } else {
+                statEl.style.color = '';
+            }
+        } else {
+            statEl.innerText = `Credits: ${todayUsage} / 10 Limit`;
+            if (todayUsage >= 10) {
+                statEl.style.color = '#ff4d4d';
+            } else {
+                statEl.style.color = '';
+            }
+        }
+    } catch (e) {
+        const statEl = document.getElementById('user-usage-stats');
+        if (user.isAnonymous) {
+            statEl.innerText = `Credits: Limit Reached (5/5)`;
+        } else {
+            statEl.innerText = `Credits: Limit Reached (10/10)`;
+        }
+        statEl.style.color = '#ff4d4d';
     }
 }
 

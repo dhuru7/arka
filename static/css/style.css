@@ -1154,3 +1154,21 @@ textarea::placeholder {
         display: none;
     }
 }
+
+/* ── Floating Color Tray Animation ──────────────────────────────────────── */
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+/* ── Floating Color Tray used by editing ────────────────────────────────── */
+#floating-color-tray {
+    white-space: nowrap;
+}

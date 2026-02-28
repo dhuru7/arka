@@ -55,11 +55,10 @@ document.addEventListener('DOMContentLoaded', () => {
         inputArea.focus();
     });
 
-    // ── Build API URL (always point to Flask server) ────────────────────────
+    // ── Build API URL (works both locally and on Vercel) ────────────────────
     function getApiUrl(path) {
-        // Always use Flask server at port 5000, so the law bot works
-        // whether opened via Flask (port 5000) or Live Server (port 5500)
-        return 'http://127.0.0.1:5000' + path;
+        // Use relative URL so it works on both local Flask and Vercel serverless
+        return path;
     }
 
     // ── Fetch with retry (handles empty responses and JSON parse errors) ──
