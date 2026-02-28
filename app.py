@@ -58,15 +58,47 @@ def get_system_prompt(mode):
     return MERMAID_SYSTEM_PROMPTS.get(mode, MERMAID_SYSTEM_PROMPTS['flowchart'])
 
 
+# Known Mermaid diagram type keywords that should start valid code
+MERMAID_KEYWORDS = [
+    'graph ', 'graph\n', 'flowchart ', 'flowchart\n',
+    'sequenceDiagram', 'classDiagram', 'stateDiagram',
+    'erDiagram', 'gantt', 'pie', 'gitGraph',
+    'mindmap', 'timeline', 'quadrantChart',
+    'xychart-beta', 'architecture-beta',
+    'block-beta', 'journey', 'C4Context',
+    'graph TD', 'graph LR', 'graph TB', 'graph RL', 'graph BT',
+    'flowchart TD', 'flowchart LR', 'flowchart TB', 'flowchart RL',
+]
+
 def clean_mermaid_code(code):
-    """Post-process AI-generated codebase to extract rough mermaid blocks."""
+    """Post-process AI-generated code to extract valid mermaid blocks."""
     if not code:
         return code
 
-    # Remove markdown fencing
+    # Remove markdown fencing (```mermaid ... ``` or ```json ... ```)
+    code = re.sub(r'```(?:mermaid|json|text)?\s*\n?', '', code).strip()
+
+    # If the AI added conversational text before the actual code,
+    # try to find where the real mermaid code starts
     lines = code.split('\n')
-    lines = [l for l in lines if not l.strip().startswith('```')]
-    return '\n'.join(lines).strip()
+    start_idx = 0
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        for kw in MERMAID_KEYWORDS:
+            if stripped.startswith(kw.strip()):
+                start_idx = i
+                break
+        else:
+            continue
+        break
+
+    if start_idx > 0:
+        lines = lines[start_idx:]
+
+    # Remove any trailing conversational text after the diagram
+    # (lines that look like plain prose after a gap)
+    cleaned = '\n'.join(lines).strip()
+    return cleaned
 
 
 @app.route('/')
@@ -113,19 +145,42 @@ def generate_diagram():
             'max_tokens': 2048
         }
 
-        response = requests.post(SARVAM_API_URL, headers=headers, json=payload, timeout=60)
+        # Retry logic for transient API failures
+        MAX_RETRIES = 3
+        bridge_code = None
+        for attempt in range(1, MAX_RETRIES + 1):
+            try:
+                safe_print(f"[Generate] Attempt {attempt}/{MAX_RETRIES} for mode={mode}")
+                response = requests.post(SARVAM_API_URL, headers=headers, json=payload, timeout=60)
 
-        if response.status_code != 200:
-            error_detail = response.text
-            print(f"Sarvam API Error [{response.status_code}]: {error_detail}")
-            return jsonify({
-                'error': f'AI service returned status {response.status_code}',
-                'detail': error_detail
-            }), 502
+                if response.status_code != 200:
+                    error_detail = response.text
+                    safe_print(f"Sarvam API Error [{response.status_code}]: {error_detail}")
+                    if response.status_code in (429, 500, 502, 503, 504) and attempt < MAX_RETRIES:
+                        time.sleep(2 ** attempt)
+                        continue
+                    return jsonify({
+                        'error': f'AI service returned status {response.status_code}',
+                        'detail': error_detail
+                    }), 502
 
-        result = response.json()
-        bridge_code = result['choices'][0]['message']['content'].strip()
-        bridge_code = clean_mermaid_code(bridge_code)
+                result = response.json()
+                content = result.get('choices', [{}])[0].get('message', {}).get('content', '').strip()
+                if not content and attempt < MAX_RETRIES:
+                    safe_print(f"[Generate] Empty content on attempt {attempt}, retrying...")
+                    time.sleep(2 ** attempt)
+                    continue
+                bridge_code = clean_mermaid_code(content)
+                break
+            except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+                safe_print(f"[Generate] {type(e).__name__} on attempt {attempt}")
+                if attempt < MAX_RETRIES:
+                    time.sleep(2 ** attempt)
+                    continue
+                raise
+
+        if not bridge_code:
+            return jsonify({'error': 'Failed to generate diagram after multiple attempts.'}), 502
 
         return jsonify({
             'success': True,

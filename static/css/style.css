@@ -507,21 +507,12 @@ textarea::placeholder {
 /* ── Top Navigation Bar ─────────────────────────────────────────────────── */
 .top-nav-bar {
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    z-index: 1000;
+    top: 24px;
+    right: 24px;
+    z-index: 30;
     display: flex;
     align-items: center;
-    justify-content: flex-start;
-    padding: 24px;
-    pointer-events: none;
-    /* Let clicks pass through empty areas */
-}
-
-.top-nav-bar>* {
-    pointer-events: auto;
-    /* Re-enable clicks on actual elements */
+    gap: 12px;
 }
 
 /* ── Floating Toolbar ───────────────────────────────────────────────────── */

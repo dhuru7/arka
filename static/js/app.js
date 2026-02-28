@@ -27,7 +27,7 @@ const refineBtn = document.getElementById('refine-btn');
 
 // ── State ───────────────────────────────────────────────────────────────
 let currentMermaidCode = '';
-let db = null; // Firebase Realtime DB reference
+// db is already declared in firebase-init.js as: const db = firebase.database();
 let currentMode = 'flowchart'; // 'flowchart' or 'block'
 let currentTheme = 'default';
 let currentScale = 1;
@@ -255,7 +255,8 @@ function setupAppThemeToggle() {
         moonIcon.style.display = 'block';
     }
 
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', (e) => {
+        e.stopPropagation();
         const isLight = document.body.classList.toggle('light-theme');
         if (isLight) {
             sunIcon.style.display = 'none';
@@ -542,6 +543,12 @@ async function renderFromCode(code, pushToHistory = true) {
     updateHistoryButtons();
 
     try {
+        // Clean up any previously created render SVG element (Mermaid won't re-render same ID)
+        ['mermaid-svg-graph', 'dmermaid-svg-graph'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.remove();
+        });
+
         const { svg } = await mermaid.render('mermaid-svg-graph', code);
         canvasContainer.innerHTML = svg;
         canvasContainer.appendChild(emptyState); // Re-append it so it's not destroyed
@@ -677,11 +684,28 @@ async function renderFromCode(code, pushToHistory = true) {
 
 // ═══ Export Functions ════════════════════════════════════════════════════════
 
-function handleExportSVG() {
+async function handleExportSVG() {
     const exportType = currentMode;
     if (!currentMermaidCode) {
         showToast(`Generate a ${currentMode} first.`, 'error');
         return;
+    }
+
+    // Check download limits for guest users
+    const user = firebase.auth().currentUser;
+    if (user) {
+        try {
+            const limitCheck = await checkDownloadLimit(user.uid, user.isAnonymous);
+            if (!limitCheck.allowed) {
+                showToast('Guest download limit reached! Sign up with Google for unlimited downloads.', 'error');
+                // Open profile dropdown to show signup button
+                const profileMenu = document.getElementById('profile-dropdown-menu');
+                if (profileMenu) profileMenu.classList.add('active');
+                return;
+            }
+        } catch (e) {
+            console.error('Download limit check failed:', e);
+        }
     }
 
     const svgEl = canvasContainer.querySelector('svg');
@@ -695,6 +719,11 @@ function handleExportSVG() {
     link.href = url;
     link.click();
     URL.revokeObjectURL(url);
+
+    // Increment download count
+    if (user) {
+        await incrementDownloadCount(user.uid);
+    }
     showToast('SVG exported!', 'success');
 }
 
@@ -705,9 +734,33 @@ async function handleExportPNG() {
         return;
     }
 
+    // Check download limits for guest users
+    const user = firebase.auth().currentUser;
+    if (user) {
+        try {
+            const limitCheck = await checkDownloadLimit(user.uid, user.isAnonymous);
+            if (!limitCheck.allowed) {
+                showToast('Guest download limit reached! Sign up with Google for unlimited downloads.', 'error');
+                // Open profile dropdown to show signup button
+                const profileMenu = document.getElementById('profile-dropdown-menu');
+                if (profileMenu) profileMenu.classList.add('active');
+                return;
+            }
+        } catch (e) {
+            console.error('Download limit check failed:', e);
+        }
+    }
+
     updateStatus('loading', 'Exporting PNG...');
 
     try {
+        // Clean up any previously created export SVG element (Mermaid won't re-render same ID)
+        // Mermaid creates elements with both the given id and 'd' + id
+        ['mermaid-export-graph', 'dmermaid-export-graph'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.remove();
+        });
+
         // Render a brand new clean invisible SVG to entirely bypass UI pan/zoom visual artifacts
         const { svg } = await mermaid.render('mermaid-export-graph', currentMermaidCode);
 
@@ -743,12 +796,17 @@ async function handleExportPNG() {
         ctx.fillRect(0, 0, width, height);
 
         const img = new Image();
-        img.onload = () => {
+        img.onload = async () => {
             ctx.drawImage(img, 0, 0, width, height);
             const link = document.createElement('a');
             link.download = `${exportType}.png`;
             link.href = canvas.toDataURL('image/png');
             link.click();
+
+            // Increment download count after successful export
+            if (user) {
+                await incrementDownloadCount(user.uid);
+            }
             updateStatus('ready', 'Exported');
             showToast('High-Res PNG exported!', 'success');
         };

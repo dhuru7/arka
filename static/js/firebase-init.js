@@ -39,13 +39,14 @@ async function checkUserLimits(userId, isGuest) {
     // Check local storage or database if they reached generation limits
     return new Promise((resolve, reject) => {
         db.ref('users/' + userId).once('value', (snapshot) => {
-            let data = snapshot.val() || {
-                totalGuestDiagrams: 0,
-                dailyUsage: {}
-            };
+            let data = snapshot.val();
+            if (!data) {
+                data = { totalGuestDiagrams: 0, dailyUsage: {} };
+            }
+            if (!data.dailyUsage) data.dailyUsage = {};
 
             // Check Guest Limits
-            if (isGuest && data.totalGuestDiagrams >= 5) {
+            if (isGuest && (data.totalGuestDiagrams || 0) >= 5) {
                 return reject(new Error("Guest limit reached! Please sign up to generate more diagrams."));
             }
 
@@ -67,7 +68,7 @@ async function incrementUserGenerationCount(userId, isGuest) {
     const userRef = db.ref('users/' + userId);
     userRef.transaction((currentData) => {
         if (!currentData) {
-            currentData = { totalGuestDiagrams: 0, dailyUsage: {} };
+            currentData = { totalGuestDiagrams: 0, dailyUsage: {}, totalDownloads: 0 };
         }
         if (!currentData.dailyUsage) currentData.dailyUsage = {};
 
@@ -75,6 +76,46 @@ async function incrementUserGenerationCount(userId, isGuest) {
         if (isGuest) {
             currentData.totalGuestDiagrams = (currentData.totalGuestDiagrams || 0) + 1;
         }
+        return currentData;
+    });
+}
+
+// ── Download Limit Functions ─────────────────────────────────────────────
+
+async function checkDownloadLimit(userId, isGuest) {
+    /**
+     * Guest users: 1 PNG download max
+     * Signed-up (Google) users: unlimited
+     */
+    if (!isGuest) {
+        return { allowed: true, remaining: Infinity };
+    }
+
+    return new Promise((resolve, reject) => {
+        db.ref('users/' + userId).once('value', (snapshot) => {
+            let data = snapshot.val();
+            if (!data) {
+                data = { totalDownloads: 0 };
+            }
+            const downloads = data.totalDownloads || 0;
+            const GUEST_DOWNLOAD_LIMIT = 1;
+
+            if (downloads >= GUEST_DOWNLOAD_LIMIT) {
+                resolve({ allowed: false, remaining: 0, total: downloads });
+            } else {
+                resolve({ allowed: true, remaining: GUEST_DOWNLOAD_LIMIT - downloads, total: downloads });
+            }
+        });
+    });
+}
+
+async function incrementDownloadCount(userId) {
+    const userRef = db.ref('users/' + userId);
+    userRef.transaction((currentData) => {
+        if (!currentData) {
+            currentData = { totalDownloads: 0 };
+        }
+        currentData.totalDownloads = (currentData.totalDownloads || 0) + 1;
         return currentData;
     });
 }

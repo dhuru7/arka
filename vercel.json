@@ -1,0 +1,47 @@
+{
+    "rewrites": [
+        {
+            "source": "/",
+            "destination": "/templates/login.html"
+        },
+        {
+            "source": "/login",
+            "destination": "/templates/login.html"
+        },
+        {
+            "source": "/signup",
+            "destination": "/templates/signup.html"
+        },
+        {
+            "source": "/index",
+            "destination": "/templates/index.html"
+        },
+        {
+            "source": "/about",
+            "destination": "/templates/about.html"
+        },
+        {
+            "source": "/law-bot",
+            "destination": "/templates/law_bot.html"
+        },
+        {
+            "source": "/templates/:path*",
+            "destination": "/templates/:path*"
+        },
+        {
+            "source": "/static/:path*",
+            "destination": "/static/:path*"
+        }
+    ],
+    "headers": [
+        {
+            "source": "/static/(.*)",
+            "headers": [
+                {
+                    "key": "Cache-Control",
+                    "value": "public, max-age=31536000, immutable"
+                }
+            ]
+        }
+    ]
+}

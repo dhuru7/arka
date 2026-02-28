@@ -182,52 +182,86 @@
         <main class="main-area">
 
             <!-- Top Settings & Profile Bar -->
-            <div class="top-nav-bar"
-                style="display: flex; align-items: center; justify-content: flex-start; gap: 12px; padding: 24px; width: 100%; box-sizing: border-box;">
+            <div class="top-nav-bar">
 
-                <!-- App Theme Toggle Button -->
-                <button class="icon-btn" id="app-theme-toggle" title="Toggle Light/Dark Mode"
-                    style="padding: 10px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 8px; cursor: pointer;">
-                    <!-- Default shows Sun because body is Dark -->
-                    <svg id="theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                        style="display: block; width: 20px; height: 20px;">
-                        <circle cx="12" cy="12" r="5"></circle>
-                        <line x1="12" y1="1" x2="12" y2="3"></line>
-                        <line x1="12" y1="21" x2="12" y2="23"></line>
-                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-                        <line x1="1" y1="12" x2="3" y2="12"></line>
-                        <line x1="21" y1="12" x2="23" y2="12"></line>
-                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-                    </svg>
-                    <!-- Moon shows when body is Light -->
-                    <svg id="theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                        style="display: none; width: 20px; height: 20px;">
-                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-                    </svg>
-                </button>
+                <!-- User Profile Dropdown Only (Theme moved inside) -->
 
-                <!-- Profile Info & Usage Stats Container -->
-                <div id="user-profile-container"
-                    style="display: flex; flex-direction: column; justify-content: center; background: rgba(0, 0, 0, 0.2); border: 1px solid var(--border); border-radius: 8px; padding: 6px 16px;">
-                    <span id="user-display-name"
-                        style="font-size: 0.85rem; font-weight: 600; color: var(--fg); margin-bottom: 2px;">Not Logged
-                        In</span>
-                    <span id="user-usage-stats" style="font-size: 0.75rem; color: var(--fg-muted);">Usage: 0 / 10
-                        limit</span>
+                <!-- User Profile Dropdown -->
+                <div class="dropdown-wrapper" id="profile-dropdown-wrapper" style="position: relative;">
+                    <button class="icon-btn" id="btn-profile" title="Profile Menu"
+                        style="padding: 12px; width: 44px; height: 44px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            style="width: 24px; height: 24px;">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                    </button>
+                    <div class="dropdown-menu" id="profile-dropdown-menu"
+                        style="right: 0; min-width: 240px; padding: 12px; flex-direction: column; gap: 8px; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">
+                        <!-- Profile Info & Usage Stats Container -->
+                        <div id="user-profile-container"
+                            style="display: flex; flex-direction: column; justify-content: center; background: rgba(0, 0, 0, 0.2); border: 1px solid var(--border); border-radius: 6px; padding: 10px; margin-bottom: 4px;">
+                            <span id="user-display-name"
+                                style="font-size: 0.85rem; font-weight: 600; color: var(--fg); margin-bottom: 4px;">Not
+                                Logged In</span>
+                            <span id="user-usage-stats" style="font-size: 0.75rem; color: var(--fg-muted);">Credits: 0 /
+                                10 Limit</span>
+                        </div>
+
+                        <button class="dropdown-item" id="btn-signup-google"
+                            style="display: none; justify-content: center; align-items: center; gap: 8px; border-radius: 6px; padding: 10px; width: 100%; border: 1px solid var(--border); background: var(--bg-surface); cursor: pointer; font-family: var(--font-body); color: var(--fg);">
+                            <svg viewBox="0 0 24 24" width="16" height="16" xmlns="http://www.w3.org/2000/svg">
+                                <path
+                                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                                    fill="#4285F4" />
+                                <path
+                                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                                    fill="#34A853" />
+                                <path
+                                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                                    fill="#FBBC05" />
+                                <path
+                                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                                    fill="#EA4335" />
+                            </svg>
+                            <span style="font-size: 0.8rem; font-weight: 500;">Signup w/ Google for More Credits</span>
+                        </button>
+
+                        <button class="dropdown-item" id="app-theme-toggle" title="Toggle Light/Dark Mode"
+                            style="justify-content: center; align-items: center; gap: 8px; border-radius: 6px; padding: 10px; width: 100%; color: var(--fg); border: 1px solid var(--border); background: var(--bg-surface); cursor: pointer; font-family: var(--font-body); display: flex;">
+                            <!-- Default shows Sun because body is Dark -->
+                            <svg id="theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" style="display: block; width: 16px; height: 16px;">
+                                <circle cx="12" cy="12" r="5"></circle>
+                                <line x1="12" y1="1" x2="12" y2="3"></line>
+                                <line x1="12" y1="21" x2="12" y2="23"></line>
+                                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                                <line x1="1" y1="12" x2="3" y2="12"></line>
+                                <line x1="21" y1="12" x2="23" y2="12"></line>
+                                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                            </svg>
+                            <!-- Moon shows when body is Light -->
+                            <svg id="theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" style="display: none; width: 16px; height: 16px;">
+                                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                            </svg>
+                            <span style="font-size: 0.8rem; font-weight: 500;">Toggle Theme</span>
+                        </button>
+
+                        <button class="dropdown-item" id="btn-logout" title="Log Out"
+                            style="justify-content: center; align-items: center; gap: 8px; border-radius: 6px; padding: 10px; width: 100%; color: #ff4d4d; border: 1px solid rgba(255, 77, 77, 0.2); background: rgba(255, 77, 77, 0.05); cursor: pointer; font-family: var(--font-body); display: flex;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                style="width: 16px; height: 16px;">
+                                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                                <polyline points="16 17 21 12 16 7"></polyline>
+                                <line x1="21" y1="12" x2="9" y2="12"></line>
+                            </svg>
+                            <span style="font-size: 0.8rem; font-weight: 500;">Log Out</span>
+                        </button>
+                    </div>
                 </div>
-
-                <!-- User Profile & Logout -->
-                <button class="icon-btn" id="btn-logout" title="Log Out"
-                    style="padding: 10px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 8px; cursor: pointer;">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                        style="width: 20px; height: 20px;">
-                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                        <polyline points="16 17 21 12 16 7"></polyline>
-                        <line x1="21" y1="12" x2="9" y2="12"></line>
-                    </svg>
-                </button>
 
             </div>
 
@@ -605,12 +639,18 @@
 
                 // Update UI Profile Name
                 const nameEl = document.getElementById('user-display-name');
+                const btnSignupGoogle = document.getElementById('btn-signup-google');
+
                 if (user.isAnonymous) {
                     nameEl.innerText = "Guest User";
-                } else if (user.displayName) {
-                    nameEl.innerText = user.displayName;
+                    if (btnSignupGoogle) btnSignupGoogle.style.display = 'flex';
                 } else {
-                    nameEl.innerText = user.email || "Logged In";
+                    if (user.displayName) {
+                        nameEl.innerText = user.displayName;
+                    } else {
+                        nameEl.innerText = user.email || "Logged In";
+                    }
+                    if (btnSignupGoogle) btnSignupGoogle.style.display = 'none';
                 }
 
                 // Fetch limits and stats dynamically from Firebase real-time DB via our check script logically initialized earlier
@@ -622,9 +662,9 @@
                     const statEl = document.getElementById('user-usage-stats');
                     if (user.isAnonymous) {
                         const guestTotal = data.totalGuestDiagrams || 0;
-                        statEl.innerText = `Guest Uses: ${guestTotal} / 5 Max`;
+                        statEl.innerText = `Credits: ${guestTotal} / 5 Limit`;
                     } else {
-                        statEl.innerText = `Daily Usage: ${todayUsage} / 10 Max`;
+                        statEl.innerText = `Credits: ${todayUsage} / 10 Limit`;
                     }
                 } catch (e) {
                     // if it errors out it means they hit the limit, but we'll still update the counter if the promise resolves/rejects
@@ -632,10 +672,10 @@
                     const statEl = document.getElementById('user-usage-stats');
 
                     if (user.isAnonymous) {
-                        statEl.innerText = `Guest Uses: Limit Reached (5/5)`;
+                        statEl.innerText = `Credits: Limit Reached (5/5)`;
                         statEl.style.color = '#ff4d4d';
                     } else {
-                        statEl.innerText = `Daily Usage: Limit Reached (10/10)`;
+                        statEl.innerText = `Credits: Limit Reached (10/10)`;
                         statEl.style.color = '#ff4d4d';
                     }
                 }
@@ -649,6 +689,37 @@
         document.getElementById('btn-logout').addEventListener('click', () => {
             firebase.auth().signOut();
         });
+
+        // Toggle Profile Dropdown
+        const profileBtn = document.getElementById('btn-profile');
+        const profileMenu = document.getElementById('profile-dropdown-menu');
+        if (profileBtn && profileMenu) {
+            profileBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                profileMenu.classList.toggle('active');
+            });
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('#profile-dropdown-wrapper')) {
+                    profileMenu.classList.remove('active');
+                }
+            });
+        }
+
+        // Setup Guest Signup Google Action
+        const signupGoogleBtn = document.getElementById('btn-signup-google');
+        if (signupGoogleBtn) {
+            signupGoogleBtn.addEventListener('click', () => {
+                const provider = new firebase.auth.GoogleAuthProvider();
+                firebase.auth().signInWithPopup(provider)
+                    .then((result) => {
+                        window.location.reload();
+                    })
+                    .catch((err) => {
+                        console.error('Sign-in failed:', err);
+                        alert('Could not sign up with Google: ' + err.message);
+                    });
+            });
+        }
     </script>
 
     <!-- Mermaid JS -->
