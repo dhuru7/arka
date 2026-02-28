@@ -204,6 +204,39 @@ function setupEventListeners() {
 
     // Save confirm
     document.getElementById('save-confirm').addEventListener('click', handleSave);
+
+    const customConfirmBtn = document.getElementById('custom-theme-confirm');
+    if (customConfirmBtn) {
+        customConfirmBtn.addEventListener('click', () => {
+            const p = document.getElementById('custom-primary').value || '#ffffff';
+            const s = document.getElementById('custom-secondary').value || '#cccccc';
+            const l = document.getElementById('custom-line').value || '#000000';
+
+            CUSTOM_THEMES['custom'] = {
+                theme: 'base',
+                themeVariables: {
+                    primaryColor: p,
+                    primaryTextColor: l,
+                    primaryBorderColor: l,
+                    lineColor: l,
+                    secondaryColor: s,
+                    tertiaryColor: p,
+                    fontFamily: 'Inter, sans-serif'
+                }
+            };
+
+            const btnText = document.getElementById('btn-theme-text');
+            if (btnText) btnText.textContent = 'Custom';
+
+            currentTheme = 'custom';
+            initializeMermaidTheme('custom');
+            if (currentMermaidCode) {
+                renderFromCode(currentMermaidCode);
+            }
+            showToast('Custom theme generated!', 'success');
+            closeAllModals();
+        });
+    }
 }
 
 let panZoomInstance = null;
@@ -254,16 +287,21 @@ function setupAppThemeToggle() {
 function setupModeToggle() {
     const btn = document.getElementById('btn-mode-select');
     const menu = document.getElementById('mode-dropdown-menu');
+    const scrollHint = document.getElementById('mode-scroll-hint');
     if (!btn || !menu) return;
 
     btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        menu.classList.toggle('active');
+        const isActive = menu.classList.toggle('active');
+        if (scrollHint) {
+            scrollHint.style.display = isActive ? 'block' : 'none';
+        }
     });
 
     document.addEventListener('click', (e) => {
         if (!e.target.closest('#mode-dropdown-wrapper')) {
             menu.classList.remove('active');
+            if (scrollHint) scrollHint.style.display = 'none';
         }
     });
 
@@ -272,6 +310,7 @@ function setupModeToggle() {
             const mode = option.getAttribute('data-mode');
             switchMode(mode);
             menu.classList.remove('active');
+            if (scrollHint) scrollHint.style.display = 'none';
         });
     });
 }
@@ -870,12 +909,16 @@ function resetThemePreview() {
 function setupThemeDropdown() {
     const btn = document.getElementById('btn-theme');
     const menu = document.getElementById('theme-dropdown-menu');
+    const scrollHint = document.getElementById('theme-scroll-hint');
     if (!btn || !menu) return;
 
     btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        menu.classList.toggle('active');
-        if (!menu.classList.contains('active')) {
+        const isActive = menu.classList.toggle('active');
+        if (scrollHint) {
+            scrollHint.style.display = isActive ? 'block' : 'none';
+        }
+        if (!isActive) {
             resetThemePreview();
         }
     });
@@ -885,6 +928,7 @@ function setupThemeDropdown() {
             if (menu.classList.contains('active')) {
                 resetThemePreview();
                 menu.classList.remove('active');
+                if (scrollHint) scrollHint.style.display = 'none';
             }
         }
     });
@@ -897,8 +941,14 @@ function setupThemeDropdown() {
         });
 
         option.addEventListener('click', (e) => {
-            changeTheme(theme);
-            menu.classList.remove('active');
+            if (theme === 'custom') {
+                e.preventDefault();
+                openModal('custom-theme-modal');
+                menu.classList.remove('active');
+            } else {
+                changeTheme(theme);
+                menu.classList.remove('active');
+            }
         });
     });
 

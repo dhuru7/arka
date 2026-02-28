@@ -59,6 +59,15 @@
                     style="font-size: 0.75rem; color: var(--fg-muted); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 8px; display: block; font-weight: 500;">DIAGRAM
                     TYPE</label>
                 <div class="dropdown-wrapper" id="mode-dropdown-wrapper" style="width: 100%;">
+                    <div class="scroll-hint-overlay" id="mode-scroll-hint"
+                        style="display: none; position: absolute; top: calc(100% + 4px); right: -18px; z-index: 200; font-size: 0.65rem; color: var(--fg-muted); transform: translateY(10px); animation: fadeIn 0.3s forwards;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12"
+                            height="12" style="display: block; margin: 0 auto; margin-bottom: 2px;">
+                            <polyline points="7 13 12 18 17 13"></polyline>
+                            <polyline points="7 6 12 11 17 6"></polyline>
+                        </svg>
+                        SCROLL
+                    </div>
                     <button id="btn-mode-select"
                         style="width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; cursor: pointer; text-align: left; background: rgba(255, 255, 255, 0.04); border: 1px solid var(--border); border-radius: 8px; color: var(--fg); font-family: var(--font-body); transition: background 0.2s, border-color 0.2s;">
                         <span id="btn-mode-text" style="font-weight: 500;">Flowchart</span>
@@ -322,6 +331,15 @@
 
                     <!-- Theme Dropdown -->
                     <div class="dropdown-wrapper" id="theme-dropdown-wrapper">
+                        <div class="scroll-hint-overlay" id="theme-scroll-hint"
+                            style="display: none; position: absolute; top: calc(100% + 4px); right: -18px; z-index: 200; font-size: 0.65rem; color: var(--fg-muted); transform: translateY(10px); animation: fadeIn 0.3s forwards;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12"
+                                height="12" style="display: block; margin: 0 auto; margin-bottom: 2px;">
+                                <polyline points="7 13 12 18 17 13"></polyline>
+                                <polyline points="7 6 12 11 17 6"></polyline>
+                            </svg>
+                            SCROLL
+                        </div>
                         <button class="toolbar-btn" id="btn-theme" title="Change Theme"
                             style="padding: 0 16px; height: 34px; border-color: transparent; border: 1px solid transparent; font-size: 0.75rem; letter-spacing: 0.5px; color: var(--fg-muted); background: transparent;">
                             <span id="btn-theme-text">Default</span>
@@ -356,6 +374,9 @@
                             </button>
                             <button class="dropdown-item theme-option" data-theme="neon">
                                 <span>Neon Grid</span>
+                            </button>
+                            <button class="dropdown-item theme-option" data-theme="custom">
+                                <span>Custom</span>
                             </button>
                         </div>
                     </div>
@@ -502,6 +523,47 @@
             </div>
             <div class="modal-footer">
                 <button class="primary" id="edit-text-confirm">Apply Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ Custom Theme Modal ════════════════════════════════════════════════ -->
+    <div class="modal-overlay" id="custom-theme-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>CUSTOM THEME</h2>
+                <button class="icon-btn modal-close">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label for="custom-primary" style="display: block; margin-bottom: 8px;">Primary Base Color
+                        Configuration (Hex)</label>
+                    <input type="text" id="custom-primary" placeholder="#ffffff"
+                        pattern="^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$"
+                        style="width: 100%; height: 40px; border: 1px solid var(--border); border-radius: 6px; padding: 0 12px; background: rgba(0,0,0,0.2); color: var(--fg); font-family: var(--font-body); outline: none;">
+                </div>
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label for="custom-secondary" style="display: block; margin-bottom: 8px;">Secondary Accents
+                        (Hex)</label>
+                    <input type="text" id="custom-secondary" placeholder="#cccccc"
+                        pattern="^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$"
+                        style="width: 100%; height: 40px; border: 1px solid var(--border); border-radius: 6px; padding: 0 12px; background: rgba(0,0,0,0.2); color: var(--fg); font-family: var(--font-body); outline: none;">
+                </div>
+                <div class="form-group">
+                    <label for="custom-line" style="display: block; margin-bottom: 8px;">Line and Text Bounds
+                        (Hex)</label>
+                    <input type="text" id="custom-line" placeholder="#000000"
+                        pattern="^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$"
+                        style="width: 100%; height: 40px; border: 1px solid var(--border); border-radius: 6px; padding: 0 12px; background: rgba(0,0,0,0.2); color: var(--fg); font-family: var(--font-body); outline: none;">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="primary" id="custom-theme-confirm" style="width: 100%;">Apply Custom Theme</button>
             </div>
         </div>
     </div>

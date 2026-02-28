@@ -90,3 +90,15 @@ body.light-theme .inline-editor input {
     border-color: #E52E2E !important;
     box-shadow: 0 0 10px rgba(229, 46, 46, 0.5) !important;
 }
+
+body.light-theme .dropdown-menu::-webkit-scrollbar-track {
+    border-left: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+body.light-theme .dropdown-menu::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+}
+
+body.light-theme .dropdown-menu::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.4);
+}
