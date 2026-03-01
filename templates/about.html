@@ -79,32 +79,28 @@
             </div>
         </section>
 
-        <!-- Marquee Divider -->
-        <div class="marquee-container">
-            <div class="marquee-content">
-                <span>FLOWCHARTS</span> <span class="separator">/</span>
-                <span>BLOCK DIAGRAMS</span> <span class="separator">/</span>
-                <span>SEQUENCE</span> <span class="separator">/</span>
-                <span>STATE MACHINES</span> <span class="separator">/</span>
-                <span>GANTT CHARTS</span> <span class="separator">/</span>
-                <span>ER DIAGRAMS</span> <span class="separator">/</span>
-                <span>TIMELINES</span> <span class="separator">/</span>
-                <span>ARCHITECTURE</span> <span class="separator">/</span>
-                <span>FLOWCHARTS</span> <span class="separator">/</span>
-                <span>BLOCK DIAGRAMS</span> <span class="separator">/</span>
-                <span>SEQUENCE</span> <span class="separator">/</span>
-                <span>STATE MACHINES</span> <span class="separator">/</span>
-                <span>GANTT CHARTS</span> <span class="separator">/</span>
-                <span>ER DIAGRAMS</span> <span class="separator">/</span>
-                <span>TIMELINES</span> <span class="separator">/</span>
-                <span>ARCHITECTURE</span> <span class="separator">/</span>
-            </div>
-        </div>
+
 
         <!-- Interactive Showcase Section -->
         <section class="showcase-section">
             <div class="showcase-header">
-                <h2>SEE IT <span class="accent-text">IN ACTION.</span></h2>
+                <h2 class="scroll-shift-text" data-text="SEE IT IN ACTION.">
+                    <span class="word">
+                        <span class="char active">S</span><span class="char active">E</span><span
+                            class="char active">E</span>
+                    </span>
+                    <span class="word">
+                        <span class="char active">I</span><span class="char active">T</span>
+                    </span>
+                    <span class="word">
+                        <span class="char">I</span><span class="char">N</span>
+                    </span>
+                    <span class="word">
+                        <span class="char">A</span><span class="char">C</span><span class="char">T</span><span
+                            class="char">I</span><span class="char">O</span><span class="char">N</span><span
+                            class="char">.</span>
+                    </span>
+                </h2>
             </div>
 
             <div class="showcase-container">
@@ -211,7 +207,21 @@
 
         <!-- Support Section -->
         <section id="support" class="support-section">
-            <h2 class="support-title">SUPPORT <span class="accent-text">THE PROJECT.</span></h2>
+            <h2 class="support-title scroll-shift-text" data-text="SUPPORT THE PROJECT.">
+                <span class="word">
+                    <span class="char active">S</span><span class="char active">U</span><span
+                        class="char active">P</span><span class="char active">P</span><span
+                        class="char active">O</span><span class="char active">R</span><span class="char active">T</span>
+                </span>
+                <span class="word">
+                    <span class="char">T</span><span class="char">H</span><span class="char">E</span>
+                </span>
+                <span class="word">
+                    <span class="char">P</span><span class="char">R</span><span class="char">O</span><span
+                        class="char">J</span><span class="char">E</span><span class="char">C</span><span
+                        class="char">T</span><span class="char">.</span>
+                </span>
+            </h2>
             <p class="support-subtitle">If you love what I built, consider buying me a coffee! ☕</p>
 
             <div class="support-grid">
@@ -296,32 +306,17 @@
     App-->>U: "Door Unlocked" visual feedback`
             },
             {
-                prompt: "Make a block diagram of a basic home automation IoT setup...",
-                type: "BLOCK DIAGRAM",
-                code: `graph LR
-    subgraph Local Network
-        Hub[Smart Home Hub]
-        Light[Smart Bulb]
-        Temp[Thermostat]
-    end
-    
-    subgraph Internet
-        API[Vendor Cloud API]
-    end
-
-    App((Mobile Phone)) --> API
-    API --> Hub
-    Hub --> Light
-    Hub --> Temp`
-            },
-            {
-                prompt: "Show me a pie chart of an IoT gateway's power consumption breakdown...",
-                type: "PIE CHART",
-                code: `pie title "IoT Gateway Power Draw"
-    "Cellular Modem (LTE)" : 45
-    "Main CPU processing" : 30
-    "Wi-Fi / BLE Radios" : 15
-    "LEDs / Peripherals" : 10`
+                prompt: "Show a quadrant chart analyzing cloud providers...",
+                type: "QUADRANT CHART",
+                code: `%%{init: {"quadrantChart": {"chartWidth": 400, "chartHeight": 250}}}%%
+quadrantChart
+    title Cloud Providers
+    x-axis Low Cost --> High Cost
+    y-axis Low Perf --> High Perf
+    AWS: [0.7, 0.8]
+    Azure: [0.6, 0.7]
+    GCP: [0.65, 0.85]
+    DigitalOcean: [0.3, 0.5]`
             }
         ];
 
@@ -363,6 +358,7 @@
                 if (svgElement) {
                     svgElement.style.animation = 'fadeIn 0.5s ease-out forwards';
                     svgElement.style.maxWidth = '100%';
+                    svgElement.style.maxHeight = '230px';
                     svgElement.style.height = 'auto';
                 }
 
@@ -400,9 +396,73 @@
             }
         }
 
-        // Start loop on load
+        // Scroll Animation Logic for Headers
+        function initScrollShiftText() {
+            const shiftHeaders = document.querySelectorAll('.scroll-shift-text');
+
+            if (shiftHeaders.length === 0) return;
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        // Element is in view, attach scroll listener
+                        window.addEventListener('scroll', handleScroll, { passive: true });
+                    } else {
+                        // Element is out of view
+                        const chars = entry.target.querySelectorAll('.char');
+                        chars.forEach(char => char.classList.remove('active'));
+                        window.removeEventListener('scroll', handleScroll);
+                    }
+                });
+            }, {
+                threshold: 0.1, // Trigger when 10% visible
+                rootMargin: "-10% 0px -10% 0px"
+            });
+
+            shiftHeaders.forEach(header => observer.observe(header));
+
+            function handleScroll() {
+                shiftHeaders.forEach(header => {
+                    const rect = header.getBoundingClientRect();
+                    const windowHeight = window.innerHeight;
+
+                    // Only process visible elements
+                    if (rect.top <= windowHeight && rect.bottom >= 0) {
+                        const chars = header.querySelectorAll('.char');
+                        if (chars.length === 0) return;
+
+                        // Start animating slightly before center, finish near top
+                        const startAnimY = windowHeight * 0.7; // Lower down the screen
+                        const endAnimY = windowHeight * 0.2;   // Higher up the screen
+
+                        // Calculate scroll progress (0 means start of animation, 1 means fully animated)
+                        let progress = (startAnimY - rect.top) / (startAnimY - endAnimY);
+
+                        // Clamp progress between 0 and 1
+                        progress = Math.max(0, Math.min(1, progress));
+
+                        // Calculate how many characters should be red based on progress
+                        const charsToActivate = Math.floor(progress * chars.length);
+
+                        chars.forEach((char, index) => {
+                            if (index < charsToActivate) {
+                                char.classList.add('active');
+                            } else {
+                                char.classList.remove('active');
+                            }
+                        });
+                    }
+                });
+            }
+
+            // Initial call to set state
+            handleScroll();
+        }
+
+        // Start loops on load
         window.addEventListener('load', () => {
             runShowcaseLoop();
+            initScrollShiftText();
         });
     </script>
 </body>

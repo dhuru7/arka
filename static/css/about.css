@@ -300,6 +300,7 @@ body {
     border-top: 1px solid var(--border);
     border-bottom: 1px solid var(--border);
     padding: 16px 0;
+    margin: 40px 0;
     overflow: hidden;
     background: rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(5px);
@@ -471,6 +472,30 @@ body {
     }
 }
 
+/* ── Scroll Text Animation ── */
+.scroll-shift-text {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3em;
+}
+
+.scroll-shift-text .word {
+    display: inline-flex;
+}
+
+.scroll-shift-text .char {
+    display: inline-block;
+    color: var(--fg);
+    /* Default text color (white) */
+    transition: color 0.1s ease-out;
+    /* Fast, snappy color change */
+}
+
+.scroll-shift-text .char.active {
+    color: var(--accent);
+    /* Target text color (red) */
+}
+
 /* ── Staggered Features Section ── */
 .features-alt-section {
     width: 100%;
@@ -638,7 +663,7 @@ body {
 
 .about-me-title {
     font-family: var(--font-logo);
-    font-size: 2.5rem;
+    font-size: clamp(2rem, 5vw, 2.5rem);
     margin-bottom: 24px;
     letter-spacing: 1px;
 }
@@ -780,42 +805,238 @@ body {
 
 @media (max-width: 768px) {
     .lander-nav {
-        padding: 16px 24px;
+        padding: 16px 20px;
+        background: rgba(0, 0, 0, 0.95);
+        border-bottom: 1px solid var(--border);
+    }
+
+    .logo-text h1 {
+        font-size: 1.6rem;
+        letter-spacing: 1px;
+    }
+
+    .nav-links {
+        gap: 8px;
+    }
+
+    .nav-link {
+        display: none;
+        /* Hide login link on mobile to save space, focus on CTA */
+    }
+
+    .auth-btn-sm {
+        padding: 8px 14px;
+        font-size: 0.75rem;
+        border-radius: var(--radius-sm);
+        /* Change pill to sharp box on mobile */
+    }
+
+    .lander-main {
+        padding-top: 100px;
+    }
+
+    .hero-section {
+        padding: 0 20px 40px;
+        text-align: left;
+        align-items: flex-start;
+        min-height: auto;
     }
 
     .hero-title {
-        font-size: 3rem;
+        font-size: clamp(2rem, 10vw, 3.5rem);
+        line-height: 1.1;
+        margin-bottom: 24px;
+        text-align: left;
+        white-space: nowrap;
+    }
+
+    .hero-title .line {
+        display: block;
+    }
+
+    .hero-subtitle {
+        font-size: 1.1rem;
+        text-align: left;
+        margin-bottom: 40px;
+        color: var(--fg);
     }
 
     .hero-ctas {
         flex-direction: column;
         width: 100%;
+        gap: 16px;
     }
 
     .large-btn {
         width: 100%;
-        justify-content: center;
+        justify-content: space-between;
+        /* Push arrow to edge */
+        padding: 20px 24px;
+        font-size: 0.95rem;
+        border-radius: var(--radius-sm);
+        /* Brutalist square corners on mobile */
+    }
+
+    .marquee-container {
+        padding: 10px 0;
+        margin: 40px 0;
+    }
+
+    .marquee-content {
+        font-size: 1rem;
+        letter-spacing: 1px;
+    }
+
+    .showcase-section,
+    .features-alt-section,
+    .about-me-section,
+    .support-section {
+        padding: 60px 20px;
+    }
+
+    .showcase-header h2 {
+        font-size: clamp(1.6rem, 7vw, 2.2rem);
+        text-align: left;
+        line-height: 1.1;
+        white-space: nowrap;
+    }
+
+    .about-me-title,
+    .support-title {
+        font-size: clamp(1.4rem, 6vw, 2.2rem);
+        text-align: left;
+        line-height: 1.2;
+        white-space: normal;
+        word-break: break-word;
+    }
+
+    .showcase-header {
+        text-align: left;
+        margin-bottom: 32px;
+    }
+
+    .prompt-window,
+    .diagram-window {
+        height: 320px;
+        /* Fixed height prevents layout jumping */
+        border-radius: 0;
+        /* Brutalist flat window on mobile */
+        border-left: 0;
+        border-right: 0;
+    }
+
+    /* Showcases stretch full width */
+    .showcase-section {
+        padding: 40px 0;
+    }
+
+    .showcase-header {
+        padding: 0 20px;
+    }
+
+    /* Transform features into a horizontal snap-scroll list */
+    .features-alt-section {
+        flex-direction: row;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        gap: 20px;
+        padding-bottom: 40px;
+        -webkit-overflow-scrolling: touch;
+        scroll-padding: 0 20px;
+    }
+
+    .features-alt-section::-webkit-scrollbar {
+        display: none;
+    }
+
+    .feature-row,
+    .feature-row.reverse {
+        flex-direction: column;
+        flex: 0 0 calc(90vw - 40px);
+        /* Take up most of screen width */
+        scroll-snap-align: start;
+        padding: 32px 24px;
+        text-align: left;
+        gap: 24px;
+        border-radius: var(--radius-md);
+        background: #0a0a0a;
+    }
+
+    .feature-num {
+        font-size: 3rem;
+        color: var(--accent);
+        -webkit-text-stroke: 0;
+    }
+
+    .feature-text h3 {
+        font-size: 1.4rem;
+        margin-bottom: 12px;
+    }
+
+    .feature-text p,
+    .about-me-body {
+        font-size: 1.05rem;
+        color: #aaa;
+    }
+
+    .about-me-card {
+        padding: 32px 20px;
+        border-radius: 0;
+        border-left: 0;
+        border-right: 0;
+        background: transparent;
+    }
+
+    .support-card {
+        padding: 32px 20px;
+        min-width: 100%;
+        border-radius: 0;
+        border-left: 4px solid var(--fg);
+        text-align: left;
+        align-items: flex-start;
+    }
+
+    .support-card .qr-box {
+        align-self: center;
+        margin-top: 16px;
+    }
+
+    .support-card .support-btn {
+        width: 100%;
+        text-align: center;
+        border-radius: var(--radius-sm);
+    }
+
+    .lander-footer {
+        padding: 40px 20px 24px;
     }
 
     .footer-grid {
         flex-direction: column;
+        gap: 32px;
+        margin-bottom: 32px;
+        padding: 0;
     }
 
     .footer-links {
         flex-direction: column;
         gap: 16px;
+        align-items: flex-start;
+        display: flex;
+    }
+
+    .footer-links a:first-child {
+        order: 99;
+    }
+
+    .footer-brand {
+        text-align: left;
     }
 
     .footer-bottom {
-        justify-content: center;
-    }
-
-    .about-me-card {
-        padding: 32px 24px;
-    }
-
-    .support-grid {
-        flex-direction: column;
-        align-items: center;
+        justify-content: flex-start;
+        text-align: left;
+        padding-top: 24px;
+        padding-left: 0;
     }
 }
