@@ -467,14 +467,16 @@ async function handleGenerate() {
         }
 
         await incrementUserGenerationCount(user.uid, user.isAnonymous);
-
-        // Update live credits immediately after generation
-        updateLiveCredits(user);
+        // Await to ensure the ui updates before toast is dismissed
+        await updateLiveCredits(user);
 
         currentMermaidCode = generatedCode;
         await renderFromCode(currentMermaidCode);
         updateStatus('ready', 'Generated');
         showToast(`${currentMode} generated successfully!`, 'success');
+
+        // Update live credits dynamically after successful generation without refresh
+        await updateLiveCredits(user);
 
     } catch (err) {
         console.error('Generate error:', err);
@@ -952,6 +954,9 @@ async function updateLiveCredits(user) {
             statEl.innerText = `Credits: Limit Reached (10/10)`;
         }
         statEl.style.color = '#ff4d4d';
+        if (!user.isAnonymous) {
+            checkAndInjectBMCWidget(10, user.isAnonymous);
+        }
     }
 }
 

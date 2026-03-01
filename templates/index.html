@@ -704,7 +704,6 @@
                     }
                 } catch (e) {
                     // if it errors out it means they hit the limit, but we'll still update the counter if the promise resolves/rejects
-                    const today = new Date().toISOString().split('T')[0];
                     const statEl = document.getElementById('user-usage-stats');
 
                     if (user.isAnonymous) {
@@ -713,8 +712,8 @@
                     } else {
                         statEl.innerText = `Credits: Limit Reached (10/10)`;
                         statEl.style.color = '#ff4d4d';
+                        if (typeof checkAndInjectBMCWidget === 'function') checkAndInjectBMCWidget(10, user.isAnonymous); // force inject
                     }
-                    if (typeof checkAndInjectBMCWidget === 'function') checkAndInjectBMCWidget(10, user.isAnonymous); // force inject
                 }
 
             } else {

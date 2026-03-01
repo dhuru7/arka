@@ -46,6 +46,11 @@
                     <label for="password">Password</label>
                     <input type="password" id="password" required placeholder="Enter your password...">
                 </div>
+                <div style="text-align: right; margin-bottom: 20px; margin-top: -10px;">
+                    <a href="#" id="forgot-password"
+                        style="color: var(--fg-muted); font-size: 0.75rem; text-decoration: none; transition: color 0.2s; font-family: var(--font-body);">Forgot
+                        Password?</a>
+                </div>
                 <button type="submit" class="primary auth-btn">
                     Log In
                 </button>
@@ -103,6 +108,13 @@
 
         function showError(msg) {
             errorMsg.innerText = msg;
+            errorMsg.style.color = '#ff4d4d';
+            setTimeout(() => { errorMsg.innerText = ''; }, 5000);
+        }
+
+        function showSuccess(msg) {
+            errorMsg.innerText = msg;
+            errorMsg.style.color = '#34A853';
             setTimeout(() => { errorMsg.innerText = ''; }, 5000);
         }
 
@@ -115,6 +127,22 @@
             try {
                 const userCredential = await firebase.auth().signInWithEmailAndPassword(email, password);
                 window.location.href = '/index';
+            } catch (error) {
+                showError(error.message);
+            }
+        });
+
+        const forgotPasswordBtn = document.getElementById('forgot-password');
+        forgotPasswordBtn.addEventListener('click', async function (e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value.trim();
+            if (!email) {
+                showError("Please enter your email to reset password.");
+                return;
+            }
+            try {
+                await firebase.auth().sendPasswordResetEmail(email);
+                showSuccess("Password reset email sent! Check your inbox.");
             } catch (error) {
                 showError(error.message);
             }
