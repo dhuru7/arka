@@ -33,12 +33,17 @@ const refineBtn = document.getElementById('refine-btn');
 function getApiUrl(path) {
     const host = window.location.hostname;
     const port = window.location.port;
-    // On Vercel or Flask (5000), use relative URLs
-    if (host.includes('vercel.app') || port === '5000' || port === '') {
+
+    // Running Flask directly (port 5000)
+    if (port === '5000') {
         return path;
     }
-    // On Live Server or other, proxy to Flask
-    return 'http://127.0.0.1:5000' + path;
+    // Running Live Server locally (localhost or 127.0.0.1) on any other port
+    if (host === 'localhost' || host === '127.0.0.1') {
+        return 'http://127.0.0.1:5000' + path;
+    }
+    // Running on Vercel or custom production domains
+    return path;
 }
 
 // Safe JSON parse that prevents crashes on non-JSON responses
