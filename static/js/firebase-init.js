@@ -68,7 +68,7 @@ async function incrementUserGenerationCount(userId, isGuest) {
 
     // Run an update/transaction to increment limits
     const userRef = db.ref('users/' + userId);
-    userRef.transaction((currentData) => {
+    return userRef.transaction((currentData) => {
         if (!currentData) {
             currentData = { totalGuestDiagrams: 0, dailyUsage: {}, totalDownloads: 0 };
         }
@@ -113,7 +113,7 @@ async function checkDownloadLimit(userId, isGuest) {
 
 async function incrementDownloadCount(userId) {
     const userRef = db.ref('users/' + userId);
-    userRef.transaction((currentData) => {
+    return userRef.transaction((currentData) => {
         if (!currentData) {
             currentData = { totalDownloads: 0 };
         }

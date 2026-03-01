@@ -417,9 +417,12 @@ def fix_mermaid_syntax(code, mode):
 
     if mode in ('flowchart', 'block', 'architecture'):
         # Fix parser errors caused by unquoted parentheses in node text
-        # Only removes ( and ) that are NOT part of shape markers like [(, ([
-        code = re.sub(r'(?<![\[\]\|])\((?![\[\]\|])', ' ', code)
-        code = re.sub(r'(?<![\[\]\|])\)(?![\[\]\|])', ' ', code)
+        # Only removes ( and ) that are NOT part of shape markers
+        code = re.sub(r'(?<![\[\]\|\{\}\<\>\(\)])\((?![\[\]\|\{\}\<\>\(\)])', ' ', code)
+        code = re.sub(r'(?<![\[\]\|\{\}\<\>\(\)])\)(?![\[\]\|\{\}\<\>\(\)])', ' ', code)
+
+        if mode == 'architecture' and 'defaultRenderer' not in code:
+            code = '%%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%\n' + code
 
     if mode == 'gantt':
         code = _fix_gantt(code)
