@@ -1177,7 +1177,23 @@ textarea::placeholder {
     .top-nav-bar {
         top: 16px;
         right: 16px;
-        z-index: 60;
+        z-index: 100000;
+    }
+
+    .toolbar-left,
+    .toolbar-right {
+        display: contents;
+    }
+
+    .toolbar-divider {
+        display: none !important;
+    }
+
+    .mobile-tray-break {
+        display: block !important;
+        flex-basis: 100%;
+        height: 0;
+        margin: 0;
     }
 
     .toolbar {
@@ -1188,11 +1204,41 @@ textarea::placeholder {
         flex-wrap: wrap;
         justify-content: center;
         border-radius: var(--radius-md);
-        padding: 8px 12px;
+        padding: 10px 12px;
         width: 90vw;
-        max-width: 90vw;
-        gap: 8px;
+        max-width: 92vw;
+        gap: 10px;
         overflow: visible;
+    }
+
+    #btn-undo,
+    #btn-redo,
+    #btn-delete-selected,
+    #btn-clear-canvas,
+    #btn-auto-layout,
+    #btn-code-view,
+    #btn-save,
+    #btn-load {
+        order: 1;
+    }
+
+    .mobile-break-row-1 {
+        order: 2;
+    }
+
+    .zoom-controls,
+    #zoom-fit {
+        order: 3;
+    }
+
+    .mobile-break-row-2 {
+        order: 4;
+    }
+
+    #btn-edit-text,
+    #theme-dropdown-wrapper,
+    #download-dropdown-wrapper {
+        order: 5;
     }
 
     .dropdown-wrapper .dropdown-menu {
@@ -1233,7 +1279,7 @@ textarea::placeholder {
         border-top: 1px solid var(--border-light) !important;
         border-radius: 20px 20px 0 0 !important;
         padding: 24px 16px 32px 16px !important;
-        z-index: 99999 !important;
+        z-index: 100005 !important;
         max-height: 80vh !important;
         box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.8) !important;
         animation: slide-up-mobile 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
