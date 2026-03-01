@@ -58,6 +58,37 @@ async function safeJsonParse(response) {
     }
 }
 
+// ── Error Reporting & Screenshots ───────────────────────────────────────
+async function triggerErrorReport(errorMessage) {
+    if (typeof html2canvas === 'undefined') return;
+    try {
+        const canvas = await html2canvas(document.body, { allowTaint: true, useCORS: true, logging: false });
+        const imgData = canvas.toDataURL("image/png");
+
+        const msgEl = document.getElementById('error-report-msg');
+        if (msgEl) msgEl.textContent = "Error Log: " + errorMessage;
+
+        const imgEl = document.getElementById('error-report-img');
+        if (imgEl) imgEl.src = imgData;
+
+        const dlBtn = document.getElementById('btn-download-error-ss');
+        if (dlBtn) dlBtn.href = imgData;
+
+        const modal = document.getElementById('error-report-modal');
+        if (modal) modal.classList.add('active');
+
+        const reportBtn = document.getElementById('btn-report-issue');
+        if (reportBtn) {
+            reportBtn.onclick = () => {
+                window.open('https://forms.gle/FA4qTch5rdXoaZvf6', '_blank');
+                modal.classList.remove('active');
+            };
+        }
+    } catch (e) {
+        console.error('Failed to capture error screenshot', e);
+    }
+}
+
 // ── State ───────────────────────────────────────────────────────────────
 let currentMermaidCode = '';
 // db is already declared in firebase-init.js as: const db = firebase.database();
@@ -519,6 +550,7 @@ async function handleGenerate() {
         console.error('Generate error:', err);
         updateStatus('error', 'Error');
         showToast(err.message, 'error');
+        triggerErrorReport(err.message);
     } finally {
         generateBtn.classList.remove('loading');
         generateBtn.disabled = false;
@@ -590,6 +622,7 @@ async function handleRefine() {
         }
         showToast(err.message, 'error');
         updateStatus('error', 'Error');
+        triggerErrorReport(err.message);
     } finally {
         refineBtn.disabled = false;
         refineBtn.textContent = 'Refine';
@@ -825,6 +858,7 @@ async function renderFromCode(code, pushToHistory = true) {
     } catch (err) {
         console.error('Parse/render error:', err);
         showToast('Error parsing the Mermaid code: ' + err.message, 'error');
+        triggerErrorReport('Error parsing the Mermaid code: ' + err.message);
     }
 }
 
