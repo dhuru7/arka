@@ -155,6 +155,53 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const ackNoticeBtn = document.getElementById('btn-ack-mobile-notice');
     if (ackNoticeBtn) ackNoticeBtn.addEventListener('click', dismissNotice);
+
+    // Break out dropdown menus on mobile to prevent toolbar scrolling clip
+    if (window.innerWidth <= 768) {
+        document.querySelectorAll('.dropdown-wrapper').forEach(wrapper => {
+            const btn = wrapper.querySelector('button');
+            const menu = wrapper.querySelector('.dropdown-menu');
+            if (btn && menu) {
+                // Move out of the toolbar clipping context
+                document.body.appendChild(menu);
+
+                // Setup Mobile Tap to Toggle
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const isActive = menu.classList.contains('active');
+
+                    // Close all other menus first
+                    document.querySelectorAll('.dropdown-menu.active').forEach(m => m.classList.remove('active'));
+
+                    if (!isActive) {
+                        menu.classList.add('active');
+                        // Inject an invisible dismiss backdrop
+                        let backdrop = document.getElementById('mobile-menu-backdrop');
+                        if (!backdrop) {
+                            backdrop = document.createElement('div');
+                            backdrop.id = 'mobile-menu-backdrop';
+                            backdrop.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; z-index:9998;';
+                            document.body.appendChild(backdrop);
+                            backdrop.addEventListener('click', () => {
+                                document.querySelectorAll('.dropdown-menu.active').forEach(m => m.classList.remove('active'));
+                                backdrop.style.display = 'none';
+                            });
+                        }
+                        backdrop.style.display = 'block';
+                    }
+                });
+
+                // Auto Close menu when clicking an item
+                menu.querySelectorAll('.dropdown-item').forEach(item => {
+                    item.addEventListener('click', () => {
+                        menu.classList.remove('active');
+                        const backdrop = document.getElementById('mobile-menu-backdrop');
+                        if (backdrop) backdrop.style.display = 'none';
+                    });
+                });
+            }
+        });
+    }
 });
 
 // Init handled by firebase-init.js globally.
