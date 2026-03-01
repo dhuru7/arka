@@ -37,6 +37,10 @@
                 </div>
             </div>
 
+            <div id="error-message"
+                style="color: #ff4d4d; margin-bottom: 20px; font-size: 0.85rem; text-align: center; font-family: var(--font-body);">
+            </div>
+
             <form id="login-form">
                 <div class="form-group">
                     <label for="email">Email</label>
@@ -47,9 +51,9 @@
                     <input type="password" id="password" required placeholder="Enter your password...">
                 </div>
                 <div style="text-align: right; margin-bottom: 20px; margin-top: -10px;">
-                    <a href="#" id="forgot-password"
-                        style="color: var(--fg-muted); font-size: 0.75rem; text-decoration: none; transition: color 0.2s; font-family: var(--font-body);">Forgot
-                        Password?</a>
+                    <button type="button" id="forgot-password"
+                        style="background:none; border:none; cursor:pointer; color: var(--accent); font-size: 0.8rem; text-decoration: none; transition: color 0.2s; font-family: var(--font-body); padding:0;">Forgot
+                        Password?</button>
                 </div>
                 <button type="submit" class="primary auth-btn">
                     Log In
@@ -86,9 +90,6 @@
             <div class="auth-footer">
                 <span>Don't have an account?</span>
                 <a href="/signup">Sign Up</a>
-            </div>
-
-            <div id="error-message" style="color: #ff4d4d; margin-top: 10px; font-size: 0.85rem; text-align: center;">
             </div>
         </div>
     </div>

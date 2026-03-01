@@ -86,3 +86,37 @@ body {
     color: var(--accent-hover);
     text-decoration: underline;
 }
+
+/* ── Mobile Optimizations ── */
+@media (max-width: 480px) {
+    .auth-wrapper {
+        padding: 40px 16px;
+        align-items: flex-start;
+    }
+
+    .auth-card {
+        padding: 32px 24px;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+        background: rgba(0, 0, 0, 0.85);
+        /* Darker for better contrast on mobile */
+        margin: 0;
+        /* Override the auto margin that causes cutoff */
+    }
+
+    .auth-header h1 {
+        font-size: 2rem;
+    }
+
+    .auth-card form input {
+        padding: 12px 14px;
+        font-size: 1rem;
+        /* Prevent iOS zoom */
+    }
+
+    .auth-btn {
+        padding: 14px;
+        font-size: 1rem;
+    }
+}
