@@ -23,6 +23,16 @@
     <script>
         mermaid.initialize({ startOnLoad: false, theme: 'dark' });
     </script>
+
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-WJZD6LFFNX"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+
+        gtag('config', 'G-WJZD6LFFNX');
+    </script>
 </head>
 
 <body>
@@ -36,8 +46,8 @@
             <h1>ARKA</h1>
         </div>
         <div class="nav-links">
-            <a href="login.html" class="nav-link">Log In</a>
-            <a href="signup.html" class="primary auth-btn-sm">Start Creating</a>
+            <a href="/login" class="nav-link">Log In</a>
+            <a href="/signup" class="primary auth-btn-sm">Start Creating</a>
         </div>
     </nav>
 
@@ -58,14 +68,14 @@
             </p>
 
             <div class="hero-ctas">
-                <a href="signup.html" class="primary large-btn">
+                <a href="/signup" class="primary large-btn">
                     INITIALIZE ENGINE
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="5" y1="12" x2="19" y2="12"></line>
                         <polyline points="12 5 19 12 12 19"></polyline>
                     </svg>
                 </a>
-                <a href="index.html" class="secondary large-btn">GUEST ACCESS</a>
+                <a href="/" class="secondary large-btn">GUEST ACCESS</a>
             </div>
         </section>
 
@@ -189,9 +199,9 @@
                     <p>The premium brutalist diagram generator.</p>
                 </div>
                 <div class="footer-links">
-                    <a href="login.html">Login</a>
-                    <a href="signup.html">Register</a>
-                    <a href="index.html">Launch App</a>
+                    <a href="/login">Login</a>
+                    <a href="/signup">Register</a>
+                    <a href="/">Launch App</a>
                 </div>
             </div>
             <div class="footer-bottom">
