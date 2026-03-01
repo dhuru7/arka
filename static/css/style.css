@@ -176,7 +176,6 @@ textarea::placeholder {
     height: 100vh;
     width: 100vw;
     position: relative;
-    z-index: 1;
 }
 
 /* ── Sidebar ────────────────────────────────────────────────────────────── */
@@ -1218,7 +1217,8 @@ textarea::placeholder {
     #btn-auto-layout,
     #btn-code-view,
     #btn-save,
-    #btn-load {
+    #btn-load,
+    #zoom-fit {
         order: 1;
     }
 
@@ -1226,19 +1226,14 @@ textarea::placeholder {
         order: 2;
     }
 
-    .zoom-controls,
-    #zoom-fit {
-        order: 3;
-    }
-
-    .mobile-break-row-2 {
-        order: 4;
+    .zoom-controls {
+        display: none !important;
     }
 
     #btn-edit-text,
     #theme-dropdown-wrapper,
     #download-dropdown-wrapper {
-        order: 5;
+        order: 3;
     }
 
     .dropdown-wrapper .dropdown-menu {
