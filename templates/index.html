@@ -697,8 +697,10 @@
                     if (user.isAnonymous) {
                         const guestTotal = data.totalGuestDiagrams || 0;
                         statEl.innerText = `Credits: ${guestTotal} / 5 Limit`;
+                        if (typeof checkAndInjectBMCWidget === 'function') checkAndInjectBMCWidget(guestTotal);
                     } else {
                         statEl.innerText = `Credits: ${todayUsage} / 10 Limit`;
+                        if (typeof checkAndInjectBMCWidget === 'function') checkAndInjectBMCWidget(todayUsage);
                     }
                 } catch (e) {
                     // if it errors out it means they hit the limit, but we'll still update the counter if the promise resolves/rejects
@@ -712,6 +714,7 @@
                         statEl.innerText = `Credits: Limit Reached (10/10)`;
                         statEl.style.color = '#ff4d4d';
                     }
+                    if (typeof checkAndInjectBMCWidget === 'function') checkAndInjectBMCWidget(10); // force inject
                 }
 
             } else {

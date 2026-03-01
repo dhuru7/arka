@@ -896,6 +896,24 @@ function applyColorToNode(element, color) {
 
 // ═══ Live Credits Update ════════════════════════════════════════════════════
 
+function checkAndInjectBMCWidget(usageCount) {
+    if (usageCount >= 1 && !document.getElementById('bmc-widget-script')) {
+        const script = document.createElement('script');
+        script.id = 'bmc-widget-script';
+        script.setAttribute('data-name', 'BMC-Widget');
+        script.setAttribute('data-cfasync', 'false');
+        script.src = 'https://cdnjs.buymeacoffee.com/1.0.0/widget.prod.min.js';
+        script.setAttribute('data-id', 'dhruvgautam');
+        script.setAttribute('data-description', 'Support me on Buy me a coffee!');
+        script.setAttribute('data-message', 'If you love what I built, consider buying me a coffee! ☕');
+        script.setAttribute('data-color', '#5F7FFF');
+        script.setAttribute('data-position', 'Right');
+        script.setAttribute('data-x_margin', '18');
+        script.setAttribute('data-y_margin', '18');
+        document.body.appendChild(script);
+    }
+}
+
 async function updateLiveCredits(user) {
     if (!user) user = firebase.auth().currentUser;
     if (!user) return;
@@ -916,6 +934,7 @@ async function updateLiveCredits(user) {
             } else {
                 statEl.style.color = '';
             }
+            checkAndInjectBMCWidget(guestTotal);
         } else {
             statEl.innerText = `Credits: ${todayUsage} / 10 Limit`;
             if (todayUsage >= 10) {
@@ -923,6 +942,7 @@ async function updateLiveCredits(user) {
             } else {
                 statEl.style.color = '';
             }
+            checkAndInjectBMCWidget(todayUsage);
         }
     } catch (e) {
         const statEl = document.getElementById('user-usage-stats');
