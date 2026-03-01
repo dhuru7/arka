@@ -7,7 +7,7 @@ import time
 import os
 
 # ── Sarvam M API Configuration ──────────────────────────────────────────────
-SARVAM_API_KEY = os.getenv("SARVAM_API_KEY", "")
+SARVAM_API_KEY = os.getenv("SARVAM_API_KEY", "").strip('"\' ')
 SARVAM_API_URL = "https://api.sarvam.ai/v1/chat/completions"
 
 MERMAID_SYSTEM_PROMPTS = {

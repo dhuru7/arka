@@ -7,7 +7,7 @@ import time
 import os
 
 # ── Sarvam M API Configuration ──────────────────────────────────────────────
-SARVAM_API_KEY = os.getenv("SARVAM_API_KEY", "")
+SARVAM_API_KEY = os.getenv("SARVAM_API_KEY", "").strip('"\' ')
 SARVAM_API_URL = "https://api.sarvam.ai/v1/chat/completions"
 
 LAW_SYSTEM_PROMPT = """You are an AI legal assistant specializing in Indian law. Your goal is to help users with legal issues, such as harassment, unjust fees, consumer rights, etc.
