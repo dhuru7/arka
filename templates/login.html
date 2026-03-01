@@ -114,7 +114,7 @@
 
             try {
                 const userCredential = await firebase.auth().signInWithEmailAndPassword(email, password);
-                window.location.href = '/';
+                window.location.href = '/index';
             } catch (error) {
                 showError(error.message);
             }
@@ -125,7 +125,7 @@
             try {
                 const provider = new firebase.auth.GoogleAuthProvider();
                 await firebase.auth().signInWithPopup(provider);
-                window.location.href = '/';
+                window.location.href = '/index';
             } catch (error) {
                 showError(error.message);
             }
@@ -135,7 +135,7 @@
         guestBtn.addEventListener('click', async function () {
             try {
                 await firebase.auth().signInAnonymously();
-                window.location.href = '/';
+                window.location.href = '/index';
             } catch (error) {
                 showError(error.message);
             }
@@ -144,7 +144,7 @@
         // If user is already logged in, redirect them
         firebase.auth().onAuthStateChanged((user) => {
             if (user) {
-                window.location.href = '/';
+                window.location.href = '/index';
             }
         });
     </script>
