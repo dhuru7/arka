@@ -87,6 +87,7 @@ CRITICAL RULES:
 - Use 'graph TD' or 'graph LR'
 - SUBGRAPHS MUST be closed with the exact word 'end' on a new line. NEVER use 'end subgraph' or 'END'.
 - Do NOT use parentheses inside node labels.
+- Keep node and subgraph text/labels SHORT and concisely wrapped using <br> if needed, so text does NOT overlap shapes.
 
 Example:
 graph TB
@@ -414,15 +415,6 @@ def fix_mermaid_syntax(code, mode):
     code = code.replace('\\n', ' ').replace('\\t', ' ')
     # Remove stray backslashes in labels (e.g. "Puberty \" -> "Puberty")
     code = re.sub(r'\\(?!["\\nrt])', '', code)
-
-    if mode in ('flowchart', 'block', 'architecture'):
-        # Fix parser errors caused by unquoted parentheses in node text
-        # Only removes ( and ) that are NOT part of shape markers
-        code = re.sub(r'(?<![\[\]\|\{\}\<\>\(\)])\((?![\[\]\|\{\}\<\>\(\)])', ' ', code)
-        code = re.sub(r'(?<![\[\]\|\{\}\<\>\(\)])\)(?![\[\]\|\{\}\<\>\(\)])', ' ', code)
-
-        if mode == 'architecture' and 'defaultRenderer' not in code:
-            code = '%%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%\n' + code
 
     if mode == 'gantt':
         code = _fix_gantt(code)

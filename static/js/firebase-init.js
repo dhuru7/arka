@@ -66,20 +66,14 @@ async function checkUserLimits(userId, isGuest) {
 async function incrementUserGenerationCount(userId, isGuest) {
     const today = new Date().toISOString().split('T')[0];
 
-    // Run an update/transaction to increment limits
-    const userRef = db.ref('users/' + userId);
-    return userRef.transaction((currentData) => {
-        if (!currentData) {
-            currentData = { totalGuestDiagrams: 0, dailyUsage: {}, totalDownloads: 0 };
-        }
-        if (!currentData.dailyUsage) currentData.dailyUsage = {};
+    const updates = {};
+    updates[`users/${userId}/dailyUsage/${today}`] = firebase.database.ServerValue.increment(1);
 
-        currentData.dailyUsage[today] = (currentData.dailyUsage[today] || 0) + 1;
-        if (isGuest) {
-            currentData.totalGuestDiagrams = (currentData.totalGuestDiagrams || 0) + 1;
-        }
-        return currentData;
-    });
+    if (isGuest) {
+        updates[`users/${userId}/totalGuestDiagrams`] = firebase.database.ServerValue.increment(1);
+    }
+
+    return db.ref().update(updates);
 }
 
 // ── Download Limit Functions ─────────────────────────────────────────────
