@@ -697,10 +697,10 @@
                     if (user.isAnonymous) {
                         const guestTotal = data.totalGuestDiagrams || 0;
                         statEl.innerText = `Credits: ${guestTotal} / 5 Limit`;
-                        if (typeof checkAndInjectBMCWidget === 'function') checkAndInjectBMCWidget(guestTotal);
+                        if (typeof checkAndInjectBMCWidget === 'function') checkAndInjectBMCWidget(guestTotal, user.isAnonymous);
                     } else {
                         statEl.innerText = `Credits: ${todayUsage} / 10 Limit`;
-                        if (typeof checkAndInjectBMCWidget === 'function') checkAndInjectBMCWidget(todayUsage);
+                        if (typeof checkAndInjectBMCWidget === 'function') checkAndInjectBMCWidget(todayUsage, user.isAnonymous);
                     }
                 } catch (e) {
                     // if it errors out it means they hit the limit, but we'll still update the counter if the promise resolves/rejects
@@ -714,7 +714,7 @@
                         statEl.innerText = `Credits: Limit Reached (10/10)`;
                         statEl.style.color = '#ff4d4d';
                     }
-                    if (typeof checkAndInjectBMCWidget === 'function') checkAndInjectBMCWidget(10); // force inject
+                    if (typeof checkAndInjectBMCWidget === 'function') checkAndInjectBMCWidget(10, user.isAnonymous); // force inject
                 }
 
             } else {

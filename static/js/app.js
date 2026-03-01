@@ -896,8 +896,8 @@ function applyColorToNode(element, color) {
 
 // ═══ Live Credits Update ════════════════════════════════════════════════════
 
-function checkAndInjectBMCWidget(usageCount) {
-    if (usageCount >= 1 && !document.getElementById('bmc-widget-script')) {
+function checkAndInjectBMCWidget(usageCount, isAnonymous) {
+    if (!isAnonymous && usageCount >= 6 && !document.getElementById('bmc-widget-script')) {
         const script = document.createElement('script');
         script.id = 'bmc-widget-script';
         script.setAttribute('data-name', 'BMC-Widget');
@@ -934,7 +934,7 @@ async function updateLiveCredits(user) {
             } else {
                 statEl.style.color = '';
             }
-            checkAndInjectBMCWidget(guestTotal);
+            checkAndInjectBMCWidget(guestTotal, user.isAnonymous);
         } else {
             statEl.innerText = `Credits: ${todayUsage} / 10 Limit`;
             if (todayUsage >= 10) {
@@ -942,7 +942,7 @@ async function updateLiveCredits(user) {
             } else {
                 statEl.style.color = '';
             }
-            checkAndInjectBMCWidget(todayUsage);
+            checkAndInjectBMCWidget(todayUsage, user.isAnonymous);
         }
     } catch (e) {
         const statEl = document.getElementById('user-usage-stats');
