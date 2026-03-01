@@ -1126,32 +1126,78 @@ textarea::placeholder {
     .sidebar {
         position: absolute;
         transform: translateX(-100%);
+        z-index: 40;
+        /* Make sure it's above the canvas, top-nav, and toolbar */
+        width: 85%;
+        min-width: unset;
+        max-width: 320px;
     }
 
     .sidebar.open {
         transform: translateX(0);
+        box-shadow: 10px 0 30px rgba(0, 0, 0, 0.5);
+    }
+
+    .mobile-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(4px);
+        z-index: 35;
+        /* Above canvas, below sidebar */
+        opacity: 0;
+        transition: opacity var(--transition-base);
+    }
+
+    .mobile-overlay.active {
+        display: block;
+        opacity: 1;
     }
 
     .sidebar-toggle {
         display: flex;
+        align-items: center;
+        justify-content: center;
     }
 
     .status-bar {
         display: none;
+        /* Hide status bar on small screens to save space */
+    }
+
+    .top-nav-bar {
+        top: 16px;
+        right: 16px;
     }
 
     .toolbar {
         top: auto;
-        bottom: 24px;
+        bottom: 84px;
+        /* Push it up above the sidebar-toggle button */
         flex-wrap: wrap;
         justify-content: center;
         border-radius: var(--radius-md);
-        padding: 12px;
+        padding: 8px 12px;
         width: 90%;
+        gap: 4px;
+    }
+
+    .toolbar .icon-btn {
+        width: 30px;
+        height: 30px;
     }
 
     .toolbar-divider {
         display: none;
+    }
+
+    .zoom-level {
+        display: none;
+        /* Hide percentage text on mobile to save space */
     }
 }
 

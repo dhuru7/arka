@@ -165,9 +165,18 @@ function setupEventListeners() {
     if (btnClearCanvas) btnClearCanvas.addEventListener('click', handleClearCode);
 
     // Sidebar toggle (mobile)
+    const mobileOverlay = document.getElementById('mobile-overlay');
     sidebarToggle.addEventListener('click', () => {
         sidebar.classList.toggle('open');
+        if (mobileOverlay) mobileOverlay.classList.toggle('active');
     });
+
+    if (mobileOverlay) {
+        mobileOverlay.addEventListener('click', () => {
+            sidebar.classList.remove('open');
+            mobileOverlay.classList.remove('active');
+        });
+    }
 
     // Example chips
     document.querySelectorAll('.example-chip').forEach(chip => {
@@ -478,6 +487,12 @@ async function handleGenerate() {
         // Update live credits dynamically after successful generation without refresh
         await updateLiveCredits(user);
 
+        if (sidebar && sidebar.classList.contains('open')) {
+            sidebar.classList.remove('open');
+            const mobileOverlay = document.getElementById('mobile-overlay');
+            if (mobileOverlay) mobileOverlay.classList.remove('active');
+        }
+
     } catch (err) {
         console.error('Generate error:', err);
         updateStatus('error', 'Error');
@@ -538,6 +553,12 @@ async function handleRefine() {
         refineInput.value = '';
         updateStatus('ready', 'Refined');
         showToast(`${currentMode} refined!`, 'success');
+
+        if (sidebar && sidebar.classList.contains('open')) {
+            sidebar.classList.remove('open');
+            const mobileOverlay = document.getElementById('mobile-overlay');
+            if (mobileOverlay) mobileOverlay.classList.remove('active');
+        }
 
     } catch (err) {
         // Rollback on any failure
