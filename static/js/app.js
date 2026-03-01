@@ -107,21 +107,23 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.innerWidth <= 768 && !localStorage.getItem('hideMobileDesktopNotice')) {
         const notice = document.getElementById('mobile-notice');
         if (notice) {
-            notice.style.display = 'flex';
+            notice.classList.add('active');
         }
     }
 
+    const dismissNotice = () => {
+        const notice = document.getElementById('mobile-notice');
+        if (notice) {
+            notice.classList.remove('active');
+        }
+        localStorage.setItem('hideMobileDesktopNotice', 'true');
+    };
+
     const closeNoticeBtn = document.getElementById('btn-close-mobile-notice');
-    if (closeNoticeBtn) {
-        closeNoticeBtn.addEventListener('click', () => {
-            const notice = document.getElementById('mobile-notice');
-            if (notice) {
-                notice.classList.add('toast-exit');
-                setTimeout(() => notice.style.display = 'none', 300);
-            }
-            localStorage.setItem('hideMobileDesktopNotice', 'true');
-        });
-    }
+    if (closeNoticeBtn) closeNoticeBtn.addEventListener('click', dismissNotice);
+
+    const ackNoticeBtn = document.getElementById('btn-ack-mobile-notice');
+    if (ackNoticeBtn) ackNoticeBtn.addEventListener('click', dismissNotice);
 });
 
 // Init handled by firebase-init.js globally.
