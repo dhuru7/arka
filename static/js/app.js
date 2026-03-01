@@ -278,6 +278,7 @@ function setupAppThemeToggle() {
     const btn = document.getElementById('app-theme-toggle');
     const sunIcon = document.getElementById('theme-icon-sun');
     const moonIcon = document.getElementById('theme-icon-moon');
+    const textSpan = document.getElementById('theme-toggle-text');
     if (!btn || !sunIcon || !moonIcon) return;
 
     // Check localStorage
@@ -286,6 +287,9 @@ function setupAppThemeToggle() {
         document.body.classList.add('light-theme');
         sunIcon.style.display = 'none';
         moonIcon.style.display = 'block';
+        if (textSpan) textSpan.textContent = 'Dark Theme';
+    } else {
+        if (textSpan) textSpan.textContent = 'Light Theme';
     }
 
     btn.addEventListener('click', (e) => {
@@ -294,10 +298,12 @@ function setupAppThemeToggle() {
         if (isLight) {
             sunIcon.style.display = 'none';
             moonIcon.style.display = 'block';
+            if (textSpan) textSpan.textContent = 'Dark Theme';
             localStorage.setItem('app-theme', 'light');
         } else {
             sunIcon.style.display = 'block';
             moonIcon.style.display = 'none';
+            if (textSpan) textSpan.textContent = 'Light Theme';
             localStorage.setItem('app-theme', 'dark');
         }
     });
