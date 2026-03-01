@@ -138,7 +138,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Disable unneeded toolbars initially
     document.getElementById('btn-delete-selected').disabled = true;
     document.getElementById('btn-edit-text').disabled = true;
-    document.getElementById('btn-auto-layout').disabled = true;
+    const btnAutoLayout = document.getElementById('btn-auto-layout');
+    if (btnAutoLayout) btnAutoLayout.disabled = true;
     updateHistoryButtons();
 
     // Mobile Desktop recommendation notice
@@ -187,9 +188,12 @@ function setupEventListeners() {
     document.getElementById('zoom-out').addEventListener('click', () => {
         if (panZoomInstance) { panZoomInstance.zoomOut(); applyZoom(); }
     });
-    document.getElementById('zoom-fit').addEventListener('click', () => {
-        if (panZoomInstance) { panZoomInstance.fit(); panZoomInstance.center(); applyZoom(); }
-    });
+    const zoomFitBtn = document.getElementById('zoom-fit');
+    if (zoomFitBtn) {
+        zoomFitBtn.addEventListener('click', () => {
+            if (panZoomInstance) { panZoomInstance.fit(); panZoomInstance.center(); applyZoom(); }
+        });
+    }
 
     // Undo / Redo
     document.getElementById('btn-undo').addEventListener('click', handleUndo);
