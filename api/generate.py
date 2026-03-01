@@ -310,10 +310,17 @@ def _fix_gantt(code):
         stripped = line.strip()
         if stripped.startswith('dateFormat'):
             has_date_format = True
+            line = '    dateFormat YYYY-MM-DD'
+            fixed.append(line)
+            continue
+        if stripped.startswith('axisFormat'):
+            line = line.replace(':', '')
+            fixed.append(line)
+            continue
         if stripped.startswith('section '):
             stripped = re.sub(r'[()\\]', '', stripped)
             line = '    ' + stripped
-        if ':' in stripped and not stripped.startswith(('section', 'dateFormat', 'title', 'gantt', 'axisFormat', 'todayMarker', 'tickInterval')):
+        elif ':' in stripped and not stripped.startswith(('section', 'dateFormat', 'title', 'gantt', 'axisFormat', 'todayMarker', 'tickInterval', 'excludes', 'includes')):
             parts = stripped.split(':', 1)
             task_name = re.sub(r'[()\\]', '', parts[0]).strip()
             task_meta = parts[1].strip() if len(parts) > 1 else ''

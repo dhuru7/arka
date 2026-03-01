@@ -145,7 +145,8 @@ button.primary:hover {
 }
 
 input[type="text"],
-textarea {
+textarea,
+select {
     width: 100%;
     background: rgba(0, 0, 0, 0.5);
     border: 1px solid var(--border-light);
@@ -154,14 +155,19 @@ textarea {
     border-radius: var(--radius-md);
     font-family: var(--font-body);
     font-size: 0.95rem;
-    resize: vertical;
     transition: border-color 0.2s;
     backdrop-filter: blur(10px);
     outline: none;
+    appearance: none;
+}
+
+textarea {
+    resize: vertical;
 }
 
 input[type="text"]:focus,
-textarea:focus {
+textarea:focus,
+select:focus {
     border-color: var(--fg);
 }
 

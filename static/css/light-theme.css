@@ -26,7 +26,8 @@ body.light-theme .toolbar {
 }
 
 body.light-theme input[type="text"],
-body.light-theme textarea {
+body.light-theme textarea,
+body.light-theme select {
     background: rgba(255, 255, 255, 0.9);
     color: var(--fg);
 }
@@ -101,4 +102,10 @@ body.light-theme .dropdown-menu::-webkit-scrollbar-thumb {
 
 body.light-theme .dropdown-menu::-webkit-scrollbar-thumb:hover {
     background: rgba(0, 0, 0, 0.4);
+}
+
+@media (max-width: 768px) {
+    body.light-theme #profile-dropdown-wrapper .dropdown-menu {
+        background: rgba(245, 245, 245, 0.98) !important;
+    }
 }

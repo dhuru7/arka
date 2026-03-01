@@ -435,7 +435,6 @@ def _fix_gantt(code):
     lines = code.split('\n')
     fixed = []
     has_date_format = False
-    has_title = False
 
     for line in lines:
         stripped = line.strip()
@@ -443,21 +442,22 @@ def _fix_gantt(code):
         # Track if dateFormat exists
         if stripped.startswith('dateFormat'):
             has_date_format = True
-
-        if stripped.startswith('title'):
-            has_title = True
+            line = '    dateFormat YYYY-MM-DD'
+            fixed.append(line)
+            continue
+            
+        if stripped.startswith('axisFormat'):
+            line = line.replace(':', '')
+            fixed.append(line)
+            continue
 
         # Remove parentheses from task names (common AI mistake)
-        # e.g. "Early Teenage (13-15)" -> "Early Teenage 13-15"
         if stripped.startswith('section '):
             stripped = re.sub(r'[()\\]', '', stripped)
             line = '    ' + stripped
 
         # Fix task lines: remove backslashes and parentheses from task names
-        if ':' in stripped and not stripped.startswith('section') and \
-           not stripped.startswith('dateFormat') and not stripped.startswith('title') and \
-           not stripped.startswith('gantt') and not stripped.startswith('axisFormat') and \
-           not stripped.startswith('todayMarker') and not stripped.startswith('tickInterval'):
+        elif ':' in stripped and not stripped.startswith(('section', 'dateFormat', 'title', 'gantt', 'axisFormat', 'todayMarker', 'tickInterval', 'excludes', 'includes')):
             # Clean parentheses and backslashes from the task name part
             parts = stripped.split(':', 1)
             task_name = re.sub(r'[()\\]', '', parts[0]).strip()

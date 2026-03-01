@@ -363,23 +363,7 @@
                             </svg>
                         </button>
                     </div>
-                    <button class="toolbar-btn icon-btn" id="zoom-fit" title="Fit to screen">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                            <circle cx="12" cy="12" r="3"></circle>
-                        </svg>
-                    </button>
-                    <button class="toolbar-btn icon-btn" id="btn-auto-layout" title="Auto Layout">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <rect x="3" y="3" width="7" height="7"></rect>
-                            <rect x="14" y="3" width="7" height="7"></rect>
-                            <rect x="3" y="14" width="7" height="7"></rect>
-                            <rect x="14" y="14" width="7" height="7"></rect>
-                        </svg>
-                    </button>
                 </div>
-
-                <div class="mobile-tray-break mobile-break-row-1" style="display:none;"></div>
 
                 <div class="toolbar-divider"></div>
 
@@ -565,8 +549,7 @@
             <div class="modal-body">
                 <div class="form-group">
                     <label for="save-folder">Select Folder</label>
-                    <select id="save-folder"
-                        style="width: 100%; height: 40px; border: 1px solid var(--border); border-radius: 6px; padding: 0 12px; background: rgba(0,0,0,0.2); color: var(--fg); font-family: var(--font-body); outline: none;">
+                    <select id="save-folder" class="prompt-input" style="height: 44px; padding: 0 16px;">
                         <option value="folder1">Folder 1</option>
                         <option value="folder2">Folder 2</option>
                         <option value="folder3">Folder 3</option>
@@ -578,7 +561,6 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="modal-cancel">Cancel</button>
                 <button class="primary" id="save-confirm">Save Diagram</button>
             </div>
         </div>
