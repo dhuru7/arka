@@ -102,6 +102,26 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-edit-text').disabled = true;
     document.getElementById('btn-auto-layout').disabled = true;
     updateHistoryButtons();
+
+    // Mobile Desktop recommendation notice
+    if (window.innerWidth <= 768 && !localStorage.getItem('hideMobileDesktopNotice')) {
+        const notice = document.getElementById('mobile-notice');
+        if (notice) {
+            notice.style.display = 'flex';
+        }
+    }
+
+    const closeNoticeBtn = document.getElementById('btn-close-mobile-notice');
+    if (closeNoticeBtn) {
+        closeNoticeBtn.addEventListener('click', () => {
+            const notice = document.getElementById('mobile-notice');
+            if (notice) {
+                notice.classList.add('toast-exit');
+                setTimeout(() => notice.style.display = 'none', 300);
+            }
+            localStorage.setItem('hideMobileDesktopNotice', 'true');
+        });
+    }
 });
 
 // Init handled by firebase-init.js globally.

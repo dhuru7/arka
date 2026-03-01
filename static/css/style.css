@@ -1175,9 +1175,8 @@ textarea::placeholder {
     }
 
     .toolbar {
-        top: auto;
-        bottom: 84px;
-        /* Push it up above the sidebar-toggle button */
+        top: 76px;
+        bottom: auto;
         flex-wrap: wrap;
         justify-content: center;
         border-radius: var(--radius-md);
