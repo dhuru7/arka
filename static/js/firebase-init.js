@@ -17,20 +17,22 @@ if (!firebase.apps.length) {
 const auth = firebase.auth();
 const db = firebase.database();
 
-// Common temporary email domains to block
-const blockedDomains = [
-    'tempmail.com', '10minutemail.com', 'guerrillamail.com',
-    'yopmail.com', 'mailinator.com', 'temp-mail.org',
-    'ethereal.email', 'dispostable.com', 'throwawaymail.com',
-    'tempmailaddress.com', 'mohmal.com', 'getnada.com',
-    'nada.ltd', 'inbox.lv', 'sharklasers.com',
-    'grr.la', 'spam4.me', 'anonbox.net', 'minuteinbox.com'
+// Strict list of allowed authentic email providers
+const authenticDomains = [
+    'gmail.com',
+    'yahoo.com', 'yahoo.in', 'yahoo.co.uk', 'ymail.com',
+    'outlook.com', 'hotmail.com', 'live.com', 'msn.com',
+    'icloud.com', 'me.com', 'mac.com',
+    'proton.me', 'protonmail.com',
+    'aol.com', 'zoho.com', 'zoho.in', 'mail.com'
 ];
 
 function isTempEmail(email) {
     const domain = email.split('@')[1];
-    if (!domain) return true;
-    return blockedDomains.includes(domain.toLowerCase());
+    if (!domain) return true; // Invalid email
+
+    // Returns TRUE (which blocks the signup) if the domain is NOT in our authentic list
+    return !authenticDomains.includes(domain.toLowerCase());
 }
 
 async function checkUserLimits(userId, isGuest) {
