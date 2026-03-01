@@ -763,6 +763,49 @@ async function renderFromCode(code, pushToHistory = true) {
             if (panZoomInstance) {
                 panZoomInstance.destroy();
             }
+
+            // Setup HammerJS for Pinch Zoom and Mobile Pan
+            const eventsHandler = {
+                haltEventListeners: ['touchstart', 'touchend', 'touchmove', 'touchleave', 'touchcancel'],
+                init: function (options) {
+                    var instance = options.instance, initialScale = 1, pannedX = 0, pannedY = 0;
+                    if (typeof Hammer === 'undefined') return;
+
+                    this.hammer = new Hammer(options.svgElement, {
+                        inputClass: Hammer.SUPPORT_POINTER_EVENTS ? Hammer.PointerEventInput : Hammer.TouchInput
+                    });
+                    this.hammer.get('pinch').set({ enable: true });
+
+                    this.hammer.on('panstart panmove', function (ev) {
+                        if (ev.type === 'panstart') { pannedX = 0; pannedY = 0; }
+                        instance.panBy({ x: ev.deltaX - pannedX, y: ev.deltaY - pannedY });
+                        pannedX = ev.deltaX; pannedY = ev.deltaY;
+                    });
+
+                    this.hammer.on('pinchstart pinchmove', function (ev) {
+                        if (ev.type === 'pinchstart') {
+                            initialScale = instance.getZoom();
+                            instance.zoomAtPoint(initialScale * ev.scale, { x: ev.center.x, y: ev.center.y });
+                        } else {
+                            instance.zoomAtPoint(initialScale * ev.scale, { x: ev.center.x, y: ev.center.y });
+                        }
+                    });
+
+                    // Fire a synthetic click for our node editing listeners
+                    this.hammer.on('tap', function (ev) {
+                        if (ev.target) {
+                            const event = new MouseEvent('click', { bubbles: true, cancelable: true, view: window });
+                            ev.target.dispatchEvent(event);
+                        }
+                    });
+
+                    options.svgElement.addEventListener('touchmove', function (e) { e.preventDefault(); }, { passive: false });
+                },
+                destroy: function () {
+                    if (this.hammer) this.hammer.destroy();
+                }
+            };
+
             panZoomInstance = svgPanZoom(svgEl, {
                 zoomEnabled: true,
                 controlIconsEnabled: false,
@@ -770,6 +813,8 @@ async function renderFromCode(code, pushToHistory = true) {
                 center: true,
                 minZoom: 0.1,
                 maxZoom: 10,
+                preventMouseEventsDefault: false,
+                customEventsHandler: eventsHandler,
                 onZoom: function () { applyZoom(); }
             });
         }

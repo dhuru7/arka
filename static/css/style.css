@@ -1185,6 +1185,15 @@ textarea::placeholder {
         gap: 4px;
     }
 
+    #btn-theme-text {
+        max-width: 65px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        display: inline-block;
+        vertical-align: middle;
+    }
+
     .toolbar .icon-btn {
         width: 30px;
         height: 30px;
