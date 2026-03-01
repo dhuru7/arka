@@ -16,8 +16,8 @@
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Orbitron:wght@500;700&family=Space+Grotesk:wght@300;400;500;600&family=Space+Mono&display=swap"
         rel="stylesheet">
 
-    <link rel="stylesheet" href="/static/css/style.css?v=1.8">
-    <link rel="stylesheet" href="/static/css/light-theme.css?v=1.8">
+    <link rel="stylesheet" href="/static/css/style.css?v=1.9">
+    <link rel="stylesheet" href="/static/css/light-theme.css?v=1.9">
     <!-- Replaced emoji favicon with a minimalistic SVG -->
     <link rel="icon"
         href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='black'/><text y='50%' x='50%' dominant-baseline='middle' text-anchor='middle' fill='white' font-family='sans-serif' font-size='60' font-weight='bold'>A</text></svg>">
@@ -449,7 +449,17 @@
                     <!-- Theme Dropdown -->
                     <div class="dropdown-wrapper" id="theme-dropdown-wrapper">
                         <button class="toolbar-btn" id="btn-theme" title="Change Theme"
-                            style="padding: 0 16px; height: 34px; border-color: transparent; border: 1px solid transparent; font-size: 0.75rem; letter-spacing: 0.5px; color: var(--fg-muted); background: transparent;">
+                            style="padding: 0 16px; height: 34px; border-color: transparent; border: 1px solid transparent; font-size: 0.75rem; letter-spacing: 0.5px; color: var(--fg-muted); background: transparent; display: flex; align-items: center; gap: 6px;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16"
+                                height="16">
+                                <circle cx="13.5" cy="6.5" r=".5" fill="currentColor"></circle>
+                                <circle cx="17.5" cy="10.5" r=".5" fill="currentColor"></circle>
+                                <circle cx="8.5" cy="7.5" r=".5" fill="currentColor"></circle>
+                                <circle cx="6.5" cy="12.5" r=".5" fill="currentColor"></circle>
+                                <path
+                                    d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10c1.38 0 2.5-1.12 2.5-2.5 0-.53-.21-1.04-.58-1.41l-1.58-1.58c-.37-.38-.58-.89-.58-1.42 0-1.1.9-2 2-2h1.17c3.21 0 5.83-2.62 5.83-5.83C21 5.31 16.97 2 12 2z">
+                                </path>
+                            </svg>
                             <span id="btn-theme-text">Default</span>
                         </button>
                         <div class="dropdown-menu" id="theme-dropdown-menu" style="min-width: 140px;">
@@ -833,7 +843,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
     <!-- App Scripts -->
-    <script src="/static/js/app.js?v=1.8"></script>
+    <script src="/static/js/app.js?v=1.9"></script>
 </body>
 
 </html>

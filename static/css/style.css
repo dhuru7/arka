@@ -98,7 +98,6 @@ label {
     pointer-events: none;
 }
 
-/* ── Common UI Elements ─────────────────────────────────────────────────── */
 button {
     background: transparent;
     color: var(--fg);
@@ -115,6 +114,11 @@ button {
     align-items: center;
     justify-content: center;
     gap: 8px;
+    -webkit-tap-highlight-color: transparent !important;
+}
+
+a {
+    -webkit-tap-highlight-color: transparent !important;
 }
 
 button:hover {
