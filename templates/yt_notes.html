@@ -8,15 +8,15 @@
         content="Arka - YouTube AI Notes Generator. Convert any lecture video into structured Markdown Notes.">
     <title>ARKA | YouTube AI Notes</title>
 
-    <!-- Google Fonts for Nothing OS Aesthetic -->
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Orbitron:wght@500;700&family=Space+Grotesk:wght@300;400;500;600&family=Space+Mono&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@300;400;500;600;700&family=Space+Mono&display=swap"
         rel="stylesheet">
 
-    <link rel="stylesheet" href="/static/css/style.css?v=2.4">
-    <link rel="stylesheet" href="/static/css/light-theme.css?v=2.4">
+    <link rel="stylesheet" href="/static/css/style.css?v=2.5">
+    <link rel="stylesheet" href="/static/css/light-theme.css?v=2.5">
 
     <!-- favicon -->
     <link rel="icon"
@@ -37,93 +37,441 @@
     <script src="/static/js/firebase-init.js"></script>
 
     <style>
-        /* Specific styles for Markdown Output */
-        #notes-content {
-            padding-bottom: 50px;
+        :root {
+            --app-bg: #0b0c10;
+            --sidebar-bg: rgba(15, 16, 20, 0.85);
+            --fg: #e2e8f0;
+            --fg-muted: #94a3b8;
+            --accent: #6366f1;
+            --accent-glow: rgba(99, 102, 241, 0.5);
+            --border: rgba(255, 255, 255, 0.1);
+            --font-display: 'Outfit', sans-serif;
+            --font-body: 'Inter', sans-serif;
+            --font-mono: 'Space Mono', monospace;
         }
 
-        #notes-content h1,
-        #notes-content h2,
-        #notes-content h3 {
+        body {
+            background-color: var(--app-bg);
             color: var(--fg);
+            font-family: var(--font-body);
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        /* Glassmorphism Sidebar */
+        .sidebar {
+            background: var(--sidebar-bg);
+            backdrop-filter: blur(12px);
+            border-right: 1px solid var(--border);
+            width: 320px;
+            display: flex;
+            flex-direction: column;
+            padding: 24px;
+            box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
+        }
+
+        .logo-text h1 {
             font-family: var(--font-display);
-            margin-top: 1.5em;
-            margin-bottom: 0.5em;
+            font-size: 2rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            margin: 0;
+            background: linear-gradient(135deg, #ffffff, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        #subtitle-text {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .prompt-section {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .prompt-input-wrap {
+            position: relative;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .prompt-input-wrap:focus-within {
+            border-color: var(--accent);
+            box-shadow: 0 0 12px var(--accent-glow);
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .prompt-input {
+            width: 100%;
+            height: 52px;
+            background: transparent;
+            border: none;
+            color: var(--fg);
+            padding: 0 16px;
+            font-size: 0.95rem;
+            font-family: var(--font-mono);
+            outline: none;
+            box-sizing: border-box;
+        }
+
+        .prompt-input::placeholder {
+            color: #475569;
+        }
+
+        .generate-btn {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            height: 52px;
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .generate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px var(--accent-glow);
+        }
+
+        .generate-btn:active {
+            transform: translateY(0);
+        }
+
+        .generate-btn.loading .btn-text {
+            display: none;
+        }
+
+        .generate-btn.loading .btn-loading-text {
+            display: inline-block;
+        }
+
+        .generate-btn .btn-loading-text {
+            display: none;
+            animation: pulse 1.5s infinite;
+        }
+
+        .spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        .generate-btn.loading .spinner {
+            display: inline-block;
+        }
+
+        @keyframes blink {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0;
+            }
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .examples-section {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            margin-top: 24px;
+        }
+
+        .examples-section label {
+            font-weight: 600;
+            color: var(--fg);
+            display: block;
+            margin-bottom: 8px;
+            font-family: var(--font-display);
+        }
+
+        /* Canvas / Main Content */
+        .main-area {
+            flex-grow: 1;
+            position: relative;
+            background: radial-gradient(circle at top right, rgba(99, 102, 241, 0.05), transparent 40%),
+                radial-gradient(circle at bottom left, rgba(139, 92, 246, 0.05), transparent 40%);
+        }
+
+        .top-nav-bar {
+            background: rgba(15, 16, 20, 0.4);
+            backdrop-filter: blur(8px);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            height: 64px;
+        }
+
+        .icon-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--fg);
+            transition: all 0.2s ease;
+        }
+
+        .icon-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--accent);
+            color: var(--accent);
+            transform: translateY(-1px);
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .empty-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(139, 92, 246, 0.2));
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 24px;
+            box-shadow: 0 0 30px rgba(99, 102, 241, 0.1);
+        }
+
+        .empty-icon svg {
+            width: 40px;
+            height: 40px;
+            stroke: var(--accent);
+            stroke-width: 1.5;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Notes Formatting */
+        #notes-content {
+            padding: 40px;
+            background: rgba(15, 16, 20, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            margin: 40px auto;
+            max-width: 850px;
+            font-size: 1.05rem;
+            line-height: 1.7;
+            animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         #notes-content h1 {
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 5px;
+            font-family: var(--font-display);
+            font-size: 2.2rem;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 0.5rem;
+        }
+
+        #notes-content h2 {
+            font-family: var(--font-display);
+            font-size: 1.6rem;
+            color: #e2e8f0;
+            margin-top: 2rem;
+        }
+
+        #notes-content h3 {
+            font-family: var(--font-display);
+            font-size: 1.3rem;
+            color: #cbd5e1;
         }
 
         #notes-content p {
-            color: var(--fg-muted);
-            line-height: 1.6;
-            margin-bottom: 1em;
-        }
-
-        #notes-content ul,
-        #notes-content ol {
-            padding-left: 20px;
-            color: var(--fg-muted);
-            margin-bottom: 1em;
+            color: #cbd5e1;
+            margin-bottom: 1.2rem;
         }
 
         #notes-content li {
-            margin-bottom: 0.5em;
-        }
-
-        #notes-content code {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-family: var(--font-mono);
-            font-size: 0.9em;
-            border: 1px solid var(--border);
+            color: #cbd5e1;
+            margin-bottom: 0.5rem;
         }
 
         #notes-content pre {
-            background: rgba(0, 0, 0, 0.2);
-            padding: 15px;
-            border-radius: 8px;
+            background: #0f1115;
             border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem;
             overflow-x: auto;
-            margin-bottom: 1em;
         }
 
-        #notes-content pre code {
-            background: none;
-            border: none;
-            padding: 0;
+        #notes-content code {
+            font-family: var(--font-mono);
+            color: #a5b4fc;
+            background: rgba(99, 102, 241, 0.1);
+            padding: 0.1rem 0.4rem;
+            border-radius: 4px;
         }
 
         #notes-content blockquote {
             border-left: 4px solid var(--accent);
-            padding-left: 15px;
-            margin-left: 0;
-            color: var(--fg);
+            padding-left: 1rem;
+            color: #94a3b8;
             font-style: italic;
+            background: rgba(255, 255, 255, 0.02);
+            padding: 1rem;
+            border-radius: 0 8px 8px 0;
         }
 
-        #notes-content strong {
-            color: var(--fg);
+        /* Status Bar */
+        .status-bar {
+            background: rgba(15, 16, 20, 0.9);
+            border-top: 1px solid var(--border);
+            backdrop-filter: blur(10px);
+            padding: 8px 24px;
+            display: flex;
+            justify-content: space-between;
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--fg-muted);
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent);
+            box-shadow: 0 0 8px var(--accent);
+            margin-right: 8px;
+        }
+
+        .status-left {
+            display: flex;
+            align-items: center;
+        }
+
+        .status-text-anim {
+            animation: pulse 2s infinite;
+            color: white;
             font-weight: 600;
         }
 
-        #notes-content em {
+        /* Loading Overlay Overlay Animation Styles */
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(11, 12, 16, 0.8);
+            backdrop-filter: blur(5px);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+        }
+
+        .loading-bar-container {
+            width: 300px;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 20px;
+        }
+
+        .loading-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #6366f1, #a855f7);
+            border-radius: 3px;
+            transition: width 0.5s ease;
+        }
+
+        .loading-text-dyn {
+            margin-top: 15px;
+            font-family: var(--font-display);
+            color: white;
+            letter-spacing: 1px;
+            font-size: 0.95rem;
+        }
+
+        .timer-text {
+            font-family: var(--font-mono);
             color: var(--accent);
+            margin-top: 8px;
+            font-size: 0.85rem;
         }
     </style>
 </head>
 
 <body style="opacity: 0; transition: opacity 0.3s ease;">
-    <!-- Background Grid -->
-    <div class="bg-grid"></div>
-
-    <!-- Toast Container -->
     <div class="toast-container" id="toast-container"></div>
 
-    <div class="app-container">
+    <div class="app-container" style="display: flex; height: 100vh;">
         <!-- Sidebar -->
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
@@ -135,14 +483,15 @@
                 </a>
             </div>
 
-            <div class="prompt-section" style="margin-top:20px;">
-                <label for="yt-url" id="prompt-label">YouTube Video URL</label>
-                <div class="prompt-input-wrap" style="height: auto; margin-bottom: 15px;">
+            <div class="prompt-section" style="margin-top:32px;">
+                <label for="yt-url"
+                    style="font-family: var(--font-display); font-weight: 500; font-size: 0.95rem; margin-bottom: 4px;">Video
+                    Source URL</label>
+                <div class="prompt-input-wrap">
                     <input type="text" id="yt-url" class="prompt-input" placeholder="https://youtu.be/..."
-                        spellcheck="false"
-                        style="height: 48px; border:none; width:100%; padding:0 12px; font-family:var(--font-mono); font-size: 0.85rem; color:var(--fg); background: transparent; outline: none;">
+                        spellcheck="false">
                 </div>
-                <button class="generate-btn primary" id="generate-btn">
+                <button class="generate-btn" id="generate-btn" style="margin-top: 8px;">
                     <div class="spinner"></div>
                     <span class="btn-text" id="generate-btn-text">Extract & Generate</span>
                     <span class="btn-loading-text">Processing...</span>
@@ -150,11 +499,11 @@
             </div>
 
             <div class="examples-section">
-                <label>Info</label>
-                <p style="font-size:0.8rem; color:var(--fg-muted); line-height: 1.5; margin-top:5px;">
-                    This tool fetches the transcript directly from the provided YouTube video.
-                    It handles very long lectures by chunking the text, ensuring parallel processing with Sarvam M.
-                    LaTeX math equations and formulas are supported.
+                <label>Information</label>
+                <p
+                    style="font-size:0.85rem; color:var(--fg-muted); line-height: 1.6; margin-top:5px; margin-bottom: 0;">
+                    Extracts lecture transcripts using seamless chunking for massive context limits. Powered by AI
+                    mapping and formatted natively with markdown & LaTeX support.
                 </p>
             </div>
 
@@ -162,11 +511,10 @@
         </aside>
 
         <!-- Main Canvas -->
-        <main class="main-area">
-            <div class="top-nav-bar" style="justify-content: flex-end; padding: 10px 20px;">
-                <!-- Download button (Hidden initially) -->
+        <main class="main-area" style="display: flex; flex-direction: column;">
+            <div class="top-nav-bar" style="justify-content: flex-end; padding: 0 24px;">
                 <button class="icon-btn" id="btn-download" title="Download Notes (.md)"
-                    style="display: none; margin-right: 15px; width: 44px; height: 44px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 8px; align-items: center; justify-content: center; cursor: pointer;">
+                    style="display: none; margin-right: 15px; width: 44px; height: 44px; align-items: center; justify-content: center; cursor: pointer;">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                         <polyline points="7 10 12 15 17 10"></polyline>
@@ -174,8 +522,8 @@
                     </svg>
                 </button>
 
-                <a href="/" class="icon-btn" title="Back to Diagrams"
-                    style="width: 44px; height: 44px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 8px; display: flex; align-items: center; justify-content: center; text-decoration: none; color: inherit;">
+                <a href="/" class="icon-btn" title="Back to Dashboard"
+                    style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; text-decoration: none;">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
                         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
                     </svg>
@@ -183,34 +531,56 @@
             </div>
 
             <div class="canvas-container" id="canvas-container"
-                style="overflow-y: auto; display: block; height: calc(100vh - 65px);">
+                style="flex: 1; overflow-y: auto; padding: 20px; position: relative;">
 
-                <div class="empty-state" id="empty-state" style="margin-top: 15vh; text-align: center;">
-                    <span class="bracket-text">[ ]</span>
-                    <h2 style="font-family:var(--font-display); letter-spacing:2px; margin: 15px 0;">AWAITING URL</h2>
-                    <p style="color:var(--fg-muted); max-width: 400px; margin: 0 auto;">Paste a valid YouTube lecture or
-                        tutorial link to extract and summarize its contents.</p>
+                <!-- Loading Overlay -->
+                <div class="loading-overlay" id="loading-overlay">
+                    <div class="spinner"
+                        style="display: block; width: 40px; height: 40px; border-width: 4px; margin-bottom: 20px;">
+                    </div>
+                    <div class="loading-text-dyn" id="loading-text-dyn">Initializing Engine...</div>
+                    <div class="loading-bar-container">
+                        <div class="loading-bar" id="loading-bar"></div>
+                    </div>
+                    <div class="timer-text" id="timer-text">Estimated time: ~45s left</div>
                 </div>
 
-                <div id="notes-content" style="display: none; max-width: 800px; margin: 40px auto; padding: 0 30px;">
+                <div class="empty-state" id="empty-state">
+                    <div class="empty-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="23 7 16 12 23 17 23 7"></polygon>
+                            <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+                        </svg>
+                    </div>
+                    <h2
+                        style="font-family:var(--font-display); font-size: 1.8rem; font-weight: 600; margin: 0 0 12px 0;">
+                        Intelligence Extractor</h2>
+                    <p
+                        style="color:var(--fg-muted); max-width: 450px; text-align: center; margin: 0; line-height: 1.6; font-size: 1.05rem;">
+                        Paste a YouTube tutorial or lecture link to intelligently extract its transcript and generate
+                        structured, comprehensive notes.
+                    </p>
+                </div>
+
+                <div id="notes-content" style="display: none;">
                     <!-- Markdown will be injected here -->
                 </div>
             </div>
 
-            <div class="status-bar" style="position: absolute; bottom: 0; width: 100%;">
+            <div class="status-bar">
                 <div class="status-left">
                     <div class="status-dot" id="status-dot"></div>
-                    <span id="status-text">SYSTEM READY</span>
+                    <span id="status-text">SYSTEM STANDBY</span>
                 </div>
                 <div class="status-right">
-                    <span>ARKA YT-NOTES</span>
+                    <span>ARKA CORE // YT-NOTES</span>
                 </div>
             </div>
         </main>
     </div>
 
     <script>
-        // Authentication handling
         let currentUser = null;
         firebase.auth().onAuthStateChanged(user => {
             if (user) {
@@ -229,40 +599,92 @@
         const statusText = document.getElementById('status-text');
         const statusDot = document.getElementById('status-dot');
 
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const dynText = document.getElementById('loading-text-dyn');
+        const loadingBar = document.getElementById('loading-bar');
+        const timerText = document.getElementById('timer-text');
+
         let rawNotes = '';
 
-        // Toast notification system
         function showToast(message, type = 'info') {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
             toast.className = `toast ${type}`;
             toast.innerText = message;
+            toast.style.background = 'rgba(15, 16, 20, 0.9)';
+            toast.style.border = '1px solid var(--accent)';
+            toast.style.color = 'white';
+            toast.style.padding = '12px 24px';
+            toast.style.borderRadius = '8px';
+            toast.style.marginBottom = '10px';
+            toast.style.boxShadow = '0 4px 15px rgba(99, 102, 241, 0.2)';
+            toast.style.animation = 'slideUp 0.3s ease';
             container.appendChild(toast);
 
             setTimeout(() => {
-                toast.classList.add('toast-exit');
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(10px)';
+                toast.style.transition = 'all 0.3s ease';
                 setTimeout(() => toast.remove(), 300);
-            }, 3000);
+            }, 4000);
         }
 
         btnGenerate.addEventListener('click', async () => {
             const url = inputUrl.value.trim();
             if (!url) {
-                showToast('Please enter a YouTube link', 'error');
+                showToast('Please enter a valid YouTube link', 'error');
                 return;
             }
 
-            // UI loading state
+            // Start UI Loading State
             btnGenerate.classList.add('loading');
             emptyState.style.display = 'none';
             notesContent.style.display = 'none';
             btnDownload.style.display = 'none';
+            loadingOverlay.style.display = 'flex';
+
             statusText.innerText = "PROCESSING TRANSCRIPT...";
-            statusDot.style.background = '#eab308'; // yellow
+            statusText.classList.add('status-text-anim');
+            statusDot.style.background = '#eab308';
             statusDot.style.boxShadow = '0 0 8px rgba(234, 179, 8, 0.8)';
 
+            // Sequential Loading Popups and Timer Fix
+            let secondsPassed = 0;
+            const estimatedTotal = 45;
+
+            loadingBar.style.width = '0%';
+
+            const progressInterval = setInterval(() => {
+                secondsPassed++;
+
+                // Update Progress bar roughly
+                const prog = Math.min((secondsPassed / estimatedTotal) * 90, 95);
+                loadingBar.style.width = prog + '%';
+
+                // Update Timer Text
+                const timeLeft = Math.max(estimatedTotal - secondsPassed, 1);
+                timerText.innerText = `Estimated time: ~${timeLeft}s left`;
+
+                // Sequential Popups
+                if (secondsPassed === 2) {
+                    showToast("Establishing connection...");
+                    dynText.innerText = "Extracting Subtitles...";
+                } else if (secondsPassed === 6) {
+                    showToast("Transcribe is generated. Moving to formatting.");
+                    dynText.innerText = "Transcribe is generated...";
+                } else if (secondsPassed === 12) {
+                    showToast("Processing... 1 page created.");
+                    dynText.innerText = "Processing Markdown Blocks...";
+                } else if (secondsPassed === 20) {
+                    showToast("Structuring mathematical equations and context...");
+                    dynText.innerText = "Context Expansion Active...";
+                } else if (secondsPassed === 30) {
+                    showToast("Compiling final summary...");
+                    dynText.innerText = "Finalizing Note Structure...";
+                }
+            }, 1000);
+
             try {
-                // Determine API endpoint: Vercel uses /api/yt-notes, local Flask uses the same.
                 const response = await fetch('/api/yt-notes', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -274,7 +696,6 @@
                 try {
                     data = JSON.parse(rawText);
                 } catch (jsonErr) {
-                    console.error("JSON Parse Error. Raw response:", rawText);
                     throw new Error(`Server returned a non-JSON response. Raw: ${rawText.substring(0, 100)}...`);
                 }
 
@@ -284,53 +705,60 @@
 
                 rawNotes = data.notes;
 
-                // Parse markdown
-                notesContent.innerHTML = marked.parse(rawNotes);
+                // Success State!
+                clearInterval(progressInterval);
+                loadingBar.style.width = '100%';
+                setTimeout(() => {
+                    loadingOverlay.style.display = 'none';
 
-                // Render KaTeX math
-                renderMathInElement(notesContent, {
-                    delimiters: [
-                        { left: '$$', right: '$$', display: true },
-                        { left: '$', right: '$', display: false },
-                        { left: '\\(', right: '\\)', display: false },
-                        { left: '\\[', right: '\\]', display: true }
-                    ],
-                    throwOnError: false
-                });
+                    notesContent.innerHTML = marked.parse(rawNotes);
+                    renderMathInElement(notesContent, {
+                        delimiters: [
+                            { left: '$$', right: '$$', display: true },
+                            { left: '$', right: '$', display: false },
+                            { left: '\\(', right: '\\)', display: false },
+                            { left: '\\[', right: '\\]', display: true }
+                        ],
+                        throwOnError: false
+                    });
 
-                // Display
-                notesContent.style.display = 'block';
-                btnDownload.style.display = 'flex';
+                    notesContent.style.display = 'block';
+                    btnDownload.style.display = 'flex';
 
-                showToast('Notes generated successfully!', 'success');
-                statusText.innerText = "NOTES RENDERED";
-                statusDot.style.background = 'var(--accent)';
-                statusDot.style.boxShadow = '0 0 8px var(--accent)';
+                    showToast('Notes generated successfully!', 'success');
+                    statusText.innerText = "SYSTEM STANDBY - NOTES RENDERED";
+                    statusText.classList.remove('status-text-anim');
+                    statusDot.style.background = '#22c55e'; // green
+                    statusDot.style.boxShadow = '0 0 8px rgba(34, 197, 94, 0.8)';
+                }, 500);
 
             } catch (e) {
+                clearInterval(progressInterval);
+                loadingOverlay.style.display = 'none';
                 showToast(e.message, 'error');
-                emptyState.style.display = 'block';
-                statusText.innerText = "SYSTEM READY";
-                statusDot.style.background = 'var(--accent)';
-                statusDot.style.boxShadow = '0 0 8px var(--accent)';
+                emptyState.style.display = 'flex';
+
+                statusText.innerText = "SYSTEM ERROR";
+                statusText.classList.remove('status-text-anim');
+                statusDot.style.background = '#ef4444'; // red
+                statusDot.style.boxShadow = '0 0 8px rgba(239, 68, 68, 0.8)';
             } finally {
                 btnGenerate.classList.remove('loading');
             }
         });
 
-        // Download functionality
         btnDownload.addEventListener('click', () => {
             if (!rawNotes) return;
             const blob = new Blob([rawNotes], { type: 'text/markdown' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = 'youtube_notes.md';
+            a.download = 'arka_notes.md';
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
-            showToast('Download started', 'success');
+            showToast('Download initialized', 'success');
         });
 
     </script>
