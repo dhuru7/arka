@@ -1114,9 +1114,9 @@ def get_sarvam_notes(chunk, chunk_idx, total_chunks, attempt=1, api_key=None):
         "CRITICAL INSTRUCTIONS:\n"
         "1. Write the notes in English by default.\n"
         "2. Make the notes detailed, concise, and structured.\n"
-        "3. Your output MUST be pure raw LaTeX code (e.g., \\section{}, \\subsection{}, \\begin{itemize}, $$math$$).\n"
-        "4. DO NOT include \\documentclass, \\begin{document}, or \\end{document}. ONLY output the content body.\n"
-        "5. DO NOT wrap your response in markdown code blocks like ```latex. Output raw text only."
+        "3. Your output MUST be pure Markdown.\n"
+        "4. Use LaTeX math expressions enclosed in $$...$$ for block equations or $...$ for inline equations.\n"
+        "5. DO NOT wrap your response in markdown code blocks like ```markdown. Output raw text only."
     )
     
     payload = {
@@ -1134,7 +1134,7 @@ def get_sarvam_notes(chunk, chunk_idx, total_chunks, attempt=1, api_key=None):
         if response.status_code == 200:
             result = response.json()
             res = result.get('choices', [{}])[0].get('message', {}).get('content', '').strip()
-            res = res.replace("```latex", "").replace("```tex", "").replace("```", "").strip()
+            res = res.replace("```markdown", "").replace("```md", "").replace("```", "").strip()
             return res
         elif attempt < 3 and response.status_code in (429, 500, 502, 503, 504):
             time.sleep(2 ** attempt)
@@ -1147,13 +1147,13 @@ def get_sarvam_notes(chunk, chunk_idx, total_chunks, attempt=1, api_key=None):
                 detail = ""
             if detail:
                 detail = detail[:400]
-                return f"% [Error: Sarvam API returned {response.status_code} for a chunk. Detail: {detail}]"
-            return f"% [Error: Sarvam API returned {response.status_code} for a chunk]"
+                return f"[Error: Sarvam API returned {response.status_code} for a chunk. Detail: {detail}]"
+            return f"[Error: Sarvam API returned {response.status_code} for a chunk]"
     except Exception as e:
         if attempt < 3:
             time.sleep(2 ** attempt)
             return get_sarvam_notes(chunk, chunk_idx, total_chunks, attempt + 1, api_key)
-        return f"% [Error connecting to AI: {str(e)}]"
+        return f"[Error connecting to AI: {str(e)}]"
 
 @app.route('/api/yt-notes', methods=['POST'])
 def generate_yt_notes():
@@ -1171,9 +1171,9 @@ def generate_yt_notes():
             result = get_sarvam_notes(chunk, chunk_idx, total_chunks, 1, SARVAM_API_KEY)
             # If the result suggests failure, throw error.
             if "invalid_api_key_error" in result or "SARVAM_API_KEY" in result:
-                return jsonify({'error': 'Sarvam authentication failed.', 'latex': result}), 502
+                return jsonify({'error': 'Sarvam authentication failed.', 'markdown': result}), 502
                 
-            return jsonify({'success': True, 'latex': result})
+            return jsonify({'success': True, 'markdown': result})
 
         url = data.get('url', '')
         if not url.strip():
@@ -1209,45 +1209,13 @@ def generate_yt_notes():
                 try:
                     results[i] = future.result()
                 except Exception as e:
-                    results[i] = f"% [Error processing chunk {i+1}]"
+                    results[i] = f"[Error processing chunk {i+1}]"
                     
         body_notes = "\n\n".join([r for r in results if r])
-        
-        latex_preamble = r'''\documentclass[11pt, a4paper]{article}
-
-% --- UNIVERSAL PREAMBLE BLOCK ---
-\usepackage[a4paper, top=2.5cm, bottom=2.5cm, left=2cm, right=2cm]{geometry}
-\usepackage{fontspec}
-\usepackage{amsmath, amssymb, amsthm}
-\usepackage{booktabs}
-\usepackage{enumitem}
-
-\usepackage[english, bidi=basic, provide=*]{babel}
-\babelprovide[import, onchar=ids fonts]{english}
-
-% Set default font to Noto Sans
-\babelfont{rm}{Noto Sans}
-
-% Custom styling for sections
-\usepackage{titlesec}
-\titleformat{\section}{\large\bfseries}{}{0em}{}[\titlerule]
-\titleformat{\subsection}{\bfseries}{}{0em}{}
-
-\begin{document}
-
-\begin{center}
-    {\huge \textbf{YouTube Video Notes}} \\
-    \textit{Refined AI Notes}
-\end{center}
-
-\vspace{0.5cm}
-'''
-        latex_postamble = "\n\\end{document}\n"
-        
-        final_notes = latex_preamble + body_notes + latex_postamble
+        final_notes = "\n\n".join([r for r in results if r])
 
         # If every chunk failed with an auth/config error, return as API error (so UI shows toast)
-        if not body_notes.strip():
+        if not final_notes.strip():
             return jsonify({'error': 'Failed to generate notes.', 'details': results}), 502
         if all(isinstance(r, str) and ("invalid_api_key_error" in r or "SARVAM_API_KEY" in r) for r in results if r):
             return jsonify({'error': 'Sarvam authentication failed. Check SARVAM_API_KEY.', 'details': results}), 502

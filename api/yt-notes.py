@@ -72,9 +72,9 @@ def get_sarvam_notes(chunk: str, chunk_idx: int, total_chunks: int, attempt: int
         "CRITICAL INSTRUCTIONS:\n"
         "1. Write the notes in English by default.\n"
         "2. Make the notes detailed, concise, and structured.\n"
-        "3. Your output MUST be pure raw LaTeX code (e.g., \\section{}, \\subsection{}, \\begin{itemize}, $$math$$).\n"
-        "4. DO NOT include \\documentclass, \\begin{document}, or \\end{document}. ONLY output the content body.\n"
-        "5. DO NOT wrap your response in markdown code blocks like ```latex. Output raw text only."
+        "3. Your output MUST be pure Markdown.\n"
+        "4. Use LaTeX math expressions enclosed in $$...$$ for block equations or $...$ for inline equations.\n"
+        "5. DO NOT wrap your response in markdown code blocks like ```markdown. Output raw text only."
     )
 
     payload = {
@@ -131,10 +131,10 @@ class handler(BaseHTTPRequestHandler):
                 
                 result = get_sarvam_notes(chunk, chunk_idx, total_chunks)
                 if "invalid_api_key_error" in result or "SARVAM_API_KEY" in result:
-                    self._json(502, {'error': 'Sarvam authentication failed.', 'latex': result})
+                    self._json(502, {'error': 'Sarvam authentication failed.', 'markdown': result})
                     return
                     
-                self._json(200, {'success': True, 'latex': result})
+                self._json(200, {'success': True, 'markdown': result})
                 return
 
             url = (data.get("url") or "").strip()
@@ -180,47 +180,14 @@ class handler(BaseHTTPRequestHandler):
                     try:
                         # Clean any leftover markdown blocks the AI might sneak in
                         res = future.result()
-                        res = res.replace("```latex", "").replace("```tex", "").replace("```", "").strip()
+                        res = res.replace("```markdown", "").replace("```md", "").replace("```", "").strip()
                         results[i] = res
                     except Exception:
-                        results[i] = f"% [Error processing chunk {i + 1}]"
+                        results[i] = f"[Error processing chunk {i + 1}]"
 
-            body_notes = "\n\n".join([r for r in results if r])
-            
-            latex_preamble = r'''\documentclass[11pt, a4paper]{article}
+            notes = "\n\n".join([r for r in results if r])
 
-% --- UNIVERSAL PREAMBLE BLOCK ---
-\usepackage[a4paper, top=2.5cm, bottom=2.5cm, left=2cm, right=2cm]{geometry}
-\usepackage{fontspec}
-\usepackage{amsmath, amssymb, amsthm}
-\usepackage{booktabs}
-\usepackage{enumitem}
-
-\usepackage[english, bidi=basic, provide=*]{babel}
-\babelprovide[import, onchar=ids fonts]{english}
-
-% Set default font to Noto Sans
-\babelfont{rm}{Noto Sans}
-
-% Custom styling for sections
-\usepackage{titlesec}
-\titleformat{\section}{\large\bfseries}{}{0em}{}[\titlerule]
-\titleformat{\subsection}{\bfseries}{}{0em}{}
-
-\begin{document}
-
-\begin{center}
-    {\huge \textbf{YouTube Video Notes}} \\
-    \textit{Refined AI Notes}
-\end{center}
-
-\vspace{0.5cm}
-'''
-            latex_postamble = "\n\\end{document}\n"
-            
-            notes = latex_preamble + body_notes + latex_postamble
-
-            if not body_notes.strip():
+            if not notes.strip():
                 self._json(502, {"error": "Failed to generate notes."})
                 return
 

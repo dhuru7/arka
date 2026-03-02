@@ -512,7 +512,7 @@
         <!-- Main Canvas -->
         <main class="main-area" style="display: flex; flex-direction: column;">
             <div class="top-nav-bar" style="justify-content: flex-end; padding: 0 24px;">
-                <button class="icon-btn" id="btn-download-pdf" title="Compile PDF (Overleaf)"
+                <button class="icon-btn" id="btn-download-pdf" title="Export to PDF"
                     style="display: none; margin-right: 15px; width: 44px; height: 44px; align-items: center; justify-content: center; cursor: pointer;">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -522,7 +522,7 @@
                         <polyline points="10 9 9 9 8 9"></polyline>
                     </svg>
                 </button>
-                <button class="icon-btn" id="btn-download-tex" title="Download Code (.tex)"
+                <button class="icon-btn" id="btn-download-md" title="Download Markdown (.md)"
                     style="display: none; margin-right: 15px; width: 44px; height: 44px; align-items: center; justify-content: center; cursor: pointer;">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -621,7 +621,7 @@
         const inputUrl = document.getElementById('yt-url');
         const emptyState = document.getElementById('empty-state');
         const notesContent = document.getElementById('notes-content');
-        const btnDownloadTex = document.getElementById('btn-download-tex');
+        const btnDownloadMd = document.getElementById('btn-download-md');
         const btnDownloadPdf = document.getElementById('btn-download-pdf');
         const statusText = document.getElementById('status-text');
         const statusDot = document.getElementById('status-dot');
@@ -657,7 +657,7 @@
             btnGenerate.classList.add('loading');
             emptyState.style.display = 'none';
             notesContent.style.display = 'none';
-            btnDownloadTex.style.display = 'none';
+            btnDownloadMd.style.display = 'none';
             btnDownloadPdf.style.display = 'none';
             loadingOverlay.style.display = 'flex';
 
@@ -716,39 +716,38 @@
 
                     if (!chunkRes.ok) throw new Error(chunkData.error || `Error processing chunk ${i + 1}`);
 
-                    if (chunkData.latex) {
-                        combinedBody += chunkData.latex + "\n\n";
+                    if (chunkData.markdown) {
+                        combinedBody += chunkData.markdown + "\n\n";
                     }
                 }
 
-                dynText.innerText = "Compiling PDF Preview...";
+                dynText.innerText = "Rendering Markdown Preview...";
                 loadingBar.style.width = '95%';
 
-                const latexPreamble = `\\documentclass[11pt, a4paper]{article}\n\n% --- UNIVERSAL PREAMBLE BLOCK ---\n\\usepackage[a4paper, top=2.5cm, bottom=2.5cm, left=2cm, right=2cm]{geometry}\n\\usepackage{fontspec}\n\\usepackage{amsmath, amssymb, amsthm}\n\\usepackage{booktabs}\n\\usepackage{enumitem}\n\n\\usepackage[english, bidi=basic, provide=*]{babel}\n\\babelprovide[import, onchar=ids fonts]{english}\n\n% Set default font to Noto Sans\n\\babelfont{rm}{Noto Sans}\n\n% Custom styling for sections\n\\usepackage{titlesec}\n\\titleformat{\\section}{\\large\\bfseries}{}{0em}{}[\\titlerule]\n\\titleformat{\\subsection}{\\bfseries}{}{0em}{}\n\n\\begin{document}\n\n\\begin{center}\n    {\\huge \\textbf{YouTube Video Notes}} \\\\\n    \\textit{Refined AI Notes}\n\\end{center}\n\n\\vspace{0.5cm}\n`;
-                const latexPostamble = "\n\\end{document}\n";
-
-                rawNotes = latexPreamble + combinedBody + latexPostamble;
-
-                // Construct compilation request inline
-                const encodedTex = encodeURIComponent(rawNotes);
-                const pdfPreviewUrl = `https://latexonline.cc/compile?text=${encodedTex}`;
+                rawNotes = combinedBody;
 
                 loadingBar.style.width = '100%';
                 setTimeout(() => {
                     loadingOverlay.style.display = 'none';
 
-                    // Provide inline iframe preview
-                    notesContent.innerHTML = `
-                        <div style="background: rgba(255,255,255,0.05); padding: 5px; border-radius: 8px; border: 1px solid var(--border); height: 600px; display: flex; flex-direction: column;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; border-bottom: 1px solid var(--border); background: rgba(0,0,0,0.2); border-radius: 8px 8px 0 0;">
-                                <span style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--fg-muted);">PREVIEW</span>
-                            </div>
-                            <iframe src="${pdfPreviewUrl}" style="width: 100%; flex: 1; border: none; border-radius: 0 0 8px 8px; background: white;"></iframe>
-                        </div>
-                    `;
+                    // Parse the Markdown using defined styles
+                    notesContent.innerHTML = `<div id="notes-render-layer" style="background: var(--bg); color: var(--fg); padding: 30px; border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 4px 20px rgba(0,0,0,0.1); line-height: 1.7;">
+                        ${marked.parse(rawNotes)}
+                    </div>`;
+
+                    // Render KaTeX Math equations
+                    renderMathInElement(document.getElementById('notes-render-layer'), {
+                        delimiters: [
+                            { left: '$$', right: '$$', display: true },
+                            { left: '$', right: '$', display: false },
+                            { left: '\\(', right: '\\)', display: false },
+                            { left: '\\[', right: '\\]', display: true }
+                        ],
+                        throwOnError: false
+                    });
 
                     notesContent.style.display = 'block';
-                    btnDownloadTex.style.display = 'flex';
+                    btnDownloadMd.style.display = 'flex';
                     btnDownloadPdf.style.display = 'flex';
 
                     showToast('Notes generated & compiled successfully!', 'success');
@@ -772,37 +771,38 @@
             }
         });
 
-        btnDownloadTex.addEventListener('click', () => {
+        btnDownloadMd.addEventListener('click', () => {
             if (!rawNotes) return;
-            const blob = new Blob([rawNotes], { type: 'text/plain' });
+            const blob = new Blob([rawNotes], { type: 'text/markdown' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = 'arka_notes.tex';
+            a.download = 'arka_notes.md';
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
-            showToast('Code downloaded as .tex', 'success');
+            showToast('Code downloaded as .md', 'success');
         });
 
         btnDownloadPdf.addEventListener('click', () => {
-            if (!rawNotes) return;
-            showToast('Compiling PDF externally...', 'info');
+            const element = document.getElementById('notes-render-layer');
+            if (!element) return;
+            showToast('Generating PDF...', 'info');
 
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = 'https://latexonline.cc/compile';
-            form.target = '_blank';
+            const opt = {
+                margin: 10,
+                filename: 'arka_video_notes.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
 
-            const input = document.createElement('textarea');
-            input.name = 'text';
-            input.value = rawNotes;
-
-            form.appendChild(input);
-            document.body.appendChild(form);
-            form.submit();
-            document.body.removeChild(form);
+            html2pdf().set(opt).from(element).save().then(() => {
+                showToast('PDF downloaded successfully!', 'success');
+            }).catch((e) => {
+                showToast('Error generating PDF.', 'error');
+            });
         });
 
     </script>
