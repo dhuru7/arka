@@ -12,7 +12,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@300;400;500;600;700&family=Space+Mono&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Orbitron:wght@500;700&family=Space+Grotesk:wght@300;400;500;600&family=Space+Mono&display=swap"
         rel="stylesheet">
 
     <link rel="stylesheet" href="/static/css/style.css?v=2.5">
@@ -38,20 +38,14 @@
 
     <style>
         :root {
-            --app-bg: #0b0c10;
-            --sidebar-bg: rgba(15, 16, 20, 0.85);
-            --fg: #e2e8f0;
-            --fg-muted: #94a3b8;
-            --accent: #6366f1;
-            --accent-glow: rgba(99, 102, 241, 0.5);
-            --border: rgba(255, 255, 255, 0.1);
-            --font-display: 'Outfit', sans-serif;
-            --font-body: 'Inter', sans-serif;
-            --font-mono: 'Space Mono', monospace;
+            --sidebar-bg: rgba(0, 0, 0, 0.85);
+            --accent-glow: rgba(229, 46, 46, 0.3);
+            --font-display: 'Orbitron', sans-serif;
+            --font-body: 'Space Grotesk', sans-serif;
         }
 
         body {
-            background-color: var(--app-bg);
+            background-color: var(--bg);
             color: var(--fg);
             font-family: var(--font-body);
             margin: 0;
@@ -73,13 +67,11 @@
 
         .logo-text h1 {
             font-family: var(--font-display);
-            font-size: 2rem;
+            font-size: 2.8rem;
             font-weight: 700;
             letter-spacing: 2px;
             margin: 0;
-            background: linear-gradient(135deg, #ffffff, #94a3b8);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            color: var(--fg);
         }
 
         #subtitle-text {
@@ -128,14 +120,16 @@
         }
 
         .generate-btn {
-            background: linear-gradient(135deg, #6366f1, #8b5cf6);
-            color: white;
-            border: none;
-            border-radius: 12px;
+            background: var(--accent);
+            color: var(--fg);
+            border: 1px solid var(--accent);
+            border-radius: var(--radius-pill, 24px);
             height: 52px;
-            font-family: var(--font-display);
+            font-family: var(--font-body);
             font-weight: 600;
-            font-size: 1rem;
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
             cursor: pointer;
             transition: all 0.3s ease;
             position: relative;
@@ -232,8 +226,6 @@
         .main-area {
             flex-grow: 1;
             position: relative;
-            background: radial-gradient(circle at top right, rgba(99, 102, 241, 0.05), transparent 40%),
-                radial-gradient(circle at bottom left, rgba(139, 92, 246, 0.05), transparent 40%);
         }
 
         .top-nav-bar {
@@ -272,13 +264,13 @@
         .empty-icon {
             width: 80px;
             height: 80px;
-            background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(139, 92, 246, 0.2));
+            background: rgba(229, 46, 46, 0.1);
             border-radius: 24px;
             display: flex;
             align-items: center;
             justify-content: center;
             margin-bottom: 24px;
-            box-shadow: 0 0 30px rgba(99, 102, 241, 0.1);
+            box-shadow: 0 0 30px rgba(229, 46, 46, 0.1);
         }
 
         .empty-icon svg {
@@ -368,8 +360,8 @@
 
         #notes-content code {
             font-family: var(--font-mono);
-            color: #a5b4fc;
-            background: rgba(99, 102, 241, 0.1);
+            color: var(--fg);
+            background: rgba(229, 46, 46, 0.1);
             padding: 0.1rem 0.4rem;
             border-radius: 4px;
         }
@@ -446,7 +438,7 @@
         .loading-bar {
             height: 100%;
             width: 0%;
-            background: linear-gradient(90deg, #6366f1, #a855f7);
+            background: var(--accent);
             border-radius: 3px;
             transition: width 0.5s ease;
         }
@@ -611,22 +603,12 @@
             const toast = document.createElement('div');
             toast.className = `toast ${type}`;
             toast.innerText = message;
-            toast.style.background = 'rgba(15, 16, 20, 0.9)';
-            toast.style.border = '1px solid var(--accent)';
-            toast.style.color = 'white';
-            toast.style.padding = '12px 24px';
-            toast.style.borderRadius = '8px';
-            toast.style.marginBottom = '10px';
-            toast.style.boxShadow = '0 4px 15px rgba(99, 102, 241, 0.2)';
-            toast.style.animation = 'slideUp 0.3s ease';
             container.appendChild(toast);
 
             setTimeout(() => {
-                toast.style.opacity = '0';
-                toast.style.transform = 'translateY(10px)';
-                toast.style.transition = 'all 0.3s ease';
+                toast.classList.add('toast-exit');
                 setTimeout(() => toast.remove(), 300);
-            }, 4000);
+            }, 3000);
         }
 
         btnGenerate.addEventListener('click', async () => {
