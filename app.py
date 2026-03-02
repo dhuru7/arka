@@ -6,6 +6,8 @@ import os
 import time
 import re
 import sys
+import concurrent.futures
+from youtube_transcript_api import YouTubeTranscriptApi
 
 # ── Fix Windows console Unicode encoding ─────────────────────────────────────
 # Windows cmd/powershell uses cp1252 by default which can't handle ₹, ™, etc.
@@ -27,11 +29,35 @@ def safe_print(*args, **kwargs):
         print(text.encode('ascii', errors='replace').decode('ascii'), **kwargs)
 
 
+def _load_dotenv(path=".env"):
+    """
+    Minimal .env loader (KEY=VALUE) to avoid extra dependencies.
+    Loads only if the file exists and a key isn't already set.
+    """
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                k, v = line.split("=", 1)
+                k = k.strip()
+                v = v.strip().strip('"').strip("'")
+                if k and k not in os.environ:
+                    os.environ[k] = v
+    except FileNotFoundError:
+        return
+    except Exception:
+        # Don't crash app startup because of a malformed .env
+        return
+
+_load_dotenv()
+
 app = Flask(__name__)
 CORS(app)
 
 # ── Sarvam M API Configuration ──────────────────────────────────────────────
-SARVAM_API_KEY = "sk_h10vkdry_WChEvgrtvbYb4iQPe1hNVmWT"
+SARVAM_API_KEY = os.getenv("SARVAM_API_KEY") or os.getenv("api-subscription-key") or ""
 SARVAM_API_URL = "https://api.sarvam.ai/v1/chat/completions"
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -767,6 +793,12 @@ def law_bot():
     """Serve the Law Bot frontend page."""
     return render_template('law_bot.html')
 
+@app.route('/yt-notes')
+@app.route('/yt_notes.html')
+def yt_notes():
+    """Serve the YT Notes frontend page."""
+    return render_template('yt_notes.html')
+
 @app.route('/login')
 @app.route('/login.html')
 def login():
@@ -1021,6 +1053,155 @@ def law_chat():
 
     except Exception as e:
         safe_print(f"[LawBot] ERROR: {type(e).__name__}: {str(e)}")
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
+
+
+def extract_video_id(url):
+    match = re.search(r"(?:v=|\/)([0-9A-Za-z_-]{11}).*", url)
+    return match.group(1) if match else None
+
+def chunk_text(text, max_length=1400):
+    if not text:
+        return []
+    num_parts = (len(text) // max_length) + 1
+    target_length = len(text) // num_parts
+    words = text.split()
+    chunks = []
+    current_chunk = []
+    current_length = 0
+    for word in words:
+        if current_length + len(word) + 1 > target_length and len(chunks) < num_parts - 1:
+            chunks.append(" ".join(current_chunk))
+            current_chunk = [word]
+            current_length = len(word)
+        else:
+            current_chunk.append(word)
+            current_length += len(word) + 1
+    if current_chunk:
+        chunks.append(" ".join(current_chunk))
+    return chunks
+
+def fetch_transcript_entries(video_id):
+    """
+    Return transcript as a list of dict entries with at least a 'text' field.
+
+    Supports both the older `youtube_transcript_api` API (get_transcript) and the
+    newer API (YouTubeTranscriptApi().fetch(...).to_raw_data()).
+    """
+    # Older versions exposed a classmethod `get_transcript(video_id)`
+    if hasattr(YouTubeTranscriptApi, "get_transcript"):
+        return YouTubeTranscriptApi.get_transcript(video_id)
+
+    # Newer versions expose instance methods: list(...) / fetch(...)
+    api = YouTubeTranscriptApi()
+    fetched = api.fetch(
+        video_id,
+        languages=("en", "en-US", "en-GB", "hi"),
+        preserve_formatting=False,
+    )
+    if hasattr(fetched, "to_raw_data"):
+        return fetched.to_raw_data()
+    return fetched
+
+def get_sarvam_notes(chunk, attempt=1, api_key=None):
+    if not api_key:
+        api_key = SARVAM_API_KEY
+    if not api_key:
+        return "[Error: SARVAM_API_KEY is not set on the server]"
+
+    headers = {
+        'Content-Type': 'application/json',
+        'api-subscription-key': api_key
+    }
+    system_prompt = "You are an expert AI that makes detailed educational notes from YouTube video transcripts. Create concise, well-structured notes for the following transcript segment. Use Markdown and use LaTeX math equations (e.g. $$...$$ or $...$) if applicable. Do not include markdown code block backticks around your whole response, just return the raw markdown text."
+    
+    payload = {
+        'model': 'sarvam-m',
+        'messages': [
+            {'role': 'system', 'content': system_prompt},
+            {'role': 'user', 'content': f"Generate detailed notes for this transcript segment: {chunk}"}
+        ],
+        'temperature': 0.3,
+        'max_tokens': 2048
+    }
+
+    try:
+        response = requests.post(SARVAM_API_URL, headers=headers, json=payload, timeout=60)
+        if response.status_code == 200:
+            result = response.json()
+            return result.get('choices', [{}])[0].get('message', {}).get('content', '').strip()
+        elif attempt < 3 and response.status_code in (429, 500, 502, 503, 504):
+            time.sleep(2 ** attempt)
+            return get_sarvam_notes(chunk, attempt + 1, api_key)
+        else:
+            detail = ""
+            try:
+                detail = response.text.strip()
+            except Exception:
+                detail = ""
+            if detail:
+                detail = detail[:400]
+                return f"[Error: Sarvam API returned {response.status_code} for a chunk. Detail: {detail}]"
+            return f"[Error: Sarvam API returned {response.status_code} for a chunk]"
+    except Exception as e:
+        if attempt < 3:
+            time.sleep(2 ** attempt)
+            return get_sarvam_notes(chunk, attempt + 1, api_key)
+        return f"[Error connecting to AI: {str(e)}]"
+
+@app.route('/api/yt-notes', methods=['POST'])
+def generate_yt_notes():
+    try:
+        data = request.get_json()
+        url = data.get('url', '')
+        if not url.strip():
+            return jsonify({'error': 'Please provide a YouTube URL.'}), 400
+
+        video_id = extract_video_id(url)
+        if not video_id:
+            return jsonify({'error': 'Invalid YouTube URL or Video ID not found.'}), 400
+
+        try:
+            transcript_entries = fetch_transcript_entries(video_id)
+            full_transcript = " ".join([t.get('text', '') for t in transcript_entries if isinstance(t, dict)])
+            full_transcript = full_transcript.strip()
+            if not full_transcript:
+                return jsonify({'error': 'Transcript was retrieved but contained no text.'}), 400
+        except Exception as e:
+            return jsonify({'error': f'Could not extract transcript: {str(e)}'}), 400
+
+        chunks = chunk_text(full_transcript, 1400)
+        
+        if not SARVAM_API_KEY:
+            return jsonify({'error': 'Server is missing SARVAM_API_KEY. Set it in environment or .env.'}), 500
+
+        api_key = SARVAM_API_KEY
+        max_workers = min(10, len(chunks)) if chunks else 1
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_chunk = {executor.submit(get_sarvam_notes, chunk, 1, api_key): i for i, chunk in enumerate(chunks)}
+            results = [None] * len(chunks)
+            for future in concurrent.futures.as_completed(future_to_chunk):
+                i = future_to_chunk[future]
+                try:
+                    results[i] = future.result()
+                except Exception as e:
+                    results[i] = f"[Error processing chunk {i+1}]"
+                    
+        final_notes = "\n\n---\n\n".join([r for r in results if r])
+
+        # If every chunk failed with an auth/config error, return as API error (so UI shows toast)
+        if not final_notes.strip():
+            return jsonify({'error': 'Failed to generate notes.', 'details': results}), 502
+        if all(isinstance(r, str) and ("invalid_api_key_error" in r or "SARVAM_API_KEY" in r) for r in results if r):
+            return jsonify({'error': 'Sarvam authentication failed. Check SARVAM_API_KEY.', 'details': results}), 502
+
+        return jsonify({
+            'success': True,
+            'notes': final_notes
+        })
+
+    except Exception as e:
+        safe_print(f"[YTNotes] Server error: {str(e)}")
         return jsonify({'error': f'Server error: {str(e)}'}), 500
 
 

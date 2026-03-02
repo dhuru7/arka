@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="Arka - YouTube AI Notes Generator. Convert any lecture video into structured Markdown Notes.">
+    <title>ARKA | YouTube AI Notes</title>
+
+    <!-- Google Fonts for Nothing OS Aesthetic -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Orbitron:wght@500;700&family=Space+Grotesk:wght@300;400;500;600&family=Space+Mono&display=swap"
+        rel="stylesheet">
+
+    <link rel="stylesheet" href="/static/css/style.css?v=2.4">
+    <link rel="stylesheet" href="/static/css/light-theme.css?v=2.4">
+
+    <!-- favicon -->
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='black'/><text y='50%' x='50%' dominant-baseline='middle' text-anchor='middle' fill='white' font-family='sans-serif' font-size='60' font-weight='bold'>A</text></svg>">
+
+    <!-- KaTeX for math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+
+    <!-- Marked.js for markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script src="/static/js/firebase-init.js"></script>
+
+    <style>
+        /* Specific styles for Markdown Output */
+        #notes-content {
+            padding-bottom: 50px;
+        }
+
+        #notes-content h1,
+        #notes-content h2,
+        #notes-content h3 {
+            color: var(--fg);
+            font-family: var(--font-display);
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+        }
+
+        #notes-content h1 {
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 5px;
+        }
+
+        #notes-content p {
+            color: var(--fg-muted);
+            line-height: 1.6;
+            margin-bottom: 1em;
+        }
+
+        #notes-content ul,
+        #notes-content ol {
+            padding-left: 20px;
+            color: var(--fg-muted);
+            margin-bottom: 1em;
+        }
+
+        #notes-content li {
+            margin-bottom: 0.5em;
+        }
+
+        #notes-content code {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: var(--font-mono);
+            font-size: 0.9em;
+            border: 1px solid var(--border);
+        }
+
+        #notes-content pre {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            overflow-x: auto;
+            margin-bottom: 1em;
+        }
+
+        #notes-content pre code {
+            background: none;
+            border: none;
+            padding: 0;
+        }
+
+        #notes-content blockquote {
+            border-left: 4px solid var(--accent);
+            padding-left: 15px;
+            margin-left: 0;
+            color: var(--fg);
+            font-style: italic;
+        }
+
+        #notes-content strong {
+            color: var(--fg);
+            font-weight: 600;
+        }
+
+        #notes-content em {
+            color: var(--accent);
+        }
+    </style>
+</head>
+
+<body style="opacity: 0; transition: opacity 0.3s ease;">
+    <!-- Background Grid -->
+    <div class="bg-grid"></div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/" style="text-decoration:none">
+                    <div class="logo-text">
+                        <h1>ARKA</h1>
+                        <span id="subtitle-text">YouTube AI Notes</span>
+                    </div>
+                </a>
+            </div>
+
+            <div class="prompt-section" style="margin-top:20px;">
+                <label for="yt-url" id="prompt-label">YouTube Video URL</label>
+                <div class="prompt-input-wrap" style="height: auto; margin-bottom: 15px;">
+                    <input type="text" id="yt-url" class="prompt-input" placeholder="https://youtu.be/..."
+                        spellcheck="false"
+                        style="height: 48px; border:none; width:100%; padding:0 12px; font-family:var(--font-mono); font-size: 0.85rem; color:var(--fg); background: transparent; outline: none;">
+                </div>
+                <button class="generate-btn primary" id="generate-btn">
+                    <div class="spinner"></div>
+                    <span class="btn-text" id="generate-btn-text">Extract & Generate</span>
+                    <span class="btn-loading-text">Processing...</span>
+                </button>
+            </div>
+
+            <div class="examples-section">
+                <label>Info</label>
+                <p style="font-size:0.8rem; color:var(--fg-muted); line-height: 1.5; margin-top:5px;">
+                    This tool fetches the transcript directly from the provided YouTube video.
+                    It handles very long lectures by chunking the text, ensuring parallel processing with Sarvam M.
+                    LaTeX math equations and formulas are supported.
+                </p>
+            </div>
+
+            <div style="flex-grow: 1;"></div>
+        </aside>
+
+        <!-- Main Canvas -->
+        <main class="main-area">
+            <div class="top-nav-bar" style="justify-content: flex-end; padding: 10px 20px;">
+                <!-- Download button (Hidden initially) -->
+                <button class="icon-btn" id="btn-download" title="Download Notes (.md)"
+                    style="display: none; margin-right: 15px; width: 44px; height: 44px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 8px; align-items: center; justify-content: center; cursor: pointer;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                </button>
+
+                <a href="/" class="icon-btn" title="Back to Diagrams"
+                    style="width: 44px; height: 44px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 8px; display: flex; align-items: center; justify-content: center; text-decoration: none; color: inherit;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                    </svg>
+                </a>
+            </div>
+
+            <div class="canvas-container" id="canvas-container"
+                style="overflow-y: auto; display: block; height: calc(100vh - 65px);">
+
+                <div class="empty-state" id="empty-state" style="margin-top: 15vh; text-align: center;">
+                    <span class="bracket-text">[ ]</span>
+                    <h2 style="font-family:var(--font-display); letter-spacing:2px; margin: 15px 0;">AWAITING URL</h2>
+                    <p style="color:var(--fg-muted); max-width: 400px; margin: 0 auto;">Paste a valid YouTube lecture or
+                        tutorial link to extract and summarize its contents.</p>
+                </div>
+
+                <div id="notes-content" style="display: none; max-width: 800px; margin: 40px auto; padding: 0 30px;">
+                    <!-- Markdown will be injected here -->
+                </div>
+            </div>
+
+            <div class="status-bar" style="position: absolute; bottom: 0; width: 100%;">
+                <div class="status-left">
+                    <div class="status-dot" id="status-dot"></div>
+                    <span id="status-text">SYSTEM READY</span>
+                </div>
+                <div class="status-right">
+                    <span>ARKA YT-NOTES</span>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Authentication handling
+        let currentUser = null;
+        firebase.auth().onAuthStateChanged(user => {
+            if (user) {
+                document.body.style.opacity = '1';
+                currentUser = user;
+            } else {
+                window.location.href = '/login';
+            }
+        });
+
+        const btnGenerate = document.getElementById('generate-btn');
+        const inputUrl = document.getElementById('yt-url');
+        const emptyState = document.getElementById('empty-state');
+        const notesContent = document.getElementById('notes-content');
+        const btnDownload = document.getElementById('btn-download');
+        const statusText = document.getElementById('status-text');
+        const statusDot = document.getElementById('status-dot');
+
+        let rawNotes = '';
+
+        // Toast notification system
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerText = message;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.add('toast-exit');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        btnGenerate.addEventListener('click', async () => {
+            const url = inputUrl.value.trim();
+            if (!url) {
+                showToast('Please enter a YouTube link', 'error');
+                return;
+            }
+
+            // UI loading state
+            btnGenerate.classList.add('loading');
+            emptyState.style.display = 'none';
+            notesContent.style.display = 'none';
+            btnDownload.style.display = 'none';
+            statusText.innerText = "PROCESSING TRANSCRIPT...";
+            statusDot.style.background = '#eab308'; // yellow
+            statusDot.style.boxShadow = '0 0 8px rgba(234, 179, 8, 0.8)';
+
+            try {
+                // Determine API endpoint: Vercel uses /api/yt-notes, local Flask uses the same.
+                const response = await fetch('/api/yt-notes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url })
+                });
+
+                const rawText = await response.text();
+                let data;
+                try {
+                    data = JSON.parse(rawText);
+                } catch (jsonErr) {
+                    console.error("JSON Parse Error. Raw response:", rawText);
+                    throw new Error(`Server returned a non-JSON response. Raw: ${rawText.substring(0, 100)}...`);
+                }
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Server error occurred');
+                }
+
+                rawNotes = data.notes;
+
+                // Parse markdown
+                notesContent.innerHTML = marked.parse(rawNotes);
+
+                // Render KaTeX math
+                renderMathInElement(notesContent, {
+                    delimiters: [
+                        { left: '$$', right: '$$', display: true },
+                        { left: '$', right: '$', display: false },
+                        { left: '\\(', right: '\\)', display: false },
+                        { left: '\\[', right: '\\]', display: true }
+                    ],
+                    throwOnError: false
+                });
+
+                // Display
+                notesContent.style.display = 'block';
+                btnDownload.style.display = 'flex';
+
+                showToast('Notes generated successfully!', 'success');
+                statusText.innerText = "NOTES RENDERED";
+                statusDot.style.background = 'var(--accent)';
+                statusDot.style.boxShadow = '0 0 8px var(--accent)';
+
+            } catch (e) {
+                showToast(e.message, 'error');
+                emptyState.style.display = 'block';
+                statusText.innerText = "SYSTEM READY";
+                statusDot.style.background = 'var(--accent)';
+                statusDot.style.boxShadow = '0 0 8px var(--accent)';
+            } finally {
+                btnGenerate.classList.remove('loading');
+            }
+        });
+
+        // Download functionality
+        btnDownload.addEventListener('click', () => {
+            if (!rawNotes) return;
+            const blob = new Blob([rawNotes], { type: 'text/markdown' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'youtube_notes.md';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast('Download started', 'success');
+        });
+
+    </script>
+</body>
+
+</html>

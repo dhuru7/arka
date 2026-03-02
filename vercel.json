@@ -49,6 +49,18 @@
             "destination": "/templates/law_bot.html"
         },
         {
+            "source": "/yt-notes",
+            "destination": "/templates/yt_notes.html"
+        },
+        {
+            "source": "/yt-notes.html",
+            "destination": "/templates/yt_notes.html"
+        },
+        {
+            "source": "/yt_notes.html",
+            "destination": "/templates/yt_notes.html"
+        },
+        {
             "source": "/templates/:path*",
             "destination": "/templates/:path*"
         },
