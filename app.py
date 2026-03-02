@@ -1097,7 +1097,7 @@ def fetch_transcript_from_supadata(video_id: str):
     else:
         return str(data)
 
-def get_sarvam_notes(chunk, attempt=1, api_key=None):
+def get_sarvam_notes(chunk, chunk_idx, total_chunks, attempt=1, api_key=None):
     if not api_key:
         api_key = SARVAM_API_KEY
     if not api_key:
@@ -1107,7 +1107,17 @@ def get_sarvam_notes(chunk, attempt=1, api_key=None):
         'Content-Type': 'application/json',
         'api-subscription-key': api_key
     }
-    system_prompt = "You are an expert AI that makes detailed educational notes from YouTube video transcripts. Create concise, well-structured notes for the following transcript segment. Use Markdown and use LaTeX math equations (e.g. $$...$$ or $...$) if applicable. Do not include markdown code block backticks around your whole response, just return the raw markdown text."
+    
+    system_prompt = (
+        "You are an expert AI creating educational notes from a YouTube video transcript. "
+        f"You are processing piece {chunk_idx} of {total_chunks}. "
+        "CRITICAL INSTRUCTIONS:\n"
+        "1. Write the notes in English by default.\n"
+        "2. Make the notes detailed, concise, and structured.\n"
+        "3. Your output MUST be pure raw LaTeX code (e.g., \\section{}, \\subsection{}, \\begin{itemize}, $$math$$).\n"
+        "4. DO NOT include \\documentclass, \\begin{document}, or \\end{document}. ONLY output the content body.\n"
+        "5. DO NOT wrap your response in markdown code blocks like ```latex. Output raw text only."
+    )
     
     payload = {
         'model': 'sarvam-m',
@@ -1123,10 +1133,12 @@ def get_sarvam_notes(chunk, attempt=1, api_key=None):
         response = requests.post(SARVAM_API_URL, headers=headers, json=payload, timeout=60)
         if response.status_code == 200:
             result = response.json()
-            return result.get('choices', [{}])[0].get('message', {}).get('content', '').strip()
+            res = result.get('choices', [{}])[0].get('message', {}).get('content', '').strip()
+            res = res.replace("```latex", "").replace("```tex", "").replace("```", "").strip()
+            return res
         elif attempt < 3 and response.status_code in (429, 500, 502, 503, 504):
             time.sleep(2 ** attempt)
-            return get_sarvam_notes(chunk, attempt + 1, api_key)
+            return get_sarvam_notes(chunk, chunk_idx, total_chunks, attempt + 1, api_key)
         else:
             detail = ""
             try:
@@ -1135,13 +1147,13 @@ def get_sarvam_notes(chunk, attempt=1, api_key=None):
                 detail = ""
             if detail:
                 detail = detail[:400]
-                return f"[Error: Sarvam API returned {response.status_code} for a chunk. Detail: {detail}]"
-            return f"[Error: Sarvam API returned {response.status_code} for a chunk]"
+                return f"% [Error: Sarvam API returned {response.status_code} for a chunk. Detail: {detail}]"
+            return f"% [Error: Sarvam API returned {response.status_code} for a chunk]"
     except Exception as e:
         if attempt < 3:
             time.sleep(2 ** attempt)
-            return get_sarvam_notes(chunk, attempt + 1, api_key)
-        return f"[Error connecting to AI: {str(e)}]"
+            return get_sarvam_notes(chunk, chunk_idx, total_chunks, attempt + 1, api_key)
+        return f"% [Error connecting to AI: {str(e)}]"
 
 @app.route('/api/yt-notes', methods=['POST'])
 def generate_yt_notes():
@@ -1162,27 +1174,61 @@ def generate_yt_notes():
         except Exception as e:
             return jsonify({'error': f'Could not extract transcript: {str(e)}'}), 400
 
-        chunks = chunk_text(full_transcript, 1400)
+        chunks = chunk_text(full_transcript, 500)
         
         if not SARVAM_API_KEY:
             return jsonify({'error': 'Server is missing SARVAM_API_KEY. Set it in environment or .env.'}), 500
 
         api_key = SARVAM_API_KEY
-        max_workers = min(10, len(chunks)) if chunks else 1
+        total_chunks = len(chunks)
+        max_workers = min(10, total_chunks) if chunks else 1
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-            future_to_chunk = {executor.submit(get_sarvam_notes, chunk, 1, api_key): i for i, chunk in enumerate(chunks)}
-            results = [None] * len(chunks)
+            future_to_chunk = {executor.submit(get_sarvam_notes, chunk, i+1, total_chunks, 1, api_key): i for i, chunk in enumerate(chunks)}
+            results = [None] * total_chunks
             for future in concurrent.futures.as_completed(future_to_chunk):
                 i = future_to_chunk[future]
                 try:
                     results[i] = future.result()
                 except Exception as e:
-                    results[i] = f"[Error processing chunk {i+1}]"
+                    results[i] = f"% [Error processing chunk {i+1}]"
                     
-        final_notes = "\n\n---\n\n".join([r for r in results if r])
+        body_notes = "\n\n".join([r for r in results if r])
+        
+        latex_preamble = r'''\documentclass[11pt, a4paper]{article}
+
+% --- UNIVERSAL PREAMBLE BLOCK ---
+\usepackage[a4paper, top=2.5cm, bottom=2.5cm, left=2cm, right=2cm]{geometry}
+\usepackage{fontspec}
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{booktabs}
+\usepackage{enumitem}
+
+\usepackage[english, bidi=basic, provide=*]{babel}
+\babelprovide[import, onchar=ids fonts]{english}
+
+% Set default font to Noto Sans
+\babelfont{rm}{Noto Sans}
+
+% Custom styling for sections
+\usepackage{titlesec}
+\titleformat{\section}{\large\bfseries}{}{0em}{}[\titlerule]
+\titleformat{\subsection}{\bfseries}{}{0em}{}
+
+\begin{document}
+
+\begin{center}
+    {\huge \textbf{YouTube Video Notes}} \\
+    \textit{Refined AI Notes}
+\end{center}
+
+\vspace{0.5cm}
+'''
+        latex_postamble = "\n\\end{document}\n"
+        
+        final_notes = latex_preamble + body_notes + latex_postamble
 
         # If every chunk failed with an auth/config error, return as API error (so UI shows toast)
-        if not final_notes.strip():
+        if not body_notes.strip():
             return jsonify({'error': 'Failed to generate notes.', 'details': results}), 502
         if all(isinstance(r, str) and ("invalid_api_key_error" in r or "SARVAM_API_KEY" in r) for r in results if r):
             return jsonify({'error': 'Sarvam authentication failed. Check SARVAM_API_KEY.', 'details': results}), 502

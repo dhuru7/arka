@@ -22,13 +22,7 @@
     <link rel="icon"
         href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='black'/><text y='50%' x='50%' dominant-baseline='middle' text-anchor='middle' fill='white' font-family='sans-serif' font-size='60' font-weight='bold'>A</text></svg>">
 
-    <!-- KaTeX for math rendering -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
-    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
 
-    <!-- Marked.js for markdown parsing -->
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
     <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -518,7 +512,17 @@
         <!-- Main Canvas -->
         <main class="main-area" style="display: flex; flex-direction: column;">
             <div class="top-nav-bar" style="justify-content: flex-end; padding: 0 24px;">
-                <button class="icon-btn" id="btn-download" title="Download Notes (.md)"
+                <button class="icon-btn" id="btn-download-pdf" title="Compile PDF (Overleaf)"
+                    style="display: none; margin-right: 15px; width: 44px; height: 44px; align-items: center; justify-content: center; cursor: pointer;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
+                    </svg>
+                </button>
+                <button class="icon-btn" id="btn-download-tex" title="Download Code (.tex)"
                     style="display: none; margin-right: 15px; width: 44px; height: 44px; align-items: center; justify-content: center; cursor: pointer;">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -617,7 +621,8 @@
         const inputUrl = document.getElementById('yt-url');
         const emptyState = document.getElementById('empty-state');
         const notesContent = document.getElementById('notes-content');
-        const btnDownload = document.getElementById('btn-download');
+        const btnDownloadTex = document.getElementById('btn-download-tex');
+        const btnDownloadPdf = document.getElementById('btn-download-pdf');
         const statusText = document.getElementById('status-text');
         const statusDot = document.getElementById('status-dot');
 
@@ -652,7 +657,8 @@
             btnGenerate.classList.add('loading');
             emptyState.style.display = 'none';
             notesContent.style.display = 'none';
-            btnDownload.style.display = 'none';
+            btnDownloadTex.style.display = 'none';
+            btnDownloadPdf.style.display = 'none';
             loadingOverlay.style.display = 'flex';
 
             statusText.innerText = "PROCESSING TRANSCRIPT...";
@@ -723,19 +729,18 @@
                 setTimeout(() => {
                     loadingOverlay.style.display = 'none';
 
-                    notesContent.innerHTML = marked.parse(rawNotes);
-                    renderMathInElement(notesContent, {
-                        delimiters: [
-                            { left: '$$', right: '$$', display: true },
-                            { left: '$', right: '$', display: false },
-                            { left: '\\(', right: '\\)', display: false },
-                            { left: '\\[', right: '\\]', display: true }
-                        ],
-                        throwOnError: false
-                    });
+                    // Escape HTML so it displays raw code cleanly
+                    const escapedCode = rawNotes.replace(/&/g, "&amp;")
+                                        .replace(/</g, "&lt;")
+                                        .replace(/>/g, "&gt;")
+                                        .replace(/"/g, "&quot;")
+                                        .replace(/'/g, "&#039;");
+
+                    notesContent.innerHTML = `<pre style="white-space: pre-wrap; word-wrap: break-word; font-family: var(--font-mono); font-size: 0.85rem; color: #a5b4fc; background: #0f1115; padding: 1rem; border-radius: 10px; border: 1px solid var(--border);"><code>${escapedCode}</code></pre>`;
 
                     notesContent.style.display = 'block';
-                    btnDownload.style.display = 'flex';
+                    btnDownloadTex.style.display = 'flex';
+                    btnDownloadPdf.style.display = 'flex';
 
                     showToast('Notes generated successfully!', 'success');
                     statusText.innerText = "SYSTEM STANDBY - NOTES RENDERED";
@@ -759,18 +764,37 @@
             }
         });
 
-        btnDownload.addEventListener('click', () => {
+        btnDownloadTex.addEventListener('click', () => {
             if (!rawNotes) return;
-            const blob = new Blob([rawNotes], { type: 'text/markdown' });
+            const blob = new Blob([rawNotes], { type: 'text/plain' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = 'arka_notes.md';
+            a.download = 'arka_notes.tex';
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
-            showToast('Download initialized', 'success');
+            showToast('Code downloaded as .tex', 'success');
+        });
+
+        btnDownloadPdf.addEventListener('click', () => {
+            if (!rawNotes) return;
+            showToast('Compiling PDF externally...', 'info');
+
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = 'https://latexonline.cc/compile';
+            form.target = '_blank';
+            
+            const input = document.createElement('textarea');
+            input.name = 'text';
+            input.value = rawNotes;
+            
+            form.appendChild(input);
+            document.body.appendChild(form);
+            form.submit();
+            document.body.removeChild(form);
         });
 
     </script>

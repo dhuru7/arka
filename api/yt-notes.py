@@ -57,7 +57,7 @@ def fetch_transcript_from_supadata(video_id: str):
     else:
         return str(data)
 
-def get_sarvam_notes(chunk: str, attempt: int = 1) -> str:
+def get_sarvam_notes(chunk: str, chunk_idx: int, total_chunks: int, attempt: int = 1) -> str:
     if not SARVAM_API_KEY:
         return "[Error: SARVAM_API_KEY is not set on the server]"
 
@@ -65,11 +65,16 @@ def get_sarvam_notes(chunk: str, attempt: int = 1) -> str:
         "Content-Type": "application/json",
         "api-subscription-key": SARVAM_API_KEY,
     }
+    
     system_prompt = (
-        "You are an expert AI that makes detailed educational notes from YouTube video transcripts. "
-        "Create concise, well-structured notes for the following transcript segment. "
-        "Use Markdown and use LaTeX math equations (e.g. $$...$$ or $...$) if applicable. "
-        "Do not include markdown code block backticks around your whole response, just return the raw markdown text."
+        "You are an expert AI creating educational notes from a YouTube video transcript. "
+        f"You are processing piece {chunk_idx} of {total_chunks}. "
+        "CRITICAL INSTRUCTIONS:\n"
+        "1. Write the notes in English by default.\n"
+        "2. Make the notes detailed, concise, and structured.\n"
+        "3. Your output MUST be pure raw LaTeX code (e.g., \\section{}, \\subsection{}, \\begin{itemize}, $$math$$).\n"
+        "4. DO NOT include \\documentclass, \\begin{document}, or \\end{document}. ONLY output the content body.\n"
+        "5. DO NOT wrap your response in markdown code blocks like ```latex. Output raw text only."
     )
 
     payload = {
@@ -90,7 +95,7 @@ def get_sarvam_notes(chunk: str, attempt: int = 1) -> str:
 
         if attempt < 3 and response.status_code in (429, 500, 502, 503, 504):
             time.sleep(2**attempt)
-            return get_sarvam_notes(chunk, attempt + 1)
+            return get_sarvam_notes(chunk, chunk_idx, total_chunks, attempt + 1)
 
         detail = ""
         try:
@@ -103,8 +108,8 @@ def get_sarvam_notes(chunk: str, attempt: int = 1) -> str:
     except Exception as e:
         if attempt < 3:
             time.sleep(2**attempt)
-            return get_sarvam_notes(chunk, attempt + 1)
-        return f"[Error connecting to AI: {str(e)}]"
+            return get_sarvam_notes(chunk, chunk_idx, total_chunks, attempt + 1)
+        return f"% [Error connecting to AI: {str(e)}]"
 
 
 class handler(BaseHTTPRequestHandler):
@@ -137,25 +142,63 @@ class handler(BaseHTTPRequestHandler):
                 self._json(400, {"error": f"Could not extract transcript: {str(e)}"})
                 return
 
-            chunks = chunk_text(full_transcript, 1400)
+            chunks = chunk_text(full_transcript, 500)
             if not chunks:
                 self._json(400, {"error": "No transcript text to process."})
                 return
 
+            total_chunks = len(chunks)
             # Keep concurrency modest in serverless
-            max_workers = 3 if len(chunks) > 1 else 1
-            results = [None] * len(chunks)
+            max_workers = 3 if total_chunks > 1 else 1
+            results = [None] * total_chunks
             with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-                future_to_idx = {executor.submit(get_sarvam_notes, chunk): i for i, chunk in enumerate(chunks)}
+                future_to_idx = {executor.submit(get_sarvam_notes, chunk, i+1, total_chunks): i for i, chunk in enumerate(chunks)}
                 for future in concurrent.futures.as_completed(future_to_idx):
                     i = future_to_idx[future]
                     try:
-                        results[i] = future.result()
+                        # Clean any leftover markdown blocks the AI might sneak in
+                        res = future.result()
+                        res = res.replace("```latex", "").replace("```tex", "").replace("```", "").strip()
+                        results[i] = res
                     except Exception:
-                        results[i] = f"[Error processing chunk {i + 1}]"
+                        results[i] = f"% [Error processing chunk {i + 1}]"
 
-            notes = "\n\n---\n\n".join([r for r in results if r])
-            if not notes.strip():
+            body_notes = "\n\n".join([r for r in results if r])
+            
+            latex_preamble = r'''\documentclass[11pt, a4paper]{article}
+
+% --- UNIVERSAL PREAMBLE BLOCK ---
+\usepackage[a4paper, top=2.5cm, bottom=2.5cm, left=2cm, right=2cm]{geometry}
+\usepackage{fontspec}
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{booktabs}
+\usepackage{enumitem}
+
+\usepackage[english, bidi=basic, provide=*]{babel}
+\babelprovide[import, onchar=ids fonts]{english}
+
+% Set default font to Noto Sans
+\babelfont{rm}{Noto Sans}
+
+% Custom styling for sections
+\usepackage{titlesec}
+\titleformat{\section}{\large\bfseries}{}{0em}{}[\titlerule]
+\titleformat{\subsection}{\bfseries}{}{0em}{}
+
+\begin{document}
+
+\begin{center}
+    {\huge \textbf{YouTube Video Notes}} \\
+    \textit{Refined AI Notes}
+\end{center}
+
+\vspace{0.5cm}
+'''
+            latex_postamble = "\n\\end{document}\n"
+            
+            notes = latex_preamble + body_notes + latex_postamble
+
+            if not body_notes.strip():
                 self._json(502, {"error": "Failed to generate notes."})
                 return
 
