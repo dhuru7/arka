@@ -7,7 +7,6 @@ import re
 import time
 
 import requests
-from youtube_transcript_api import YouTubeTranscriptApi
 
 
 SARVAM_API_KEY = os.getenv("SARVAM_API_KEY", "").strip('"\' ')
@@ -41,22 +40,22 @@ def chunk_text(text: str, max_length: int = 1400):
     return chunks
 
 
-def fetch_transcript_entries(video_id: str):
-    # Older versions exposed a classmethod `get_transcript(video_id)`
-    if hasattr(YouTubeTranscriptApi, "get_transcript"):
-        return YouTubeTranscriptApi.get_transcript(video_id)
-
-    # Newer versions expose instance methods: list(...) / fetch(...)
-    api = YouTubeTranscriptApi()
-    fetched = api.fetch(
-        video_id,
-        languages=("en", "en-US", "en-GB", "hi"),
-        preserve_formatting=False,
-    )
-    if hasattr(fetched, "to_raw_data"):
-        return fetched.to_raw_data()
-    return fetched
-
+def fetch_transcript_from_supadata(video_id: str):
+    supadata_key = "sd_14a060fc8a6b311244d92b1661d00fe5"
+    url = f"https://api.supadata.ai/v1/transcript?url=https://www.youtube.com/watch?v={video_id}&text=true"
+    headers = {"x-api-key": supadata_key}
+    
+    response = requests.get(url, headers=headers, timeout=30)
+    if response.status_code != 200:
+        raise Exception(f"Supadata API Error {response.status_code}")
+    
+    data = response.json()
+    if "content" in data:
+        return data["content"]
+    elif "text" in data:
+        return data["text"]
+    else:
+        return str(data)
 
 def get_sarvam_notes(chunk: str, attempt: int = 1) -> str:
     if not SARVAM_API_KEY:
@@ -130,11 +129,8 @@ class handler(BaseHTTPRequestHandler):
                 return
 
             try:
-                transcript_entries = fetch_transcript_entries(video_id)
-                full_transcript = " ".join(
-                    [t.get("text", "") for t in transcript_entries if isinstance(t, dict)]
-                ).strip()
-                if not full_transcript:
+                full_transcript = fetch_transcript_from_supadata(video_id)
+                if not full_transcript or len(str(full_transcript)) < 10:
                     self._json(400, {"error": "Transcript was retrieved but contained no text."})
                     return
             except Exception as e:

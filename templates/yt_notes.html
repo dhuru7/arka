@@ -461,6 +461,19 @@
 </head>
 
 <body style="opacity: 0; transition: opacity 0.3s ease;">
+    <!-- Passcode Overlay -->
+    <div id="passcode-overlay"
+        style="position: fixed; inset: 0; background: var(--bg); z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; backdrop-filter: blur(20px);">
+        <h2 style="font-family: var(--font-display); margin-bottom: 10px;">Isolated Prototype</h2>
+        <p style="color: var(--fg-muted); margin-bottom: 24px;">Please enter your tester access code to use this tool.
+        </p>
+        <div style="display: flex; gap: 10px;">
+            <input type="password" id="passcode-input" class="prompt-input" placeholder="Enter code"
+                style="width: 250px; background: rgba(255,255,255,0.05); border: 1px solid var(--border);">
+            <button class="generate-btn" id="passcode-submit" style="height: 52px; min-width: 120px;">Unlock</button>
+        </div>
+    </div>
+
     <div class="toast-container" id="toast-container"></div>
 
     <div class="app-container" style="display: flex; height: 100vh;">
@@ -574,12 +587,29 @@
 
     <script>
         let currentUser = null;
+        let isCodeUnlocked = false;
+
         firebase.auth().onAuthStateChanged(user => {
             if (user) {
                 document.body.style.opacity = '1';
                 currentUser = user;
             } else {
                 window.location.href = '/login';
+            }
+        });
+
+        const passcodeOverlay = document.getElementById('passcode-overlay');
+        const passcodeInput = document.getElementById('passcode-input');
+        const passcodeSubmit = document.getElementById('passcode-submit');
+
+        passcodeSubmit.addEventListener('click', () => {
+            if (passcodeInput.value.trim() === 'backend123') { // Tell user this default code
+                passcodeOverlay.style.opacity = '0';
+                setTimeout(() => passcodeOverlay.style.display = 'none', 300);
+                isCodeUnlocked = true;
+            } else {
+                showToast('Invalid access code', 'error');
+                passcodeInput.style.border = '1px solid var(--accent)';
             }
         });
 

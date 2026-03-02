@@ -7,7 +7,6 @@ import time
 import re
 import sys
 import concurrent.futures
-from youtube_transcript_api import YouTubeTranscriptApi
 
 # ── Fix Windows console Unicode encoding ─────────────────────────────────────
 # Windows cmd/powershell uses cp1252 by default which can't handle ₹, ™, etc.
@@ -1081,27 +1080,22 @@ def chunk_text(text, max_length=1400):
         chunks.append(" ".join(current_chunk))
     return chunks
 
-def fetch_transcript_entries(video_id):
-    """
-    Return transcript as a list of dict entries with at least a 'text' field.
-
-    Supports both the older `youtube_transcript_api` API (get_transcript) and the
-    newer API (YouTubeTranscriptApi().fetch(...).to_raw_data()).
-    """
-    # Older versions exposed a classmethod `get_transcript(video_id)`
-    if hasattr(YouTubeTranscriptApi, "get_transcript"):
-        return YouTubeTranscriptApi.get_transcript(video_id)
-
-    # Newer versions expose instance methods: list(...) / fetch(...)
-    api = YouTubeTranscriptApi()
-    fetched = api.fetch(
-        video_id,
-        languages=("en", "en-US", "en-GB", "hi"),
-        preserve_formatting=False,
-    )
-    if hasattr(fetched, "to_raw_data"):
-        return fetched.to_raw_data()
-    return fetched
+def fetch_transcript_from_supadata(video_id: str):
+    supadata_key = "sd_14a060fc8a6b311244d92b1661d00fe5"
+    url = f"https://api.supadata.ai/v1/transcript?url=https://www.youtube.com/watch?v={video_id}&text=true"
+    headers = {"x-api-key": supadata_key}
+    
+    response = requests.get(url, headers=headers, timeout=30)
+    if response.status_code != 200:
+        raise Exception(f"Supadata API Error {response.status_code}")
+    
+    data = response.json()
+    if "content" in data:
+        return data["content"]
+    elif "text" in data:
+        return data["text"]
+    else:
+        return str(data)
 
 def get_sarvam_notes(chunk, attempt=1, api_key=None):
     if not api_key:
@@ -1162,10 +1156,8 @@ def generate_yt_notes():
             return jsonify({'error': 'Invalid YouTube URL or Video ID not found.'}), 400
 
         try:
-            transcript_entries = fetch_transcript_entries(video_id)
-            full_transcript = " ".join([t.get('text', '') for t in transcript_entries if isinstance(t, dict)])
-            full_transcript = full_transcript.strip()
-            if not full_transcript:
+            full_transcript = fetch_transcript_from_supadata(video_id)
+            if not full_transcript or len(str(full_transcript)) < 10:
                 return jsonify({'error': 'Transcript was retrieved but contained no text.'}), 400
         except Exception as e:
             return jsonify({'error': f'Could not extract transcript: {str(e)}'}), 400
