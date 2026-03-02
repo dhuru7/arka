@@ -1159,6 +1159,22 @@ def get_sarvam_notes(chunk, chunk_idx, total_chunks, attempt=1, api_key=None):
 def generate_yt_notes():
     try:
         data = request.get_json()
+        action = data.get('action', 'full')
+        
+        if action == 'chunk':
+            chunk = data.get('chunk', '')
+            chunk_idx = data.get('chunk_idx', 1)
+            total_chunks = data.get('total_chunks', 1)
+            if not SARVAM_API_KEY:
+                return jsonify({'error': 'Server is missing SARVAM_API_KEY. Set it in environment.'}), 500
+            
+            result = get_sarvam_notes(chunk, chunk_idx, total_chunks, 1, SARVAM_API_KEY)
+            # If the result suggests failure, throw error.
+            if "invalid_api_key_error" in result or "SARVAM_API_KEY" in result:
+                return jsonify({'error': 'Sarvam authentication failed.', 'latex': result}), 502
+                
+            return jsonify({'success': True, 'latex': result})
+
         url = data.get('url', '')
         if not url.strip():
             return jsonify({'error': 'Please provide a YouTube URL.'}), 400
@@ -1176,6 +1192,9 @@ def generate_yt_notes():
 
         chunks = chunk_text(full_transcript, 500)
         
+        if action == 'extract':
+            return jsonify({'success': True, 'chunks': chunks, 'total_chunks': len(chunks)})
+            
         if not SARVAM_API_KEY:
             return jsonify({'error': 'Server is missing SARVAM_API_KEY. Set it in environment or .env.'}), 500
 

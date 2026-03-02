@@ -661,96 +661,104 @@
             btnDownloadPdf.style.display = 'none';
             loadingOverlay.style.display = 'flex';
 
-            statusText.innerText = "PROCESSING TRANSCRIPT...";
+            statusText.innerText = "EXTRACTING TRANSCRIPT...";
             statusText.classList.add('status-text-anim');
             statusDot.style.background = '#eab308';
             statusDot.style.boxShadow = '0 0 8px rgba(234, 179, 8, 0.8)';
-
-            // Sequential Loading Popups and Timer Fix
-            let secondsPassed = 0;
-            const estimatedTotal = 45;
-
-            loadingBar.style.width = '0%';
-
-            const progressInterval = setInterval(() => {
-                secondsPassed++;
-
-                // Update Progress bar roughly
-                const prog = Math.min((secondsPassed / estimatedTotal) * 90, 95);
-                loadingBar.style.width = prog + '%';
-
-                // Update Timer Text
-                const timeLeft = Math.max(estimatedTotal - secondsPassed, 1);
-                timerText.innerText = `Estimated time: ~${timeLeft}s left`;
-
-                // Sequential Popups
-                if (secondsPassed === 2) {
-                    showToast("Establishing connection...");
-                    dynText.innerText = "Extracting Subtitles...";
-                } else if (secondsPassed === 6) {
-                    showToast("Transcribe is generated. Moving to formatting.");
-                    dynText.innerText = "Transcribe is generated...";
-                } else if (secondsPassed === 12) {
-                    showToast("Processing... 1 page created.");
-                    dynText.innerText = "Processing Markdown Blocks...";
-                } else if (secondsPassed === 20) {
-                    showToast("Structuring mathematical equations and context...");
-                    dynText.innerText = "Context Expansion Active...";
-                } else if (secondsPassed === 30) {
-                    showToast("Compiling final summary...");
-                    dynText.innerText = "Finalizing Note Structure...";
-                }
-            }, 1000);
+            dynText.innerText = "Fetching Video Data...";
+            loadingBar.style.width = '5%';
+            timerText.innerText = `Preparing extraction...`;
 
             try {
-                const response = await fetch('/api/yt-notes', {
+                // Step 1: Extract chunks
+                const extractRes = await fetch('/api/yt-notes', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url })
+                    body: JSON.stringify({ action: 'extract', url })
                 });
 
-                const rawText = await response.text();
-                let data;
+                let extractData;
                 try {
-                    data = JSON.parse(rawText);
-                } catch (jsonErr) {
-                    throw new Error(`Server returned a non-JSON response. Raw: ${rawText.substring(0, 100)}...`);
+                    extractData = await extractRes.json();
+                } catch (e) { throw new Error("Server returned a non-JSON response during extraction."); }
+
+                if (!extractRes.ok) throw new Error(extractData.error || 'Server error occurred during extraction');
+
+                const chunks = extractData.chunks;
+                const totalChunks = extractData.total_chunks;
+
+                showToast(`Transcript extracted. Processing ${totalChunks} pages...`);
+                statusText.innerText = "GENERATING AI NOTES...";
+
+                let combinedBody = "";
+
+                // Step 2: Iterate sequentially
+                for (let i = 0; i < totalChunks; i++) {
+                    dynText.innerText = `Processing page ${i + 1} of ${totalChunks}...`;
+                    const prog = 5 + ((i / totalChunks) * 80);
+                    loadingBar.style.width = prog + '%';
+
+                    const chunkRes = await fetch('/api/yt-notes', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            action: 'chunk',
+                            chunk: chunks[i],
+                            chunk_idx: i + 1,
+                            total_chunks: totalChunks
+                        })
+                    });
+
+                    let chunkData;
+                    try {
+                        chunkData = await chunkRes.json();
+                    } catch (e) { throw new Error(`Server returned a non-JSON response on chunk ${i + 1}.`); }
+
+                    if (!chunkRes.ok) throw new Error(chunkData.error || `Error processing chunk ${i + 1}`);
+
+                    if (chunkData.latex) {
+                        combinedBody += chunkData.latex + "\n\n";
+                    }
                 }
 
-                if (!response.ok) {
-                    throw new Error(data.error || 'Server error occurred');
-                }
+                dynText.innerText = "Compiling PDF Preview...";
+                loadingBar.style.width = '95%';
 
-                rawNotes = data.notes;
+                const latexPreamble = `\\documentclass[11pt, a4paper]{article}\n\n% --- UNIVERSAL PREAMBLE BLOCK ---\n\\usepackage[a4paper, top=2.5cm, bottom=2.5cm, left=2cm, right=2cm]{geometry}\n\\usepackage{fontspec}\n\\usepackage{amsmath, amssymb, amsthm}\n\\usepackage{booktabs}\n\\usepackage{enumitem}\n\n\\usepackage[english, bidi=basic, provide=*]{babel}\n\\babelprovide[import, onchar=ids fonts]{english}\n\n% Set default font to Noto Sans\n\\babelfont{rm}{Noto Sans}\n\n% Custom styling for sections\n\\usepackage{titlesec}\n\\titleformat{\\section}{\\large\\bfseries}{}{0em}{}[\\titlerule]\n\\titleformat{\\subsection}{\\bfseries}{}{0em}{}\n\n\\begin{document}\n\n\\begin{center}\n    {\\huge \\textbf{YouTube Video Notes}} \\\\\n    \\textit{Refined AI Notes}\n\\end{center}\n\n\\vspace{0.5cm}\n`;
+                const latexPostamble = "\n\\end{document}\n";
 
-                // Success State!
-                clearInterval(progressInterval);
+                rawNotes = latexPreamble + combinedBody + latexPostamble;
+
+                // Construct compilation request inline
+                const encodedTex = encodeURIComponent(rawNotes);
+                const pdfPreviewUrl = `https://latexonline.cc/compile?text=${encodedTex}`;
+
                 loadingBar.style.width = '100%';
                 setTimeout(() => {
                     loadingOverlay.style.display = 'none';
 
-                    // Escape HTML so it displays raw code cleanly
-                    const escapedCode = rawNotes.replace(/&/g, "&amp;")
-                                        .replace(/</g, "&lt;")
-                                        .replace(/>/g, "&gt;")
-                                        .replace(/"/g, "&quot;")
-                                        .replace(/'/g, "&#039;");
-
-                    notesContent.innerHTML = `<pre style="white-space: pre-wrap; word-wrap: break-word; font-family: var(--font-mono); font-size: 0.85rem; color: #a5b4fc; background: #0f1115; padding: 1rem; border-radius: 10px; border: 1px solid var(--border);"><code>${escapedCode}</code></pre>`;
+                    // Provide inline iframe preview
+                    notesContent.innerHTML = `
+                        <div style="background: rgba(255,255,255,0.05); padding: 5px; border-radius: 8px; border: 1px solid var(--border); height: 600px; display: flex; flex-direction: column;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; border-bottom: 1px solid var(--border); background: rgba(0,0,0,0.2); border-radius: 8px 8px 0 0;">
+                                <span style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--fg-muted);">PREVIEW</span>
+                            </div>
+                            <iframe src="${pdfPreviewUrl}" style="width: 100%; flex: 1; border: none; border-radius: 0 0 8px 8px; background: white;"></iframe>
+                        </div>
+                    `;
 
                     notesContent.style.display = 'block';
                     btnDownloadTex.style.display = 'flex';
                     btnDownloadPdf.style.display = 'flex';
 
-                    showToast('Notes generated successfully!', 'success');
-                    statusText.innerText = "SYSTEM STANDBY - NOTES RENDERED";
+                    showToast('Notes generated & compiled successfully!', 'success');
+                    statusText.innerText = "SYSTEM STANDBY - PDF RENDERED";
                     statusText.classList.remove('status-text-anim');
                     statusDot.style.background = '#22c55e'; // green
                     statusDot.style.boxShadow = '0 0 8px rgba(34, 197, 94, 0.8)';
-                }, 500);
+                }, 1000);
 
             } catch (e) {
-                clearInterval(progressInterval);
                 loadingOverlay.style.display = 'none';
                 showToast(e.message, 'error');
                 emptyState.style.display = 'flex';
@@ -786,11 +794,11 @@
             form.method = 'POST';
             form.action = 'https://latexonline.cc/compile';
             form.target = '_blank';
-            
+
             const input = document.createElement('textarea');
             input.name = 'text';
             input.value = rawNotes;
-            
+
             form.appendChild(input);
             document.body.appendChild(form);
             form.submit();

@@ -119,6 +119,24 @@ class handler(BaseHTTPRequestHandler):
             body = self.rfile.read(content_length)
             data = json.loads(body) if body else {}
 
+            action = data.get("action", "full")
+            
+            if action == 'chunk':
+                chunk = data.get('chunk', '')
+                chunk_idx = data.get('chunk_idx', 1)
+                total_chunks = data.get('total_chunks', 1)
+                if not SARVAM_API_KEY:
+                    self._json(500, {'error': 'Server is missing SARVAM_API_KEY. Set it in environment.'})
+                    return
+                
+                result = get_sarvam_notes(chunk, chunk_idx, total_chunks)
+                if "invalid_api_key_error" in result or "SARVAM_API_KEY" in result:
+                    self._json(502, {'error': 'Sarvam authentication failed.', 'latex': result})
+                    return
+                    
+                self._json(200, {'success': True, 'latex': result})
+                return
+
             url = (data.get("url") or "").strip()
             if not url:
                 self._json(400, {"error": "Please provide a YouTube URL."})
@@ -145,6 +163,10 @@ class handler(BaseHTTPRequestHandler):
             chunks = chunk_text(full_transcript, 500)
             if not chunks:
                 self._json(400, {"error": "No transcript text to process."})
+                return
+            
+            if action == 'extract':
+                self._json(200, {'success': True, 'chunks': chunks, 'total_chunks': len(chunks)})
                 return
 
             total_chunks = len(chunks)
