@@ -47,9 +47,9 @@ async function checkUserLimits(userId, isGuest) {
             }
             if (!data.dailyUsage) data.dailyUsage = {};
 
-            // Check Guest Limits
+            // Check Dry Mode Limits
             if (isGuest && (data.totalGuestDiagrams || 0) >= 5) {
-                return reject(new Error("Guest limit reached! Please sign up to generate more diagrams."));
+                return reject(new Error("Dry Mode limit reached! Please sign up to generate more diagrams."));
             }
 
             // Check Daily Limits

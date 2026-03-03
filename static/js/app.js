@@ -553,9 +553,6 @@ async function handleGenerate() {
         updateStatus('ready', 'Generated');
         showToast(`${currentMode} generated successfully!`, 'success');
 
-        // Update live credits dynamically after successful generation without refresh
-        await updateLiveCredits(user);
-
         if (sidebar && sidebar.classList.contains('open')) {
             sidebar.classList.remove('open');
             const mobileOverlay = document.getElementById('mobile-overlay');
@@ -1036,8 +1033,13 @@ function applyColorToNode(element, color) {
 
 // ═══ Live Credits Update ════════════════════════════════════════════════════
 
+// Local counter to track usage optimistically (avoids race condition with ServerValue.increment)
+let _localUsageCounter = null;
+
 function checkAndInjectBMCWidget(usageCount, isAnonymous) {
-    if (!isAnonymous && usageCount >= 6 && !document.getElementById('bmc-widget-script')) {
+    // Inject for signed-in users at 6+ credits, or dry mode users at 3+ credits
+    const threshold = isAnonymous ? 3 : 6;
+    if (usageCount >= threshold && !document.getElementById('bmc-widget-script')) {
         const script = document.createElement('script');
         script.id = 'bmc-widget-script';
         script.setAttribute('data-name', 'BMC-Widget');
@@ -1058,16 +1060,33 @@ async function updateLiveCredits(user) {
     if (!user) user = firebase.auth().currentUser;
     if (!user) return;
 
+    const statEl = document.getElementById('user-usage-stats');
+    if (!statEl) return;
+
+    // Optimistic local update: if we already know the count, increment it locally first
+    if (_localUsageCounter !== null) {
+        _localUsageCounter++;
+        const limit = user.isAnonymous ? 5 : 10;
+        statEl.innerText = `Credits: ${_localUsageCounter} / ${limit} Limit`;
+        if (_localUsageCounter >= limit) {
+            statEl.style.color = '#ff4d4d';
+        } else {
+            statEl.style.color = '';
+        }
+        checkAndInjectBMCWidget(_localUsageCounter, user.isAnonymous);
+    }
+
+    // After a short delay, also sync with Firebase for authoritative value
+    await new Promise(r => setTimeout(r, 800));
+
     try {
         const data = await checkUserLimits(user.uid, user.isAnonymous);
         const today = new Date().toISOString().split('T')[0];
         const todayUsage = (data.dailyUsage && data.dailyUsage[today]) ? data.dailyUsage[today] : 0;
 
-        const statEl = document.getElementById('user-usage-stats');
-        if (!statEl) return;
-
         if (user.isAnonymous) {
             const guestTotal = data.totalGuestDiagrams || 0;
+            _localUsageCounter = guestTotal;
             statEl.innerText = `Credits: ${guestTotal} / 5 Limit`;
             if (guestTotal >= 5) {
                 statEl.style.color = '#ff4d4d';
@@ -1076,6 +1095,7 @@ async function updateLiveCredits(user) {
             }
             checkAndInjectBMCWidget(guestTotal, user.isAnonymous);
         } else {
+            _localUsageCounter = todayUsage;
             statEl.innerText = `Credits: ${todayUsage} / 10 Limit`;
             if (todayUsage >= 10) {
                 statEl.style.color = '#ff4d4d';
@@ -1085,16 +1105,31 @@ async function updateLiveCredits(user) {
             checkAndInjectBMCWidget(todayUsage, user.isAnonymous);
         }
     } catch (e) {
-        const statEl = document.getElementById('user-usage-stats');
         if (user.isAnonymous) {
+            _localUsageCounter = 5;
             statEl.innerText = `Credits: Limit Reached (5/5)`;
         } else {
+            _localUsageCounter = 10;
             statEl.innerText = `Credits: Limit Reached (10/10)`;
         }
         statEl.style.color = '#ff4d4d';
-        if (!user.isAnonymous) {
-            checkAndInjectBMCWidget(10, user.isAnonymous);
+        checkAndInjectBMCWidget(_localUsageCounter, user.isAnonymous);
+    }
+}
+
+// Initialize the local usage counter on page load from Firebase data
+async function initLocalUsageCounter(user) {
+    if (!user) return;
+    try {
+        const data = await checkUserLimits(user.uid, user.isAnonymous);
+        const today = new Date().toISOString().split('T')[0];
+        if (user.isAnonymous) {
+            _localUsageCounter = data.totalGuestDiagrams || 0;
+        } else {
+            _localUsageCounter = (data.dailyUsage && data.dailyUsage[today]) ? data.dailyUsage[today] : 0;
         }
+    } catch (e) {
+        _localUsageCounter = user.isAnonymous ? 5 : 10;
     }
 }
 
@@ -1480,8 +1515,10 @@ async function handleApplyCodeEdit() {
 async function handleSave() {
     const nameInput = document.getElementById('save-name');
     const folderSelect = document.getElementById('save-folder');
+    const folderRenameInput = document.getElementById('save-folder-rename');
     const folderId = folderSelect ? folderSelect.value : 'folder1';
     const name = nameInput.value.trim();
+    const customFolderName = folderRenameInput ? folderRenameInput.value.trim() : '';
 
     if (!name) {
         showToast(`Enter a name for the diagram.`, 'error');
@@ -1503,11 +1540,22 @@ async function handleSave() {
     try {
         const snapshot = await folderRef.once('value');
         const folderData = snapshot.val() || {};
-        const diagramCount = Object.keys(folderData).length;
+        // Count only diagram entries (exclude _meta)
+        const diagramCount = Object.keys(folderData).filter(k => k !== '_meta').length;
 
         if (diagramCount >= 3) {
             showToast('Premium Required! Folder is full (max 3 diagrams/folder).', 'error');
             return;
+        }
+
+        // Save custom folder name if provided
+        if (customFolderName) {
+            await db.ref(`users/${user.uid}/folders/${folderId}/_meta`).set({
+                name: customFolderName
+            });
+            // Also update the select dropdown text
+            const selectedOption = folderSelect.querySelector(`option[value="${folderId}"]`);
+            if (selectedOption) selectedOption.textContent = customFolderName;
         }
 
         const flowchartData = {
@@ -1521,9 +1569,11 @@ async function handleSave() {
         const newRef = folderRef.push();
         await newRef.set(flowchartData);
 
-        showToast(`Saved "${name}" into ${folderId} successfully!`, 'success');
+        const displayFolder = customFolderName || folderSelect.options[folderSelect.selectedIndex].text;
+        showToast(`Saved "${name}" into ${displayFolder} successfully!`, 'success');
         closeAllModals();
         nameInput.value = '';
+        if (folderRenameInput) folderRenameInput.value = '';
     } catch (err) {
         showToast('Save failed: ' + err.message, 'error');
     }
@@ -1545,18 +1595,26 @@ function handleOpenLoad() {
             const folders = foldersSnap.val() || {};
             let items = [];
 
-            // Reconstruct array for display
+            // Build folder name map from _meta entries
+            const folderNames = {};
+            Object.keys(folders).forEach(fKey => {
+                const meta = folders[fKey]._meta;
+                folderNames[fKey] = (meta && meta.name) ? meta.name : fKey;
+            });
+
+            // Reconstruct array for display (skip _meta keys)
             Object.keys(folders).forEach(fKey => {
                 const diagrams = folders[fKey];
                 Object.keys(diagrams).forEach(dKey => {
-                    items.push({ id: dKey, folder: fKey, ...diagrams[dKey] });
+                    if (dKey === '_meta') return; // Skip metadata
+                    items.push({ id: dKey, folder: fKey, folderName: folderNames[fKey], ...diagrams[dKey] });
                 });
             });
 
             items.sort((a, b) => b.createdAt - a.createdAt);
 
             if (items.length === 0) {
-                listEl.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);">No saved flowcharts.</div>';
+                listEl.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);">No saved diagrams yet.</div>';
                 return;
             }
 
@@ -1566,7 +1624,7 @@ function handleOpenLoad() {
                 div.className = 'saved-item';
                 div.innerHTML = `
                         <div style="text-align: left;">
-                        <div class="saved-item-name">${escapeHtml(item.name)} <span style="font-size:0.75rem; color:#888;">(${item.folder})</span></div>
+                        <div class="saved-item-name">${escapeHtml(item.name)} <span style="font-size:0.75rem; color:#888;">(${escapeHtml(item.folderName)})</span></div>
                         <div class="saved-item-date">${new Date(item.createdAt).toLocaleDateString()}</div>
                         </div>
                         <div class="saved-item-actions">

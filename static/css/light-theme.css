@@ -104,8 +104,102 @@ body.light-theme .dropdown-menu::-webkit-scrollbar-thumb:hover {
     background: rgba(0, 0, 0, 0.4);
 }
 
+/* ── Light Theme: Profile Drawer Buttons Fix ─────────────────────── */
+body.light-theme .dropdown-item {
+    color: #333 !important;
+    border-color: #ddd !important;
+    background: rgba(0, 0, 0, 0.03) !important;
+}
+
+body.light-theme .dropdown-item:hover {
+    background: rgba(0, 0, 0, 0.08) !important;
+    color: #111 !important;
+}
+
+body.light-theme #profile-dropdown-wrapper .dropdown-menu .dropdown-item {
+    color: #333 !important;
+    border-color: #ddd !important;
+    background: rgba(255, 255, 255, 0.8) !important;
+}
+
+body.light-theme #profile-dropdown-wrapper .dropdown-menu .dropdown-item:hover {
+    background: rgba(0, 0, 0, 0.06) !important;
+    color: #111 !important;
+}
+
+body.light-theme #user-profile-container {
+    background: rgba(0, 0, 0, 0.04) !important;
+    border-color: #ddd !important;
+}
+
+body.light-theme #user-display-name {
+    color: #111 !important;
+}
+
+body.light-theme #user-usage-stats {
+    color: #555 !important;
+}
+
+body.light-theme #btn-logout {
+    color: #ff4d4d !important;
+    border-color: rgba(255, 77, 77, 0.3) !important;
+    background: rgba(255, 77, 77, 0.06) !important;
+}
+
+body.light-theme #btn-logout:hover {
+    background: rgba(255, 77, 77, 0.12) !important;
+}
+
+body.light-theme #btn-signup-google {
+    color: #333 !important;
+    border-color: #ddd !important;
+    background: rgba(255, 255, 255, 0.9) !important;
+}
+
+body.light-theme #btn-profile {
+    background: rgba(0, 0, 0, 0.05) !important;
+    border-color: #ddd !important;
+}
+
+body.light-theme #btn-profile:hover {
+    background: rgba(0, 0, 0, 0.1) !important;
+}
+
+body.light-theme #profile-dropdown-wrapper .dropdown-menu {
+    background: rgba(250, 250, 250, 0.98) !important;
+    border-color: #ddd !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12) !important;
+}
+
+/* ── Light Theme: Toolbar Dropdowns ──────────────────────────────── */
+body.light-theme .toolbar {
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+body.light-theme .toolbar-btn {
+    color: #555 !important;
+}
+
+body.light-theme .toolbar-btn:hover {
+    color: #111 !important;
+    background: rgba(0, 0, 0, 0.06) !important;
+}
+
+body.light-theme #theme-dropdown-wrapper .dropdown-menu,
+body.light-theme #download-dropdown-wrapper .dropdown-menu {
+    background: rgba(250, 250, 250, 0.98) !important;
+    border-color: #ddd !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12) !important;
+}
+
 @media (max-width: 768px) {
     body.light-theme #profile-dropdown-wrapper .dropdown-menu {
-        background: rgba(245, 245, 245, 0.98) !important;
+        background: rgba(248, 248, 248, 0.99) !important;
+        box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.1) !important;
+    }
+
+    body.light-theme #profile-dropdown-wrapper .dropdown-menu .dropdown-item {
+        background: rgba(255, 255, 255, 0.9) !important;
+        border-color: #e0e0e0 !important;
     }
 }

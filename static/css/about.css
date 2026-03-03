@@ -12,6 +12,41 @@ body {
     margin: 0;
 }
 
+/* ── Remove Blue Tap Highlight on Mobile ── */
+a,
+button,
+.large-btn,
+.auth-btn-sm,
+.nav-link,
+.support-btn,
+.feature-row,
+.support-card {
+    -webkit-tap-highlight-color: transparent !important;
+    -webkit-touch-callout: none;
+    outline: none;
+}
+
+/* ── Mobile Touch Feedback ── */
+.large-btn:active {
+    transform: scale(0.97) !important;
+    transition: transform 80ms ease !important;
+}
+
+.auth-btn-sm:active {
+    transform: scale(0.95) !important;
+    transition: transform 80ms ease !important;
+}
+
+.support-btn:active {
+    transform: scale(0.97) !important;
+    transition: transform 80ms ease !important;
+}
+
+.footer-links a:active {
+    opacity: 0.6;
+    transition: opacity 80ms ease;
+}
+
 /* ── Noise Overlay ── */
 .noise-overlay {
     position: fixed;
