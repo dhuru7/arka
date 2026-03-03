@@ -266,7 +266,7 @@
                                     d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                                     fill="#EA4335" />
                             </svg>
-                            <span style="font-size: 0.8rem; font-weight: 500;">Upgrade for More Credits</span>
+                            <span style="font-size: 0.8rem; font-weight: 500;">Signup w/ Google for More Credits</span>
                         </button>
 
                         <a href="https://forms.gle/FA4qTch5rdXoaZvf6" target="_blank" class="dropdown-item"
@@ -392,18 +392,11 @@
 
                     <!-- Download Dropdown -->
                     <div class="dropdown-wrapper" id="download-dropdown-wrapper">
-                        <button class="toolbar-btn" id="btn-download" title="Download"
-                            style="padding: 4px 14px; height: 34px; border: 1px solid var(--border-light); font-size: 0.75rem; letter-spacing: 0.5px; color: var(--fg-muted); background: rgba(255,255,255,0.04); display: flex; align-items: center; gap: 6px; border-radius: 8px; transition: all 0.2s ease;">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14"
-                                height="14">
+                        <button class="toolbar-btn icon-btn" id="btn-download" title="Download">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                                 <polyline points="7 10 12 15 17 10"></polyline>
                                 <line x1="12" y1="15" x2="12" y2="3"></line>
-                            </svg>
-                            <span>Export</span>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12"
-                                height="12" style="opacity: 0.5;">
-                                <polyline points="6 9 12 15 18 9"></polyline>
                             </svg>
                         </button>
                         <div class="dropdown-menu" id="download-dropdown-menu">
@@ -442,9 +435,9 @@
                     <!-- Theme Dropdown -->
                     <div class="dropdown-wrapper" id="theme-dropdown-wrapper">
                         <button class="toolbar-btn" id="btn-theme" title="Change Theme"
-                            style="padding: 4px 14px; height: 34px; border: 1px solid var(--border-light); font-size: 0.75rem; letter-spacing: 0.5px; color: var(--fg-muted); background: rgba(255,255,255,0.04); display: flex; align-items: center; gap: 6px; border-radius: 8px; transition: all 0.2s ease;">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14"
-                                height="14">
+                            style="padding: 0 16px; height: 34px; border-color: transparent; border: 1px solid transparent; font-size: 0.75rem; letter-spacing: 0.5px; color: var(--fg-muted); background: transparent; display: flex; align-items: center; gap: 6px;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16"
+                                height="16">
                                 <circle cx="13.5" cy="6.5" r=".5" fill="currentColor"></circle>
                                 <circle cx="17.5" cy="10.5" r=".5" fill="currentColor"></circle>
                                 <circle cx="8.5" cy="7.5" r=".5" fill="currentColor"></circle>
@@ -454,10 +447,6 @@
                                 </path>
                             </svg>
                             <span id="btn-theme-text">Default</span>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12"
-                                height="12" style="opacity: 0.5;">
-                                <polyline points="6 9 12 15 18 9"></polyline>
-                            </svg>
                         </button>
                         <div class="dropdown-menu" id="theme-dropdown-menu" style="min-width: 140px;">
                             <button class="dropdown-item theme-option" data-theme="default">
@@ -559,17 +548,12 @@
             </div>
             <div class="modal-body">
                 <div class="form-group">
-                    <label for="save-folder">Select or Create Folder</label>
+                    <label for="save-folder">Select Folder</label>
                     <select id="save-folder" class="prompt-input" style="height: 44px; padding: 0 16px;">
-                        <option value="folder1">My Diagrams</option>
-                        <option value="folder2">Projects</option>
-                        <option value="folder3">Archive</option>
+                        <option value="folder1">Folder 1</option>
+                        <option value="folder2">Folder 2</option>
+                        <option value="folder3">Folder 3</option>
                     </select>
-                </div>
-                <div class="form-group">
-                    <label for="save-folder-rename">Rename Folder (optional)</label>
-                    <input type="text" id="save-folder-rename" placeholder="Type a custom folder name..." maxlength="30"
-                        style="height: 44px; padding: 0 16px; font-size: 0.85rem;">
                 </div>
                 <div class="form-group">
                     <label for="save-name">Diagram Name</label>
@@ -718,7 +702,7 @@
                 const btnSignupGoogle = document.getElementById('btn-signup-google');
 
                 if (user.isAnonymous) {
-                    nameEl.innerText = "Dry Mode";
+                    nameEl.innerText = "Guest User";
                     if (btnSignupGoogle) btnSignupGoogle.style.display = 'flex';
                 } else {
                     if (user.displayName) {
@@ -729,7 +713,7 @@
                     if (btnSignupGoogle) btnSignupGoogle.style.display = 'none';
                 }
 
-                // Fetch limits and stats dynamically from Firebase real-time DB
+                // Fetch limits and stats dynamically from Firebase real-time DB via our check script logically initialized earlier
                 try {
                     const data = await checkUserLimits(user.uid, user.isAnonymous);
                     const today = new Date().toISOString().split('T')[0];
@@ -745,6 +729,7 @@
                         if (typeof checkAndInjectBMCWidget === 'function') checkAndInjectBMCWidget(todayUsage, user.isAnonymous);
                     }
                 } catch (e) {
+                    // if it errors out it means they hit the limit, but we'll still update the counter if the promise resolves/rejects
                     const statEl = document.getElementById('user-usage-stats');
 
                     if (user.isAnonymous) {
@@ -753,13 +738,8 @@
                     } else {
                         statEl.innerText = `Credits: Limit Reached (10/10)`;
                         statEl.style.color = '#ff4d4d';
-                        if (typeof checkAndInjectBMCWidget === 'function') checkAndInjectBMCWidget(10, user.isAnonymous);
+                        if (typeof checkAndInjectBMCWidget === 'function') checkAndInjectBMCWidget(10, user.isAnonymous); // force inject
                     }
-                }
-
-                // Initialize the local usage counter for live credit tracking
-                if (typeof initLocalUsageCounter === 'function') {
-                    initLocalUsageCounter(user);
                 }
 
             } else {

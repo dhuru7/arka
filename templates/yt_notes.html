@@ -523,7 +523,14 @@
                         <polyline points="10 9 9 9 8 9"></polyline>
                     </svg>
                 </button>
-
+                <button class="icon-btn" id="btn-download-html" title="Download HTML (.html)"
+                    style="display: none; margin-right: 15px; width: 44px; height: 44px; align-items: center; justify-content: center; cursor: pointer;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                </button>
 
                 <a href="/" class="icon-btn" title="Back to Dashboard"
                     style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; text-decoration: none;">
@@ -615,7 +622,7 @@
         const inputUrl = document.getElementById('yt-url');
         const emptyState = document.getElementById('empty-state');
         const notesContent = document.getElementById('notes-content');
-        const btnDownloadHtml = null;
+        const btnDownloadHtml = document.getElementById('btn-download-html');
         const btnDownloadPdf = document.getElementById('btn-download-pdf');
         const statusText = document.getElementById('status-text');
         const statusDot = document.getElementById('status-dot');
@@ -651,7 +658,7 @@
             btnGenerate.classList.add('loading');
             emptyState.style.display = 'none';
             notesContent.style.display = 'none';
-            if (btnDownloadHtml) btnDownloadHtml.style.display = 'none';
+            btnDownloadHtml.style.display = 'none';
             btnDownloadPdf.style.display = 'none';
             loadingOverlay.style.display = 'flex';
 
@@ -739,9 +746,9 @@
 </style>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Orbitron:wght@500;700&family=Space+Grotesk:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"><\/script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"
-        onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}, {left: '\\\\\\\\(', right: '\\\\\\\\)', display: false}, {left: '\\\\\\\\[', right: '\\\\\\\\]', display: true}]});"><\/script>
+        onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}, {left: '\\\\(', right: '\\\\)', display: false}, {left: '\\\\[', right: '\\\\]', display: true}]});"></script>
     </head>
 
     <body>
@@ -750,7 +757,7 @@
 
 </html>`;
 
-                        notesContent.innerHTML = `
+notesContent.innerHTML = `
 <div
     style="background: rgba(255,255,255,0.05); padding: 5px; border-radius: 8px; border: 1px solid var(--border); height: calc(100vh - 160px); min-height: 600px; display: flex; flex-direction: column;">
     <div
@@ -767,7 +774,16 @@
                 </svg>
                 Preview Full
             </button>
-
+            <button id="download-notes-inline-btn" class="icon-btn"
+                style="padding: 6px 12px; font-size: 0.85rem; height: auto; font-family: var(--font-body); display: flex; align-items: center; gap: 6px;"
+                title="Download HTML">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                Download (.html)
+            </button>
             <button id="download-pdf-inline-btn" class="icon-btn"
                 style="padding: 6px 12px; font-size: 0.85rem; height: auto; font-family: var(--font-body); display: flex; align-items: center; gap: 6px;"
                 title="Export to PDF">
@@ -787,109 +803,109 @@
 </div>
 `;
 
-                        window.currentFullHtml = fullHtmlDocument;
+window.currentFullHtml = fullHtmlDocument;
 
-                        const iframe = document.getElementById('notes-render-iframe');
-                        iframe.srcdoc = fullHtmlDocument;
+const iframe = document.getElementById('notes-render-iframe');
+iframe.srcdoc = fullHtmlDocument;
 
-                        const btnNewTab = document.getElementById('open-new-tab-btn');
-                        if (btnNewTab) {
-                            btnNewTab.addEventListener('click', () => {
-                                const newWindow = window.open();
-                                if (newWindow) {
-                                    newWindow.document.write(window.currentFullHtml);
-                                    newWindow.document.close();
-                                } else {
-                                    showToast('Popup blocked! Please allow popups for this site.', 'error');
-                                }
-                            });
-                        }
+const btnNewTab = document.getElementById('open-new-tab-btn');
+if (btnNewTab) {
+btnNewTab.addEventListener('click', () => {
+const newWindow = window.open();
+if (newWindow) {
+newWindow.document.write(window.currentFullHtml);
+newWindow.document.close();
+} else {
+showToast('Popup blocked! Please allow popups for this site.', 'error');
+}
+});
+}
 
-                        const btnDownloadInline = document.getElementById('download-notes-inline-btn');
-                        if (btnDownloadInline) {
-                            btnDownloadInline.addEventListener('click', () => {
-                                btnDownloadHtml.click();
-                            });
-                        }
+const btnDownloadInline = document.getElementById('download-notes-inline-btn');
+if (btnDownloadInline) {
+btnDownloadInline.addEventListener('click', () => {
+btnDownloadHtml.click();
+});
+}
 
-                        const btnPdfInline = document.getElementById('download-pdf-inline-btn');
-                        if (btnPdfInline) {
-                            btnPdfInline.addEventListener('click', () => {
-                                btnDownloadPdf.click();
-                            });
-                        }
+const btnPdfInline = document.getElementById('download-pdf-inline-btn');
+if (btnPdfInline) {
+btnPdfInline.addEventListener('click', () => {
+btnDownloadPdf.click();
+});
+}
 
-                        notesContent.style.display = 'block';
-                        btnDownloadHtml.style.display = 'flex';
-                        btnDownloadPdf.style.display = 'flex';
+notesContent.style.display = 'block';
+btnDownloadHtml.style.display = 'flex';
+btnDownloadPdf.style.display = 'flex';
 
-                        showToast('Notes generated & compiled successfully!', 'success');
-                        statusText.innerText = "SYSTEM STANDBY - PDF RENDERED";
-                        statusText.classList.remove('status-text-anim');
-                        statusDot.style.background = '#22c55e'; // green
-                        statusDot.style.boxShadow = '0 0 8px rgba(34, 197, 94, 0.8)';
-                    } catch (err) {
-                        showToast(`Rendering Error: ${err.message}`, 'error');
-                        console.error(err);
-                        emptyState.style.display = 'flex';
-                        statusText.innerText = "SYSTEM ERROR";
-                        statusText.classList.remove('status-text-anim');
-                        statusDot.style.background = '#ef4444'; // red
-                    }
-                }, 1000);
+showToast('Notes generated & compiled successfully!', 'success');
+statusText.innerText = "SYSTEM STANDBY - PDF RENDERED";
+statusText.classList.remove('status-text-anim');
+statusDot.style.background = '#22c55e'; // green
+statusDot.style.boxShadow = '0 0 8px rgba(34, 197, 94, 0.8)';
+} catch (err) {
+showToast(`Rendering Error: ${err.message}`, 'error');
+console.error(err);
+emptyState.style.display = 'flex';
+statusText.innerText = "SYSTEM ERROR";
+statusText.classList.remove('status-text-anim');
+statusDot.style.background = '#ef4444'; // red
+}
+}, 1000);
 
-            } catch (e) {
-                loadingOverlay.style.display = 'none';
-                showToast(e.message, 'error');
-                emptyState.style.display = 'flex';
+} catch (e) {
+loadingOverlay.style.display = 'none';
+showToast(e.message, 'error');
+emptyState.style.display = 'flex';
 
-                statusText.innerText = "SYSTEM ERROR";
-                statusText.classList.remove('status-text-anim');
-                statusDot.style.background = '#ef4444'; // red
-                statusDot.style.boxShadow = '0 0 8px rgba(239, 68, 68, 0.8)';
-            } finally {
-                btnGenerate.classList.remove('loading');
-            }
-        });
+statusText.innerText = "SYSTEM ERROR";
+statusText.classList.remove('status-text-anim');
+statusDot.style.background = '#ef4444'; // red
+statusDot.style.boxShadow = '0 0 8px rgba(239, 68, 68, 0.8)';
+} finally {
+btnGenerate.classList.remove('loading');
+}
+});
 
-        btnDownloadHtml.addEventListener('click', () => {
-            const contentToDownload = window.currentFullHtml || rawNotes;
-            if (!contentToDownload) return;
-            const blob = new Blob([contentToDownload], { type: 'text/html' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'arka_notes.html';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            showToast('Notes downloaded as HTML', 'success');
-        });
+btnDownloadHtml.addEventListener('click', () => {
+const contentToDownload = window.currentFullHtml || rawNotes;
+if (!contentToDownload) return;
+const blob = new Blob([contentToDownload], { type: 'text/html' });
+const url = URL.createObjectURL(blob);
+const a = document.createElement('a');
+a.href = url;
+a.download = 'arka_notes.html';
+document.body.appendChild(a);
+a.click();
+document.body.removeChild(a);
+URL.revokeObjectURL(url);
+showToast('Notes downloaded as HTML', 'success');
+});
 
-        btnDownloadPdf.addEventListener('click', () => {
-            const iframe = document.getElementById('notes-render-iframe');
-            if (!iframe) return;
-            const element = iframe.contentWindow.document.body;
+btnDownloadPdf.addEventListener('click', () => {
+const iframe = document.getElementById('notes-render-iframe');
+if (!iframe) return;
+const element = iframe.contentWindow.document.body;
 
-            showToast('Generating PDF...', 'info');
+showToast('Generating PDF...', 'info');
 
-            const opt = {
-                margin: 10,
-                filename: 'arka_video_notes.pdf',
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-            };
+const opt = {
+margin: 10,
+filename: 'arka_video_notes.pdf',
+image: { type: 'jpeg', quality: 0.98 },
+html2canvas: { scale: 2, useCORS: true },
+jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+};
 
-            html2pdf().set(opt).from(element).save().then(() => {
-                showToast('PDF downloaded successfully!', 'success');
-            }).catch((e) => {
-                showToast('Error generating PDF.', 'error');
-            });
-        });
+html2pdf().set(opt).from(element).save().then(() => {
+showToast('PDF downloaded successfully!', 'success');
+}).catch((e) => {
+showToast('Error generating PDF.', 'error');
+});
+});
 
-    </script>
+</script>
 </body>
 
 </html>
