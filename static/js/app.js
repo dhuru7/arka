@@ -1105,12 +1105,14 @@ function applyColorToNode(element, color) {
         }
 
         // Only add for flowchart/graph types
-        const firstLine = currentMermaidCode.trim().split('\\n')[0].toLowerCase();
+        const firstLine = currentMermaidCode.trim().split('\n')[0].toLowerCase();
         if (firstLine.startsWith('graph') || firstLine.startsWith('flowchart')) {
-            // Check if a style for this node already exists, if so, we just append a new one (Mermaid uses the last one)
-            const styleDirective = `\\n    style ${realId} fill:${color},color:#fff`;
-            currentMermaidCode += styleDirective;
-            // The fix: Re-render from the updated code to save into history so Undo works
+            // Remove any existing style for this node first to keep code clean
+            const styleRegex = new RegExp(`\\n\\s*style\\s+${realId}\\s+fill:[^\\n]*`, 'g');
+            currentMermaidCode = currentMermaidCode.replace(styleRegex, '');
+            // Append the new style directive on its own line
+            currentMermaidCode += '\n    style ' + realId + ' fill:' + color + ',color:#fff';
+            // Re-render from the updated code to save into history so Undo works
             renderFromCode(currentMermaidCode, true, true);
         }
     }
@@ -1122,48 +1124,264 @@ function applyColorToNode(element, color) {
     if (tray) tray.remove();
 }
 
+// ═══ Shape Definitions for Mermaid Flowcharts ═══════════════════════════════
+const MERMAID_SHAPES = [
+    { name: 'Rectangle', open: '[', close: ']', preview: '▭', css: 'border-radius: 2px;' },
+    { name: 'Rounded', open: '(', close: ')', preview: '▢', css: 'border-radius: 8px;' },
+    { name: 'Stadium', open: '([', close: '])', preview: '⬭', css: 'border-radius: 50px;' },
+    { name: 'Cylinder', open: '[(', close: ')]', preview: '⌸', css: 'border-radius: 2px; border-top: 3px solid rgba(255,255,255,0.5);' },
+    { name: 'Circle', open: '((', close: '))', preview: '●', css: 'border-radius: 50%; width: 30px !important; height: 30px !important;' },
+    { name: 'Diamond', open: '{', close: '}', preview: '◆', css: 'transform: rotate(45deg); width: 22px !important; height: 22px !important; border-radius: 2px;' },
+    { name: 'Hexagon', open: '{{', close: '}}', preview: '⬡', css: 'clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);' },
+    { name: 'Parallelogram', open: '[/', close: '/]', preview: '▱', css: 'transform: skewX(-10deg);' },
+    { name: 'Trapezoid', open: '[/', close: '\\]', preview: '⏢', css: 'clip-path: polygon(10% 0%, 90% 0%, 100% 100%, 0% 100%);' },
+    { name: 'Subroutine', open: '[[', close: ']]', preview: '⊞', css: 'border-left: 3px double rgba(255,255,255,0.6); border-right: 3px double rgba(255,255,255,0.6);' },
+    { name: 'Asymmetric', open: '>', close: ']', preview: '⊳', css: 'clip-path: polygon(0% 0%, 85% 0%, 100% 50%, 85% 100%, 0% 100%);' },
+];
+
+/**
+ * Extracts the node ID from a Mermaid SVG DOM element ID.
+ * e.g., 'flowchart-C-3' -> 'C', 'flowchart-myNode-12' -> 'myNode'
+ */
+function extractMermaidNodeId(element) {
+    const svgId = element.id;
+    if (!svgId) return null;
+    const parts = svgId.split('-');
+    if (parts.length >= 3 && (svgId.startsWith('flowchart-') || svgId.startsWith('state-'))) {
+        return parts.slice(1, -1).join('-');
+    }
+    return svgId;
+}
+
+/**
+ * Detects the current shape bracket syntax for a given node ID in the Mermaid code.
+ * Returns the index into MERMAID_SHAPES or -1 if not found.
+ */
+function detectCurrentShape(nodeId) {
+    if (!currentMermaidCode || !nodeId) return -1;
+    const escapedId = nodeId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+    // Try each shape pattern from most specific (longest delimiters) to least specific
+    const orderedChecks = [
+        { idx: 9, regex: new RegExp(`${escapedId}\\s*\\[\\[`) },   // Subroutine [[ ]]
+        { idx: 6, regex: new RegExp(`${escapedId}\\s*\\{\\{`) },   // Hexagon {{ }}
+        { idx: 2, regex: new RegExp(`${escapedId}\\s*\\(\\[`) },   // Stadium ([ ])
+        { idx: 3, regex: new RegExp(`${escapedId}\\s*\\[\\(`) },   // Cylinder [( )]
+        { idx: 4, regex: new RegExp(`${escapedId}\\s*\\(\\(`) },   // Circle (( ))
+        { idx: 7, regex: new RegExp(`${escapedId}\\s*\\[/`) },     // Parallelogram [/ /] or Trapezoid [/ \]
+        { idx: 10, regex: new RegExp(`${escapedId}\\s*>`) },        // Asymmetric > ]
+        { idx: 5, regex: new RegExp(`${escapedId}\\s*\\{`) },      // Diamond { }
+        { idx: 1, regex: new RegExp(`${escapedId}\\s*\\(`) },      // Rounded ( )
+        { idx: 0, regex: new RegExp(`${escapedId}\\s*\\[`) },      // Rectangle [ ]
+    ];
+
+    for (const { idx, regex } of orderedChecks) {
+        if (regex.test(currentMermaidCode)) return idx;
+    }
+    return -1;
+}
+
+/**
+ * Shows a visual shape picker popup. When the user selects a shape,
+ * directly modifies the Mermaid code to change the bracket syntax.
+ */
 function changeShape(element) {
     if (!currentMermaidCode || !selectedNodeOriginalText) return;
 
-    const svgId = element.id;
-    let realId = svgId;
-    const parts = svgId.split('-');
-    if (parts.length >= 3 && (svgId.startsWith('flowchart-') || svgId.startsWith('state-'))) {
-        realId = parts.slice(1, -1).join('-');
+    const nodeId = extractMermaidNodeId(element);
+    if (!nodeId) {
+        showToast('Could not identify node for shape change.', 'error');
+        return;
     }
 
-    const safeText = selectedNodeOriginalText.replace(/[.*+?^$\\{}()|[\\]\\\\]/g, '\\\\$&');
-    const shapeRegexes = [
-        { regex: new RegExp(`(${realId})\\\\s*\\\\[\\\\s*${safeText}\\\\s*\\\\]`), replace: `$1(${selectedNodeOriginalText})` }, // Square to Rounded
-        { regex: new RegExp(`(${realId})\\\\s*\\\\(\\\\s*${safeText}\\\\s*\\\\)`), replace: `$1([${selectedNodeOriginalText}])` }, // Rounded to Stadium
-        { regex: new RegExp(`(${realId})\\\\s*\\\\[\\\\(\\\\s*${safeText}\\\\s*\\\\)\\\\]`), replace: `$1[(${selectedNodeOriginalText})]` }, // Stadium to Cylinder
-        { regex: new RegExp(`(${realId})\\\\s*\\\\[\\\\s*\\\\(\\\\s*${safeText}\\\\s*\\\\)\\\\s*\\\\]`), replace: `$1((${selectedNodeOriginalText}))` }, // Cylinder to Circle
-        { regex: new RegExp(`(${realId})\\\\s*\\\\(\\\\(\\\\s*${safeText}\\\\s*\\\\)\\\\)`), replace: `$1{${selectedNodeOriginalText}}` }, // Circle to Rhombus
-        { regex: new RegExp(`(${realId})\\\\s*\\\\{\\\\s*${safeText}\\\\s*\\\\}`), replace: `$1{{${selectedNodeOriginalText}}}` }, // Rhombus to Hexagon
-        { regex: new RegExp(`(${realId})\\\\s*\\\\{\\\\{\\\\s*${safeText}\\\\s*\\\\}\\\\}`), replace: `$1[${selectedNodeOriginalText}]` } // Hexagon back to Square
+    // Only works for flowchart/graph types
+    const firstLine = currentMermaidCode.trim().split('\n')[0].toLowerCase();
+    if (!firstLine.startsWith('graph') && !firstLine.startsWith('flowchart')) {
+        showToast('Shape changing only works for flowchart diagrams.', 'error');
+        return;
+    }
+
+    const currentShapeIdx = detectCurrentShape(nodeId);
+
+    // Remove any existing shape picker
+    const existingPicker = document.getElementById('shape-picker-popup');
+    if (existingPicker) existingPicker.remove();
+
+    // Create popup
+    const popup = document.createElement('div');
+    popup.id = 'shape-picker-popup';
+    popup.style.cssText = `
+        position: fixed;
+        top: 50%; left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(12, 12, 18, 0.97);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 16px;
+        padding: 20px 24px;
+        z-index: 10000;
+        backdrop-filter: blur(20px);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 60px rgba(0, 255, 255, 0.05);
+        animation: fadeInDown 0.2s ease-out;
+        min-width: 320px;
+        max-width: 400px;
+    `;
+
+    // Title
+    const title = document.createElement('div');
+    title.textContent = 'Choose Shape';
+    title.style.cssText = `
+        color: #fff; font-size: 14px; font-weight: 700;
+        text-transform: uppercase; letter-spacing: 2px;
+        margin-bottom: 14px; text-align: center;
+        font-family: var(--font-mono, 'Space Mono', monospace);
+    `;
+    popup.appendChild(title);
+
+    // Subtitle showing selected node
+    const subtitle = document.createElement('div');
+    subtitle.textContent = `Node: ${selectedNodeOriginalText}`;
+    subtitle.style.cssText = `
+        color: rgba(255,255,255,0.5); font-size: 11px;
+        margin-bottom: 16px; text-align: center;
+        font-family: var(--font-body, 'Space Grotesk', sans-serif);
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    `;
+    popup.appendChild(subtitle);
+
+    // Shape grid
+    const grid = document.createElement('div');
+    grid.style.cssText = `
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+    `;
+
+    MERMAID_SHAPES.forEach((shape, idx) => {
+        const btn = document.createElement('button');
+        const isActive = idx === currentShapeIdx;
+        btn.title = shape.name;
+        btn.style.cssText = `
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            gap: 4px; padding: 10px 4px;
+            background: ${isActive ? 'rgba(0, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.04)'};
+            border: 1px solid ${isActive ? 'rgba(0, 255, 255, 0.5)' : 'rgba(255, 255, 255, 0.08)'};
+            border-radius: 10px; cursor: pointer;
+            transition: all 0.15s ease;
+            color: #fff; font-family: var(--font-body, 'Space Grotesk', sans-serif);
+        `;
+
+        // Shape preview box
+        const previewBox = document.createElement('div');
+        previewBox.style.cssText = `
+            width: 32px; height: 24px;
+            background: ${isActive ? 'rgba(0, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.1)'};
+            border: 1.5px solid ${isActive ? '#00ffff' : 'rgba(255, 255, 255, 0.3)'};
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px; color: ${isActive ? '#00ffff' : '#fff'};
+            ${shape.css}
+        `;
+        previewBox.textContent = shape.preview;
+
+        // Label
+        const label = document.createElement('div');
+        label.textContent = shape.name;
+        label.style.cssText = `
+            font-size: 9px; opacity: 0.7;
+            text-align: center; line-height: 1.1;
+            color: ${isActive ? '#00ffff' : '#fff'};
+        `;
+
+        btn.appendChild(previewBox);
+        btn.appendChild(label);
+
+        btn.addEventListener('mouseenter', () => {
+            if (!isActive) {
+                btn.style.background = 'rgba(255, 255, 255, 0.1)';
+                btn.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+            }
+        });
+        btn.addEventListener('mouseleave', () => {
+            if (!isActive) {
+                btn.style.background = 'rgba(255, 255, 255, 0.04)';
+                btn.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+            }
+        });
+
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            applyShapeChange(nodeId, selectedNodeOriginalText, idx);
+            popup.remove();
+            overlay.remove();
+        });
+
+        grid.appendChild(btn);
+    });
+
+    popup.appendChild(grid);
+
+    // Overlay
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+        position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.4); z-index: 9999;
+    `;
+    overlay.addEventListener('click', () => {
+        popup.remove();
+        overlay.remove();
+    });
+
+    document.body.appendChild(overlay);
+    document.body.appendChild(popup);
+}
+
+/**
+ * Applies a shape change by modifying the Mermaid code brackets for the given node.
+ */
+function applyShapeChange(nodeId, nodeText, targetShapeIdx) {
+    if (!currentMermaidCode || targetShapeIdx < 0 || targetShapeIdx >= MERMAID_SHAPES.length) return;
+
+    const targetShape = MERMAID_SHAPES[targetShapeIdx];
+    const escapedId = nodeId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+    // Build a regex that matches the nodeId followed by ANY known shape bracket syntax with content inside
+    // We need to capture: nodeId + open_bracket + content + close_bracket
+    // The content may contain spaces, letters, numbers, special chars etc.
+    const shapePatterns = [
+        `\\[\\[([^\\]]*?)\\]\\]`,     // [[ ]] Subroutine
+        `\\{\\{([^}]*?)\\}\\}`,       // {{ }} Hexagon
+        `\\(\\[([^\\]]*?)\\]\\)`,     // ([ ]) Stadium
+        `\\[\\(([^)]*?)\\)\\]`,       // [( )] Cylinder
+        `\\(\\(([^)]*?)\\)\\)`,       // (( )) Circle
+        `\\[/([^/\\\\]*?)/\\]`,       // [/ /] Parallelogram
+        `\\[/([^\\\\]*?)\\\\\\]`,     // [/ \] Trapezoid
+        `>([^\\]]*?)\\]`,             // > ] Asymmetric
+        `\\{([^}]*?)\\}`,             // { } Diamond
+        `\\(([^)]*?)\\)`,             // ( ) Rounded
+        `\\[([^\\]]*?)\\]`,           // [ ] Rectangle
     ];
 
-    let replaced = false;
-    for (const { regex, replace } of shapeRegexes) {
-        if (regex.test(currentMermaidCode)) {
-            currentMermaidCode = currentMermaidCode.replace(regex, replace);
-            replaced = true;
+    // Try to match the node with any shape
+    let matched = false;
+    for (const pattern of shapePatterns) {
+        const regex = new RegExp(`(${escapedId})\\s*${pattern}`);
+        const match = currentMermaidCode.match(regex);
+        if (match) {
+            const capturedText = match[2]; // The text inside the brackets
+            const newNodeDef = `${nodeId}${targetShape.open}${capturedText}${targetShape.close}`;
+            currentMermaidCode = currentMermaidCode.replace(regex, newNodeDef);
+            matched = true;
             break;
         }
     }
 
-    if (!replaced) {
-        const refineInput = document.getElementById('refine-input');
-        const refineBtn = document.getElementById('refine-btn');
-        if (refineInput && refineBtn) {
-            refineInput.value = `Change the shape of "${selectedNodeOriginalText}" to a different shape`;
-            refineBtn.click();
-        }
+    if (!matched) {
+        showToast('Could not find the node in the code to change its shape.', 'error');
         return;
     }
 
     renderFromCode(currentMermaidCode, true, true);
-    showToast(`Shape changed for "${selectedNodeOriginalText}"`, 'success');
+    showToast(`Shape changed to "${MERMAID_SHAPES[targetShapeIdx].name}" for "${nodeText}"`, 'success');
 }
 
 // ═══ Live Credits Update ════════════════════════════════════════════════════
