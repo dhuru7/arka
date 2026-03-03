@@ -1077,10 +1077,14 @@ function showColorTray(element) {
     editBtnWrapper.style.position = 'relative';
     editBtnWrapper.appendChild(tray);
 
+    // Hide floating mobile buttons when tray is shown
+    hideMobileOverlayButtons();
+
     // Close tray when clicking outside
     const closeTray = (e) => {
         if (!tray.contains(e.target) && e.target !== editBtn && !editBtn.contains(e.target)) {
             tray.remove();
+            showMobileOverlayButtons();
             document.removeEventListener('click', closeTray);
         }
     };
@@ -1104,9 +1108,14 @@ function applyColorToNode(element, color) {
             realId = parts.slice(1, -1).join('-');
         }
 
-        // Only add for flowchart/graph types
+        // Add style directive for any diagram type that supports it
         const firstLine = currentMermaidCode.trim().split('\n')[0].toLowerCase();
-        if (firstLine.startsWith('graph') || firstLine.startsWith('flowchart')) {
+        // Most Mermaid diagram types support 'style' directives
+        const supportsStyle = firstLine.startsWith('graph') || firstLine.startsWith('flowchart')
+            || firstLine.startsWith('statediagram') || firstLine.startsWith('sequencediagram')
+            || firstLine.startsWith('block') || firstLine.startsWith('classDiagram')
+            || firstLine.startsWith('erdiagram') || firstLine.startsWith('c4');
+        if (supportsStyle || true) { // Apply to all – visual SVG fill is always applied above
             // Remove any existing style for this node first to keep code clean
             const styleRegex = new RegExp(`\\n\\s*style\\s+${realId}\\s+fill:[^\\n]*`, 'g');
             currentMermaidCode = currentMermaidCode.replace(styleRegex, '');
@@ -1122,6 +1131,7 @@ function applyColorToNode(element, color) {
     // Remove the color tray
     const tray = document.getElementById('floating-color-tray');
     if (tray) tray.remove();
+    showMobileOverlayButtons();
 }
 
 // ═══ Shape Definitions for Mermaid Flowcharts ═══════════════════════════════
@@ -1138,6 +1148,29 @@ const MERMAID_SHAPES = [
     { name: 'Subroutine', open: '[[', close: ']]', preview: '⊞', css: 'border-left: 3px double rgba(255,255,255,0.6); border-right: 3px double rgba(255,255,255,0.6);' },
     { name: 'Asymmetric', open: '>', close: ']', preview: '⊳', css: 'clip-path: polygon(0% 0%, 85% 0%, 100% 50%, 85% 100%, 0% 100%);' },
 ];
+
+// ═══ Mobile Overlay Button Helpers ═══════════════════════════════════════════
+// On mobile, hide the floating buttons (hamburger, profile, download, theme)
+// when the editing tray or modals are active for a cleaner UX.
+function hideMobileOverlayButtons() {
+    if (window.innerWidth > 768) return;
+    const els = [
+        document.getElementById('sidebar-toggle'),
+        document.querySelector('.top-nav-bar'),
+        document.querySelector('.theme-download-tray')
+    ];
+    els.forEach(el => { if (el) el.style.display = 'none'; });
+}
+
+function showMobileOverlayButtons() {
+    if (window.innerWidth > 768) return;
+    const toggle = document.getElementById('sidebar-toggle');
+    if (toggle) toggle.style.display = 'flex';
+    const topNav = document.querySelector('.top-nav-bar');
+    if (topNav) topNav.style.display = '';
+    const tray = document.querySelector('.theme-download-tray');
+    if (tray) tray.style.display = 'flex';
+}
 
 /**
  * Extracts the node ID from a Mermaid SVG DOM element ID.
@@ -1191,13 +1224,6 @@ function changeShape(element) {
     const nodeId = extractMermaidNodeId(element);
     if (!nodeId) {
         showToast('Could not identify node for shape change.', 'error');
-        return;
-    }
-
-    // Only works for flowchart/graph types
-    const firstLine = currentMermaidCode.trim().split('\n')[0].toLowerCase();
-    if (!firstLine.startsWith('graph') && !firstLine.startsWith('flowchart')) {
-        showToast('Shape changing only works for flowchart diagrams.', 'error');
         return;
     }
 
@@ -1313,6 +1339,7 @@ function changeShape(element) {
             applyShapeChange(nodeId, selectedNodeOriginalText, idx);
             popup.remove();
             overlay.remove();
+            showMobileOverlayButtons();
         });
 
         grid.appendChild(btn);
@@ -1329,6 +1356,7 @@ function changeShape(element) {
     overlay.addEventListener('click', () => {
         popup.remove();
         overlay.remove();
+        showMobileOverlayButtons();
     });
 
     document.body.appendChild(overlay);
@@ -2130,10 +2158,12 @@ function showToast(message, type = 'info') {
 
 function openModal(id) {
     document.getElementById(id).classList.add('active');
+    hideMobileOverlayButtons();
 }
 
 function closeAllModals() {
     document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
+    showMobileOverlayButtons();
 }
 
 function escapeHtml(text) {
