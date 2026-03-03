@@ -297,7 +297,7 @@ function setupEventListeners() {
     // Modal close
     document.querySelectorAll('.modal-close, .modal-cancel').forEach(el => {
         el.addEventListener('click', () => {
-            document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
+            closeAllModals();
         });
     });
 
