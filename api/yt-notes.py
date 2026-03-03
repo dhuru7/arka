@@ -67,14 +67,15 @@ def get_sarvam_notes(chunk: str, chunk_idx: int, total_chunks: int, attempt: int
     }
     
     system_prompt = (
-        "You are an expert AI creating educational notes from a YouTube video transcript. "
+        "You are an expert academic tutor creating educational notes from a transcript. "
         f"You are processing piece {chunk_idx} of {total_chunks}. "
         "CRITICAL INSTRUCTIONS:\n"
-        "1. Write the notes in English by default.\n"
-        "2. Make the notes detailed, concise, and structured.\n"
-        "3. Your output MUST be pure Markdown.\n"
-        "4. Use LaTeX math expressions enclosed in $$...$$ for block equations or $...$ for inline equations.\n"
-        "5. DO NOT wrap your response in markdown code blocks like ```markdown. Output raw text only."
+        "1. Write the notes in English by default. Use a professional, academic tone suitable for studying and memorization.\n"
+        "2. DO NOT mention the words 'video', 'speaker', or 'lecture'. It must read like a standalone textbook section.\n"
+        "3. Structure logically with clear nested headings (<h2>, <h3>), bullet points, and emphasized keywords (<strong>).\n"
+        "4. Your output MUST be pure HTML code containing ONLY content tags (<h2>, <h3>, <p>, <ul>, <li>, <strong>, <em>, <br>).\n"
+        "5. Do NOT output <html>, <head>, or <body> tags. Do NOT use inline CSS styles.\n"
+        "6. DO NOT wrap your response in markdown code blocks like ```html. Output raw HTML text only."
     )
 
     payload = {
@@ -131,10 +132,10 @@ class handler(BaseHTTPRequestHandler):
                 
                 result = get_sarvam_notes(chunk, chunk_idx, total_chunks)
                 if "invalid_api_key_error" in result or "SARVAM_API_KEY" in result:
-                    self._json(502, {'error': 'Sarvam authentication failed.', 'markdown': result})
+                    self._json(502, {'error': 'Sarvam authentication failed.', 'html': result})
                     return
                     
-                self._json(200, {'success': True, 'markdown': result})
+                self._json(200, {'success': True, 'html': result})
                 return
 
             url = (data.get("url") or "").strip()
@@ -180,7 +181,7 @@ class handler(BaseHTTPRequestHandler):
                     try:
                         # Clean any leftover markdown blocks the AI might sneak in
                         res = future.result()
-                        res = res.replace("```markdown", "").replace("```md", "").replace("```", "").strip()
+                        res = res.replace("```html", "").replace("```", "").strip()
                         results[i] = res
                     except Exception:
                         results[i] = f"[Error processing chunk {i + 1}]"

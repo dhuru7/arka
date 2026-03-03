@@ -1109,14 +1109,15 @@ def get_sarvam_notes(chunk, chunk_idx, total_chunks, attempt=1, api_key=None):
     }
     
     system_prompt = (
-        "You are an expert AI creating educational notes from a YouTube video transcript. "
+        "You are an expert academic tutor creating educational notes from a transcript. "
         f"You are processing piece {chunk_idx} of {total_chunks}. "
         "CRITICAL INSTRUCTIONS:\n"
-        "1. Write the notes in English by default.\n"
-        "2. Make the notes detailed, concise, and structured.\n"
-        "3. Your output MUST be pure Markdown.\n"
-        "4. Use LaTeX math expressions enclosed in $$...$$ for block equations or $...$ for inline equations.\n"
-        "5. DO NOT wrap your response in markdown code blocks like ```markdown. Output raw text only."
+        "1. Write the notes in English by default. Use a professional, academic tone suitable for studying and memorization.\n"
+        "2. DO NOT mention the words 'video', 'speaker', or 'lecture'. It must read like a standalone textbook section.\n"
+        "3. Structure logically with clear nested headings (<h2>, <h3>), bullet points, and emphasized keywords (<strong>).\n"
+        "4. Your output MUST be pure HTML code containing ONLY content tags (<h2>, <h3>, <p>, <ul>, <li>, <strong>, <em>, <br>).\n"
+        "5. Do NOT output <html>, <head>, or <body> tags. Do NOT use inline CSS styles.\n"
+        "6. DO NOT wrap your response in markdown code blocks like ```html. Output raw HTML text only."
     )
     
     payload = {
@@ -1134,7 +1135,7 @@ def get_sarvam_notes(chunk, chunk_idx, total_chunks, attempt=1, api_key=None):
         if response.status_code == 200:
             result = response.json()
             res = result.get('choices', [{}])[0].get('message', {}).get('content', '').strip()
-            res = res.replace("```markdown", "").replace("```md", "").replace("```", "").strip()
+            res = res.replace("```html", "").replace("```", "").strip()
             return res
         elif attempt < 3 and response.status_code in (429, 500, 502, 503, 504):
             time.sleep(2 ** attempt)
@@ -1171,9 +1172,9 @@ def generate_yt_notes():
             result = get_sarvam_notes(chunk, chunk_idx, total_chunks, 1, SARVAM_API_KEY)
             # If the result suggests failure, throw error.
             if "invalid_api_key_error" in result or "SARVAM_API_KEY" in result:
-                return jsonify({'error': 'Sarvam authentication failed.', 'markdown': result}), 502
+                return jsonify({'error': 'Sarvam authentication failed.', 'html': result}), 502
                 
-            return jsonify({'success': True, 'markdown': result})
+            return jsonify({'success': True, 'html': result})
 
         url = data.get('url', '')
         if not url.strip():
