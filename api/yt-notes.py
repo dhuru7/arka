@@ -67,14 +67,15 @@ def get_sarvam_notes(chunk: str, chunk_idx: int, total_chunks: int, attempt: int
     }
     
     system_prompt = (
-        "You are an expert academic tutor creating highly professional educational notes from a transcript. "
+        "You are an expert student creating concise, highly detailed notes from a class. "
         f"You are processing piece {chunk_idx} of {total_chunks}. "
         "CRITICAL INSTRUCTIONS:\n"
-        "1. Write the notes in English using a highly professional, academic textbook tone. It must be organized for optimal memorization and learning.\n"
-        "2. DO NOT mention the words 'video', 'speaker', or 'lecture'. It must read strictly like a standalone textbook.\n"
-        "3. Provide your output as a beautiful, fully-styled HTML component. Use inline CSS or a <style> block to make it look like a stunning, modern academic document (white background, professional fonts like Inter/Roboto, elegant headings with colored accents, beautiful tables or quote blocks if needed).\n"
-        "4. Output ONLY valid, beautifully formatted HTML and CSS. Structure logically with <h2>, <h3>, <ul>, <p>, etc.\n"
-        "5. DO NOT wrap your response in markdown code blocks like ```html. Output raw HTML text only."
+        "1. Write the notes in English using a highly concise, bullet-point format. Cover every single important detail, but avoid long paragraphs and unnecessary fluff.\n"
+        "2. Write these notes as if you are attending a class and writing down the important points to remember.\n"
+        "3. DO NOT mention the words 'video', 'speaker', 'transcript', or 'lecture'. The notes must read context-free, focusing ONLY on the actual subject matter.\n"
+        "4. Provide your output as a beautiful, fully-styled HTML component. Use inline CSS or a <style> block to make it look clean and highly readable (white background, professional fonts like Inter/Roboto, elegant headings, clear bulleted <ul> or <ol> lists).\n"
+        "5. Output ONLY valid, beautifully formatted HTML and CSS. Structure logically with <h2>, <h3>, <ul>, <li>, etc.\n"
+        "6. DO NOT wrap your response in markdown code blocks like ```html. Output raw HTML text only."
     )
 
     payload = {

@@ -523,14 +523,7 @@
                         <polyline points="10 9 9 9 8 9"></polyline>
                     </svg>
                 </button>
-                <button class="icon-btn" id="btn-download-html" title="Download HTML (.html)"
-                    style="display: none; margin-right: 15px; width: 44px; height: 44px; align-items: center; justify-content: center; cursor: pointer;">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                        <polyline points="7 10 12 15 17 10"></polyline>
-                        <line x1="12" y1="15" x2="12" y2="3"></line>
-                    </svg>
-                </button>
+
 
                 <a href="/" class="icon-btn" title="Back to Dashboard"
                     style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; text-decoration: none;">
@@ -622,7 +615,7 @@
         const inputUrl = document.getElementById('yt-url');
         const emptyState = document.getElementById('empty-state');
         const notesContent = document.getElementById('notes-content');
-        const btnDownloadHtml = document.getElementById('btn-download-html');
+        const btnDownloadHtml = null;
         const btnDownloadPdf = document.getElementById('btn-download-pdf');
         const statusText = document.getElementById('status-text');
         const statusDot = document.getElementById('status-dot');
@@ -658,7 +651,7 @@
             btnGenerate.classList.add('loading');
             emptyState.style.display = 'none';
             notesContent.style.display = 'none';
-            btnDownloadHtml.style.display = 'none';
+            if (btnDownloadHtml) btnDownloadHtml.style.display = 'none';
             btnDownloadPdf.style.display = 'none';
             loadingOverlay.style.display = 'flex';
 
@@ -774,16 +767,7 @@
                 </svg>
                 Preview Full
             </button>
-            <button id="download-notes-inline-btn" class="icon-btn"
-                style="padding: 6px 12px; font-size: 0.85rem; height: auto; font-family: var(--font-body); display: flex; align-items: center; gap: 6px;"
-                title="Download HTML">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                    <polyline points="7 10 12 15 17 10"></polyline>
-                    <line x1="12" y1="15" x2="12" y2="3"></line>
-                </svg>
-                Download (.html)
-            </button>
+
             <button id="download-pdf-inline-btn" class="icon-btn"
                 style="padding: 6px 12px; font-size: 0.85rem; height: auto; font-family: var(--font-body); display: flex; align-items: center; gap: 6px;"
                 title="Export to PDF">
