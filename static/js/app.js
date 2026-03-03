@@ -261,12 +261,11 @@ function setupEventListeners() {
     document.getElementById('btn-edit-text').addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        if (!selectedNodeOriginalText || !selectedNodeElement) return;
-
-        const editInput = document.getElementById('edit-node-text-input');
-        editInput.value = selectedNodeOriginalText;
-        openModal('edit-text-modal');
-        editInput.focus();
+        // The pencil icon is now just a dummy indicator "Edit Options"
+        // But if clicked, we can ensure the color/edit tray is visible
+        if (selectedNodeElement) {
+            showColorTray(selectedNodeElement);
+        }
     });
 
     document.getElementById('edit-text-confirm').addEventListener('click', () => {
@@ -970,6 +969,68 @@ function showColorTray(element) {
         animation: fadeInDown 0.15s ease-out;
     `;
 
+    // ADD TEXT & SHAPE BUTTONS GROUP (Left side)
+    const leftGroup = document.createElement('div');
+    leftGroup.style.cssText = `
+        display: flex;
+        gap: 6px;
+        border-right: 1px solid rgba(255,255,255,0.2);
+        padding-right: 8px;
+        margin-right: 2px;
+        align-items: center;
+    `;
+
+    const btnStyle = `
+        width: 26px; height: 26px;
+        min-width: 26px; min-height: 26px;
+        padding: 0; margin: 0;
+        flex-shrink: 0;
+        box-sizing: border-box;
+        border-radius: 6px;
+        border: 1px solid rgba(255,255,255,0.15);
+        background: rgba(255,255,255,0.05);
+        color: #fff;
+        font-family: var(--font-body);
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        transition: transform 0.15s, background 0.15s;
+        display: flex; justify-content: center; align-items: center;
+    `;
+
+    const tBtn = document.createElement('button');
+    tBtn.textContent = 'T';
+    tBtn.title = 'Edit Text';
+    tBtn.style.cssText = btnStyle;
+    tBtn.addEventListener('mouseenter', () => { tBtn.style.background = 'rgba(255,255,255,0.2)'; });
+    tBtn.addEventListener('mouseleave', () => { tBtn.style.background = 'rgba(255,255,255,0.05)'; });
+    tBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const editInput = document.getElementById('edit-node-text-input');
+        if (editInput) {
+            editInput.value = selectedNodeOriginalText;
+            openModal('edit-text-modal');
+            editInput.focus();
+        }
+        tray.remove();
+    });
+
+    const shapeBtn = document.createElement('button');
+    shapeBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"></polygon></svg>';
+    shapeBtn.title = 'Change Shape';
+    shapeBtn.style.cssText = btnStyle;
+    shapeBtn.addEventListener('mouseenter', () => { shapeBtn.style.background = 'rgba(255,255,255,0.2)'; });
+    shapeBtn.addEventListener('mouseleave', () => { shapeBtn.style.background = 'rgba(255,255,255,0.05)'; });
+    shapeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        changeShape(element);
+        tray.remove();
+    });
+
+    leftGroup.appendChild(tBtn);
+    leftGroup.appendChild(shapeBtn);
+    tray.appendChild(leftGroup);
+
     const colors = [
         { color: '#222222', label: 'Dark' },
         { color: '#555555', label: 'Gray' },
@@ -1018,7 +1079,7 @@ function showColorTray(element) {
 
     // Close tray when clicking outside
     const closeTray = (e) => {
-        if (!tray.contains(e.target) && e.target !== editBtn) {
+        if (!tray.contains(e.target) && e.target !== editBtn && !editBtn.contains(e.target)) {
             tray.remove();
             document.removeEventListener('click', closeTray);
         }
@@ -1044,11 +1105,13 @@ function applyColorToNode(element, color) {
         }
 
         // Only add for flowchart/graph types
-        const firstLine = currentMermaidCode.trim().split('\n')[0].toLowerCase();
+        const firstLine = currentMermaidCode.trim().split('\\n')[0].toLowerCase();
         if (firstLine.startsWith('graph') || firstLine.startsWith('flowchart')) {
             // Check if a style for this node already exists, if so, we just append a new one (Mermaid uses the last one)
-            const styleDirective = `\n    style ${realId} fill:${color},color:#fff`;
+            const styleDirective = `\\n    style ${realId} fill:${color},color:#fff`;
             currentMermaidCode += styleDirective;
+            // The fix: Re-render from the updated code to save into history so Undo works
+            renderFromCode(currentMermaidCode, true, true);
         }
     }
 
@@ -1057,6 +1120,50 @@ function applyColorToNode(element, color) {
     // Remove the color tray
     const tray = document.getElementById('floating-color-tray');
     if (tray) tray.remove();
+}
+
+function changeShape(element) {
+    if (!currentMermaidCode || !selectedNodeOriginalText) return;
+
+    const svgId = element.id;
+    let realId = svgId;
+    const parts = svgId.split('-');
+    if (parts.length >= 3 && (svgId.startsWith('flowchart-') || svgId.startsWith('state-'))) {
+        realId = parts.slice(1, -1).join('-');
+    }
+
+    const safeText = selectedNodeOriginalText.replace(/[.*+?^$\\{}()|[\\]\\\\]/g, '\\\\$&');
+    const shapeRegexes = [
+        { regex: new RegExp(`(${realId})\\\\s*\\\\[\\\\s*${safeText}\\\\s*\\\\]`), replace: `$1(${selectedNodeOriginalText})` }, // Square to Rounded
+        { regex: new RegExp(`(${realId})\\\\s*\\\\(\\\\s*${safeText}\\\\s*\\\\)`), replace: `$1([${selectedNodeOriginalText}])` }, // Rounded to Stadium
+        { regex: new RegExp(`(${realId})\\\\s*\\\\[\\\\(\\\\s*${safeText}\\\\s*\\\\)\\\\]`), replace: `$1[(${selectedNodeOriginalText})]` }, // Stadium to Cylinder
+        { regex: new RegExp(`(${realId})\\\\s*\\\\[\\\\s*\\\\(\\\\s*${safeText}\\\\s*\\\\)\\\\s*\\\\]`), replace: `$1((${selectedNodeOriginalText}))` }, // Cylinder to Circle
+        { regex: new RegExp(`(${realId})\\\\s*\\\\(\\\\(\\\\s*${safeText}\\\\s*\\\\)\\\\)`), replace: `$1{${selectedNodeOriginalText}}` }, // Circle to Rhombus
+        { regex: new RegExp(`(${realId})\\\\s*\\\\{\\\\s*${safeText}\\\\s*\\\\}`), replace: `$1{{${selectedNodeOriginalText}}}` }, // Rhombus to Hexagon
+        { regex: new RegExp(`(${realId})\\\\s*\\\\{\\\\{\\\\s*${safeText}\\\\s*\\\\}\\\\}`), replace: `$1[${selectedNodeOriginalText}]` } // Hexagon back to Square
+    ];
+
+    let replaced = false;
+    for (const { regex, replace } of shapeRegexes) {
+        if (regex.test(currentMermaidCode)) {
+            currentMermaidCode = currentMermaidCode.replace(regex, replace);
+            replaced = true;
+            break;
+        }
+    }
+
+    if (!replaced) {
+        const refineInput = document.getElementById('refine-input');
+        const refineBtn = document.getElementById('refine-btn');
+        if (refineInput && refineBtn) {
+            refineInput.value = `Change the shape of "${selectedNodeOriginalText}" to a different shape`;
+            refineBtn.click();
+        }
+        return;
+    }
+
+    renderFromCode(currentMermaidCode, true, true);
+    showToast(`Shape changed for "${selectedNodeOriginalText}"`, 'success');
 }
 
 // ═══ Live Credits Update ════════════════════════════════════════════════════

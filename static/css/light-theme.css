@@ -221,4 +221,11 @@ body.light-theme .toolbar .icon-btn:hover {
         background: rgba(250, 250, 250, 0.98) !important;
         border-color: var(--border) !important;
     }
+
+    /* Remove backdrop-filter on mobile toolbar so .theme-download-tray position:fixed works */
+    body.light-theme .toolbar {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        background: rgba(245, 245, 245, 0.95) !important;
+    }
 }

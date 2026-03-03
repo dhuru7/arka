@@ -561,6 +561,10 @@ textarea::placeholder {
     gap: 4px;
 }
 
+.theme-download-tray {
+    display: contents;
+}
+
 .zoom-controls {
     display: flex;
     align-items: center;
@@ -1297,22 +1301,73 @@ textarea::placeholder {
         margin: 0;
     }
 
+    .theme-download-tray {
+        position: fixed;
+        bottom: 96px;
+        right: 136px;
+        left: auto;
+        background: transparent;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        border: none;
+        padding: 0;
+        border-radius: 0;
+        box-shadow: none;
+        z-index: 100005;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        height: 44px;
+    }
+
+    .theme-download-tray .toolbar-btn {
+        width: 44px !important;
+        height: 44px !important;
+        background: rgba(0, 0, 0, 0.2) !important;
+        backdrop-filter: blur(8px) !important;
+        -webkit-backdrop-filter: blur(8px) !important;
+        border: 1px solid var(--border) !important;
+        border-radius: 8px !important;
+        box-shadow: none !important;
+        color: var(--fg) !important;
+        padding: 0 !important;
+        justify-content: center !important;
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+
+    .theme-download-tray .toolbar-btn:hover {
+        background: rgba(255, 255, 255, 0.1) !important;
+    }
+
+    .theme-download-tray .toolbar-btn:active {
+        transform: scale(0.96) !important;
+        background: rgba(255, 255, 255, 0.15) !important;
+        transition-duration: 0.1s !important;
+    }
+
     .toolbar {
         position: fixed;
         top: auto;
         bottom: 24px;
-        left: 50%;
-        transform: translateX(-50%);
+        left: 16px;
+        right: 16px;
+        transform: none;
         flex-wrap: nowrap;
-        justify-content: center;
+        justify-content: space-between;
         border-radius: var(--radius-md);
-        padding: 6px 10px;
-        width: max-content;
-        max-width: 80vw;
-        gap: 8px;
+        padding: 8px 16px;
+        width: auto;
+        max-width: none;
+        gap: 4px;
         overflow: visible;
         margin-top: 0;
         z-index: 100000;
+        /* Remove backdrop-filter on mobile so that children with position:fixed
+           (like .theme-download-tray) are positioned relative to the viewport,
+           not the toolbar. backdrop-filter creates a new containing block. */
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        background: rgba(10, 10, 15, 0.92);
     }
 
     #btn-undo,
@@ -1402,18 +1457,23 @@ textarea::placeholder {
         }
     }
 
-    #btn-theme-text {
-        max-width: 65px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        display: inline-block;
-        vertical-align: middle;
+    #btn-theme {
+        width: auto !important;
+        padding: 0 16px !important;
+        height: 44px !important;
+        justify-content: center !important;
+        border-radius: 8px !important;
     }
 
-    .toolbar .icon-btn {
-        width: 30px;
-        height: 30px;
+    #btn-theme-text {
+        display: inline-block !important;
+        /* show theme text on mobile */
+    }
+
+    .toolbar .icon-btn,
+    .theme-download-tray .icon-btn {
+        width: 38px;
+        height: 38px;
     }
 
     .toolbar-divider {
