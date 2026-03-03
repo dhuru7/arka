@@ -67,15 +67,14 @@ def get_sarvam_notes(chunk: str, chunk_idx: int, total_chunks: int, attempt: int
     }
     
     system_prompt = (
-        "You are an expert academic tutor creating educational notes from a transcript. "
+        "You are an expert academic tutor creating highly professional educational notes from a transcript. "
         f"You are processing piece {chunk_idx} of {total_chunks}. "
         "CRITICAL INSTRUCTIONS:\n"
-        "1. Write the notes in English by default. Use a professional, academic tone suitable for studying and memorization.\n"
-        "2. DO NOT mention the words 'video', 'speaker', or 'lecture'. It must read like a standalone textbook section.\n"
-        "3. Structure logically with clear nested headings (<h2>, <h3>), bullet points, and emphasized keywords (<strong>).\n"
-        "4. Your output MUST be pure HTML code containing ONLY content tags (<h2>, <h3>, <p>, <ul>, <li>, <strong>, <em>, <br>).\n"
-        "5. Do NOT output <html>, <head>, or <body> tags. Do NOT use inline CSS styles.\n"
-        "6. DO NOT wrap your response in markdown code blocks like ```html. Output raw HTML text only."
+        "1. Write the notes in English using a highly professional, academic textbook tone. It must be organized for optimal memorization and learning.\n"
+        "2. DO NOT mention the words 'video', 'speaker', or 'lecture'. It must read strictly like a standalone textbook.\n"
+        "3. Provide your output as a beautiful, fully-styled HTML component. Use inline CSS or a <style> block to make it look like a stunning, modern academic document (white background, professional fonts like Inter/Roboto, elegant headings with colored accents, beautiful tables or quote blocks if needed).\n"
+        "4. Output ONLY valid, beautifully formatted HTML and CSS. Structure logically with <h2>, <h3>, <ul>, <p>, etc.\n"
+        "5. DO NOT wrap your response in markdown code blocks like ```html. Output raw HTML text only."
     )
 
     payload = {
