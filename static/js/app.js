@@ -676,7 +676,7 @@ function handleUndo() {
     if (state.historyIndex > 0) {
         state.historyIndex--;
         currentMermaidCode = state.history[state.historyIndex];
-        renderFromCode(currentMermaidCode, false);
+        renderFromCode(currentMermaidCode, false, true);
     }
 }
 
@@ -685,7 +685,7 @@ function handleRedo() {
     if (state.historyIndex < state.history.length - 1) {
         state.historyIndex++;
         currentMermaidCode = state.history[state.historyIndex];
-        renderFromCode(currentMermaidCode, false);
+        renderFromCode(currentMermaidCode, false, true);
     }
 }
 
@@ -950,24 +950,51 @@ function showColorTray(element) {
     const editBtn = document.getElementById('btn-edit-text');
     if (!editBtn) return;
 
+    const isMobile = window.innerWidth <= 768;
+
     const tray = document.createElement('div');
     tray.id = 'floating-color-tray';
-    tray.style.cssText = `
-        position: absolute;
-        top: calc(100% + 8px);
-        left: 50%;
-        transform: translateX(-50%);
-        background: rgba(15, 15, 15, 0.95);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 8px;
-        padding: 8px;
-        display: flex;
-        gap: 6px;
-        z-index: 1000;
-        backdrop-filter: blur(12px);
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
-        animation: fadeInDown 0.15s ease-out;
-    `;
+
+    if (isMobile) {
+        // On mobile, position the tray fixed at the bottom where the toolbar is,
+        // replacing the toolbar buttons, so it doesn't go off-screen
+        tray.style.cssText = `
+            position: fixed;
+            bottom: 24px;
+            left: 16px;
+            right: 16px;
+            background: rgba(10, 10, 15, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 12px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            z-index: 100001;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.6);
+            animation: slide-up-mobile 0.2s ease-out;
+            justify-content: center;
+            align-items: center;
+        `;
+    } else {
+        tray.style.cssText = `
+            position: absolute;
+            top: calc(100% + 8px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(15, 15, 15, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 8px;
+            display: flex;
+            gap: 6px;
+            z-index: 1000;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+            animation: fadeInDown 0.15s ease-out;
+        `;
+    }
 
     // ADD TEXT & SHAPE BUTTONS GROUP (Left side)
     const leftGroup = document.createElement('div');
@@ -1013,6 +1040,7 @@ function showColorTray(element) {
             editInput.focus();
         }
         tray.remove();
+        showMobileOverlayButtons();
     });
 
     const shapeBtn = document.createElement('button');
@@ -1025,7 +1053,39 @@ function showColorTray(element) {
         e.stopPropagation();
         changeShape(element);
         tray.remove();
+        showMobileOverlayButtons();
     });
+
+    // Close button for mobile tray
+    if (isMobile) {
+        const closeBtn = document.createElement('button');
+        closeBtn.innerHTML = '✕';
+        closeBtn.title = 'Close';
+        closeBtn.style.cssText = `
+            position: absolute;
+            top: -12px;
+            right: -4px;
+            width: 28px; height: 28px;
+            min-width: 28px; min-height: 28px;
+            padding: 0; margin: 0;
+            flex-shrink: 0;
+            box-sizing: border-box;
+            border-radius: 50%;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(30,30,30,0.95);
+            color: #fff;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex; justify-content: center; align-items: center;
+            z-index: 1;
+        `;
+        closeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            tray.remove();
+            showMobileOverlayButtons();
+        });
+        tray.appendChild(closeBtn);
+    }
 
     leftGroup.appendChild(tBtn);
     leftGroup.appendChild(shapeBtn);
@@ -1046,8 +1106,8 @@ function showColorTray(element) {
         const swatch = document.createElement('button');
         swatch.title = label;
         swatch.style.cssText = `
-            width: 24px; height: 24px;
-            min-width: 24px; min-height: 24px;
+            width: 28px; height: 28px;
+            min-width: 28px; min-height: 28px;
             padding: 0; margin: 0;
             flex-shrink: 0;
             box-sizing: border-box;
@@ -1072,10 +1132,18 @@ function showColorTray(element) {
         tray.appendChild(swatch);
     });
 
-    // Position it relative to the edit button
-    const editBtnWrapper = editBtn.parentElement;
-    editBtnWrapper.style.position = 'relative';
-    editBtnWrapper.appendChild(tray);
+    if (isMobile) {
+        // On mobile, append to body as a fixed element replacing the toolbar
+        // Hide the toolbar itself so tray takes its place
+        const toolbar = document.querySelector('.toolbar');
+        if (toolbar) toolbar.style.display = 'none';
+        document.body.appendChild(tray);
+    } else {
+        // Position it relative to the edit button on desktop
+        const editBtnWrapper = editBtn.parentElement;
+        editBtnWrapper.style.position = 'relative';
+        editBtnWrapper.appendChild(tray);
+    }
 
     // Hide floating mobile buttons when tray is shown
     hideMobileOverlayButtons();
@@ -1085,6 +1153,11 @@ function showColorTray(element) {
         if (!tray.contains(e.target) && e.target !== editBtn && !editBtn.contains(e.target)) {
             tray.remove();
             showMobileOverlayButtons();
+            // Restore toolbar on mobile
+            if (isMobile) {
+                const toolbar = document.querySelector('.toolbar');
+                if (toolbar) toolbar.style.display = '';
+            }
             document.removeEventListener('click', closeTray);
         }
     };
@@ -1101,12 +1174,8 @@ function applyColorToNode(element, color) {
     // Also try to apply via Mermaid style directive in the code so it persists
     const svgId = element.id;
     if (svgId && currentMermaidCode) {
-        // Extract real Mermaid ID from SVG DOM ID (e.g., 'flowchart-C-3' -> 'C')
-        let realId = svgId;
-        const parts = svgId.split('-');
-        if (parts.length >= 3 && (svgId.startsWith('flowchart-') || svgId.startsWith('state-'))) {
-            realId = parts.slice(1, -1).join('-');
-        }
+        // Extract real Mermaid ID from SVG DOM ID using our robust extractor
+        const realId = extractMermaidNodeId(element) || svgId;
 
         // Add style directive for any diagram type that supports it
         const firstLine = currentMermaidCode.trim().split('\n')[0].toLowerCase();
@@ -1132,6 +1201,11 @@ function applyColorToNode(element, color) {
     const tray = document.getElementById('floating-color-tray');
     if (tray) tray.remove();
     showMobileOverlayButtons();
+    // Restore toolbar on mobile
+    if (window.innerWidth <= 768) {
+        const toolbar = document.querySelector('.toolbar');
+        if (toolbar) toolbar.style.display = '';
+    }
 }
 
 // ═══ Shape Definitions for Mermaid Flowcharts ═══════════════════════════════
@@ -1174,14 +1248,26 @@ function showMobileOverlayButtons() {
 
 /**
  * Extracts the node ID from a Mermaid SVG DOM element ID.
+ * Handles various diagram type prefixes:
  * e.g., 'flowchart-C-3' -> 'C', 'flowchart-myNode-12' -> 'myNode'
+ *       'stateDiagram-C-3' -> 'C', 'classId-myClass-5' -> 'myClass'
  */
 function extractMermaidNodeId(element) {
     const svgId = element.id;
     if (!svgId) return null;
     const parts = svgId.split('-');
-    if (parts.length >= 3 && (svgId.startsWith('flowchart-') || svgId.startsWith('state-'))) {
-        return parts.slice(1, -1).join('-');
+    // Most Mermaid SVG node IDs follow the pattern: prefix-nodeId-number
+    // The last part is typically a numeric index added by Mermaid
+    if (parts.length >= 3) {
+        const lastPart = parts[parts.length - 1];
+        // If the last part is numeric, strip the prefix and numeric suffix
+        if (/^\d+$/.test(lastPart)) {
+            return parts.slice(1, -1).join('-');
+        }
+    }
+    // If 2 parts like "prefix-nodeId", return the second part
+    if (parts.length === 2) {
+        return parts[1];
     }
     return svgId;
 }
@@ -1220,6 +1306,13 @@ function detectCurrentShape(nodeId) {
  */
 function changeShape(element) {
     if (!currentMermaidCode || !selectedNodeOriginalText) return;
+
+    // Shape change only works on flowchart/graph diagrams
+    const firstLine = currentMermaidCode.trim().split('\n')[0].toLowerCase();
+    if (!firstLine.startsWith('graph') && !firstLine.startsWith('flowchart')) {
+        showToast('Shape change is only supported for Flowchart diagrams.', 'error');
+        return;
+    }
 
     const nodeId = extractMermaidNodeId(element);
     if (!nodeId) {
