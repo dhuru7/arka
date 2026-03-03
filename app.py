@@ -594,12 +594,14 @@ def _fix_mindmap(code):
 
 
 @app.route('/')
+@app.route('/index')
 @app.route('/index.html')
 def index():
     """Serve the main frontend page."""
     return render_template('index.html')
 
 @app.route('/updateslog')
+@app.route('/updates-log')
 @app.route('/updateslog.html')
 def updates_log():
     """Serve the updates log page."""
@@ -794,11 +796,16 @@ ADDITIONAL GUIDELINES:
 """
 
 @app.route('/law-bot')
+@app.route('/law-bot.html')
+@app.route('/law_bot')
+@app.route('/law_bot.html')
 def law_bot():
     """Serve the Law Bot frontend page."""
     return render_template('law_bot.html')
 
 @app.route('/yt-notes')
+@app.route('/yt-notes.html')
+@app.route('/yt_notes')
 @app.route('/yt_notes.html')
 def yt_notes():
     """Serve the YT Notes frontend page."""
