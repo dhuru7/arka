@@ -22,7 +22,16 @@
     <link rel="icon"
         href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='black'/><text y='50%' x='50%' dominant-baseline='middle' text-anchor='middle' fill='white' font-family='sans-serif' font-size='60' font-weight='bold'>A</text></svg>">
 
+    <!-- KaTeX for math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
 
+    <!-- Marked.js for markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <!-- html2pdf.js for exporting PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
     <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -728,33 +737,44 @@
 
                 loadingBar.style.width = '100%';
                 setTimeout(() => {
-                    loadingOverlay.style.display = 'none';
+                    try {
+                        loadingOverlay.style.display = 'none';
 
-                    // Parse the Markdown using defined styles
-                    notesContent.innerHTML = `<div id="notes-render-layer" style="background: var(--bg); color: var(--fg); padding: 30px; border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 4px 20px rgba(0,0,0,0.1); line-height: 1.7;">
-                        ${marked.parse(rawNotes)}
-                    </div>`;
+                        // Parse the Markdown using defined styles
+                        notesContent.innerHTML = `<div id="notes-render-layer" style="background: var(--bg); color: var(--fg); padding: 30px; border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 4px 20px rgba(0,0,0,0.1); line-height: 1.7;">
+                            ${marked.parse(rawNotes)}
+                        </div>`;
 
-                    // Render KaTeX Math equations
-                    renderMathInElement(document.getElementById('notes-render-layer'), {
-                        delimiters: [
-                            { left: '$$', right: '$$', display: true },
-                            { left: '$', right: '$', display: false },
-                            { left: '\\(', right: '\\)', display: false },
-                            { left: '\\[', right: '\\]', display: true }
-                        ],
-                        throwOnError: false
-                    });
+                        // Render KaTeX Math equations
+                        if (typeof renderMathInElement !== 'undefined') {
+                            renderMathInElement(document.getElementById('notes-render-layer'), {
+                                delimiters: [
+                                    { left: '$$', right: '$$', display: true },
+                                    { left: '$', right: '$', display: false },
+                                    { left: '\\(', right: '\\)', display: false },
+                                    { left: '\\[', right: '\\]', display: true }
+                                ],
+                                throwOnError: false
+                            });
+                        }
 
-                    notesContent.style.display = 'block';
-                    btnDownloadMd.style.display = 'flex';
-                    btnDownloadPdf.style.display = 'flex';
+                        notesContent.style.display = 'block';
+                        btnDownloadMd.style.display = 'flex';
+                        btnDownloadPdf.style.display = 'flex';
 
-                    showToast('Notes generated & compiled successfully!', 'success');
-                    statusText.innerText = "SYSTEM STANDBY - PDF RENDERED";
-                    statusText.classList.remove('status-text-anim');
-                    statusDot.style.background = '#22c55e'; // green
-                    statusDot.style.boxShadow = '0 0 8px rgba(34, 197, 94, 0.8)';
+                        showToast('Notes generated & compiled successfully!', 'success');
+                        statusText.innerText = "SYSTEM STANDBY - PDF RENDERED";
+                        statusText.classList.remove('status-text-anim');
+                        statusDot.style.background = '#22c55e'; // green
+                        statusDot.style.boxShadow = '0 0 8px rgba(34, 197, 94, 0.8)';
+                    } catch (err) {
+                        showToast(`Rendering Error: ${err.message}`, 'error');
+                        console.error(err);
+                        emptyState.style.display = 'flex';
+                        statusText.innerText = "SYSTEM ERROR";
+                        statusText.classList.remove('status-text-anim');
+                        statusDot.style.background = '#ef4444'; // red
+                    }
                 }, 1000);
 
             } catch (e) {
