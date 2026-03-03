@@ -759,18 +759,81 @@
 
 notesContent.innerHTML = `
 <div
-    style="background: rgba(255,255,255,0.05); padding: 5px; border-radius: 8px; border: 1px solid var(--border); height: 700px; display: flex; flex-direction: column;">
+    style="background: rgba(255,255,255,0.05); padding: 5px; border-radius: 8px; border: 1px solid var(--border); height: calc(100vh - 160px); min-height: 600px; display: flex; flex-direction: column;">
     <div
-        style="display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; border-bottom: 1px solid var(--border); background: rgba(0,0,0,0.2); border-radius: 8px 8px 0 0;">
+        style="display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; border-bottom: 1px solid var(--border); background: rgba(0,0,0,0.2); border-radius: 8px 8px 0 0; flex-wrap: wrap; gap: 10px;">
         <span style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--fg-muted);">DOCUMENT PREVIEW</span>
+        <div style="display: flex; gap: 8px;">
+            <button id="open-new-tab-btn" class="icon-btn"
+                style="padding: 6px 12px; font-size: 0.85rem; height: auto; font-family: var(--font-body); display: flex; align-items: center; gap: 6px;"
+                title="Open in New Tab">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                    <polyline points="15 3 21 3 21 9"></polyline>
+                    <line x1="10" y1="14" x2="21" y2="3"></line>
+                </svg>
+                Preview Full
+            </button>
+            <button id="download-notes-inline-btn" class="icon-btn"
+                style="padding: 6px 12px; font-size: 0.85rem; height: auto; font-family: var(--font-body); display: flex; align-items: center; gap: 6px;"
+                title="Download HTML">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                Download (.html)
+            </button>
+            <button id="download-pdf-inline-btn" class="icon-btn"
+                style="padding: 6px 12px; font-size: 0.85rem; height: auto; font-family: var(--font-body); display: flex; align-items: center; gap: 6px;"
+                title="Export to PDF">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <polyline points="10 9 9 9 8 9"></polyline>
+                </svg>
+                Export PDF
+            </button>
+        </div>
     </div>
     <iframe id="notes-render-iframe"
         style="width: 100%; flex: 1; border: none; border-radius: 0 0 8px 8px; background: white;"></iframe>
 </div>
 `;
 
+window.currentFullHtml = fullHtmlDocument;
+
 const iframe = document.getElementById('notes-render-iframe');
 iframe.srcdoc = fullHtmlDocument;
+
+const btnNewTab = document.getElementById('open-new-tab-btn');
+if (btnNewTab) {
+btnNewTab.addEventListener('click', () => {
+const newWindow = window.open();
+if (newWindow) {
+newWindow.document.write(window.currentFullHtml);
+newWindow.document.close();
+} else {
+showToast('Popup blocked! Please allow popups for this site.', 'error');
+}
+});
+}
+
+const btnDownloadInline = document.getElementById('download-notes-inline-btn');
+if (btnDownloadInline) {
+btnDownloadInline.addEventListener('click', () => {
+btnDownloadHtml.click();
+});
+}
+
+const btnPdfInline = document.getElementById('download-pdf-inline-btn');
+if (btnPdfInline) {
+btnPdfInline.addEventListener('click', () => {
+btnDownloadPdf.click();
+});
+}
 
 notesContent.style.display = 'block';
 btnDownloadHtml.style.display = 'flex';
@@ -806,8 +869,9 @@ btnGenerate.classList.remove('loading');
 });
 
 btnDownloadHtml.addEventListener('click', () => {
-if (!rawNotes) return;
-const blob = new Blob([rawNotes], { type: 'text/html' });
+const contentToDownload = window.currentFullHtml || rawNotes;
+if (!contentToDownload) return;
+const blob = new Blob([contentToDownload], { type: 'text/html' });
 const url = URL.createObjectURL(blob);
 const a = document.createElement('a');
 a.href = url;
@@ -816,7 +880,7 @@ document.body.appendChild(a);
 a.click();
 document.body.removeChild(a);
 URL.revokeObjectURL(url);
-showToast('Code downloaded as HTML', 'success');
+showToast('Notes downloaded as HTML', 'success');
 });
 
 btnDownloadPdf.addEventListener('click', () => {
