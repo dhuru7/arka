@@ -599,6 +599,12 @@ def index():
     """Serve the main frontend page."""
     return render_template('index.html')
 
+@app.route('/updateslog')
+@app.route('/updateslog.html')
+def updates_log():
+    """Serve the updates log page."""
+    return render_template('updateslog.html')
+
 
 @app.route('/api/generate', methods=['POST'])
 def generate_diagram():

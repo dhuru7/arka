@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARKA | Changelog</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Orbitron:wght@500;700&family=Space+Grotesk:wght@300;400;500;600&family=Space+Mono&display=swap"
+        rel="stylesheet">
+
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/light-theme.css">
+
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='black'/><text y='50%' x='50%' dominant-baseline='middle' text-anchor='middle' fill='white' font-family='sans-serif' font-size='60' font-weight='bold'>A</text></svg>">
+
+    <style>
+        body {
+            background-color: var(--bg);
+            color: var(--fg);
+        }
+
+        /* Premium Background Glows */
+        .glow-orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(100px);
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0.15;
+            animation: float 20s infinite ease-in-out alternate;
+        }
+
+        .glow-1 {
+            top: -10%;
+            left: -10%;
+            width: 50vw;
+            height: 50vw;
+            background: var(--accent);
+        }
+
+        .glow-2 {
+            bottom: -20%;
+            right: -10%;
+            width: 60vw;
+            height: 60vw;
+            background: #3b82f6;
+            animation-delay: -5s;
+        }
+
+        @keyframes float {
+            0% {
+                transform: scale(1) translate(0, 0);
+            }
+
+            50% {
+                transform: scale(1.1) translate(5%, 5%);
+            }
+
+            100% {
+                transform: scale(0.9) translate(-5%, -5%);
+            }
+        }
+
+        .updates-container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 100px 24px 80px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .nav-back {
+            position: fixed;
+            top: 24px;
+            left: 24px;
+            z-index: 100;
+        }
+
+        .header-section {
+            margin-bottom: 80px;
+        }
+
+        .header-section h1 {
+            font-family: var(--font-logo);
+            font-size: 4rem;
+            color: var(--fg);
+            margin-bottom: 16px;
+            letter-spacing: -1px;
+            background: linear-gradient(90deg, var(--fg), #888);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header-section p {
+            color: var(--fg-muted);
+            font-size: 1.2rem;
+            font-family: var(--font-body);
+            max-width: 500px;
+            line-height: 1.6;
+        }
+
+        .timeline-container {
+            position: relative;
+        }
+
+        .timeline-line {
+            position: absolute;
+            left: 20px;
+            top: 10px;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(to bottom, var(--border), transparent);
+            z-index: 1;
+        }
+
+        .update-item {
+            position: relative;
+            padding-left: 64px;
+            margin-bottom: 72px;
+        }
+
+        /* The Dot */
+        .update-item::before {
+            content: '';
+            position: absolute;
+            left: 17px;
+            top: 6px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--bg);
+            border: 2px solid var(--accent);
+            z-index: 2;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 0 4px var(--bg);
+        }
+
+        .update-item:hover::before {
+            background: var(--accent);
+            box-shadow: 0 0 16px var(--accent), 0 0 0 4px var(--bg);
+        }
+
+        .update-meta {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .time-badge {
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: var(--fg);
+            background: rgba(255, 255, 255, 0.08);
+            padding: 6px 12px;
+            border-radius: var(--radius-pill);
+            border: 1px solid var(--border-light);
+        }
+
+        .version-badge {
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .update-content {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 32px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .update-item:hover .update-content {
+            transform: translateY(-4px);
+            border-color: var(--border-light);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+        }
+
+        .update-content h2 {
+            font-size: 1.6rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--fg);
+            letter-spacing: -0.5px;
+        }
+
+        .update-content p {
+            color: var(--fg-muted);
+            line-height: 1.7;
+            font-size: 1.05rem;
+            margin-bottom: 24px;
+        }
+
+        .feature-list {
+            list-style: none;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .feature-list li {
+            position: relative;
+            padding-left: 28px;
+            color: var(--fg);
+            line-height: 1.6;
+        }
+
+        .feature-list li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 7px;
+            width: 12px;
+            height: 12px;
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23E52E2E' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'%3E%3C/polyline%3E%3C/svg%3E") no-repeat center;
+            background-size: contain;
+        }
+
+        /* Light theme overrides */
+        body.light-theme .glow-1 {
+            opacity: 0.08;
+        }
+
+        body.light-theme .header-section h1 {
+            background: linear-gradient(90deg, #111, #666);
+            -webkit-background-clip: text;
+            background-clip: text;
+        }
+
+        body.light-theme .time-badge {
+            background: rgba(0, 0, 0, 0.04);
+            border-color: var(--border);
+        }
+
+        body.light-theme .update-item:hover .update-content {
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.05);
+        }
+
+        @media (max-width: 768px) {
+            .header-section h1 {
+                font-size: 2.8rem;
+            }
+
+            .updates-container {
+                padding: 90px 16px 60px;
+            }
+
+            .update-item {
+                padding-left: 40px;
+                margin-bottom: 56px;
+            }
+
+            .timeline-line {
+                left: 8px;
+            }
+
+            .update-item::before {
+                left: 5px;
+            }
+
+            .update-content {
+                padding: 24px;
+            }
+
+            .update-content h2 {
+                font-size: 1.4rem;
+            }
+
+            .update-meta {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+        }
+    </style>
+</head>
+
+<body class="dark-theme">
+    <div class="bg-grid"></div>
+    <div class="glow-orb glow-1"></div>
+    <div class="glow-orb glow-2"></div>
+
+    <a href="/about" class="icon-btn glass-btn nav-back" id="back-btn" title="Back to About">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+            <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+    </a>
+
+    <script>
+        const savedTheme = localStorage.getItem('app-theme') || 'dark';
+        if (savedTheme === 'light') {
+            document.body.classList.add('light-theme');
+            document.body.classList.remove('dark-theme');
+        }
+    </script>
+
+    <div class="app-container" style="overflow-y: auto; display: block; height: 100vh;">
+        <div class="updates-container">
+            <div class="header-section">
+                <h1>CHANGELOG</h1>
+                <p>Track everything that's new and everything we've improved in ARKA. Always evolving.</p>
+            </div>
+
+            <div class="timeline-container">
+                <div class="timeline-line"></div>
+
+                <!-- Latest Update -->
+                <div class="update-item">
+                    <div class="update-meta">
+                        <span class="time-badge">Just now</span>
+                        <span class="version-badge">v2.1.0</span>
+                    </div>
+                    <div class="update-content">
+                        <h2>Mobile Redesign & Tool Tray Fixes</h2>
+                        <p>We've implemented massive UI consistency fixes across our mobile experience. Layout
+                            overlapping, z-indexes, and responsive drawer toggles are now flawlessly mapped.</p>
+                        <ul class="feature-list">
+                            <li>Re-engineered the bottom floating UI hierarchy so the sidebar and profile dropdowns
+                                gracefully slide completely above the middle tool-tray.</li>
+                            <li>The mobile hamburger toggle has been completely reshaped from a tiny dot to a fully
+                                interactive 28x28 icon with fluid geometric "X" rotations on click!</li>
+                            <li>Fixed conflicting dropdown logic where opening the Theme tray and Download tray
+                                simultaneously would break the UI overlay. Opening one now elegantly retracts any other
+                                active tray instantly.</li>
+                            <li>Implemented this brand new premium Changelog page structure to easily digest our latest
+                                patches.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Previous Update -->
+                <div class="update-item">
+                    <div class="update-meta">
+                        <span class="time-badge">1 day ago</span>
+                        <span class="version-badge">v2.0.8</span>
+                    </div>
+                    <div class="update-content">
+                        <h2>Sleek Overlays & Folder Integrity</h2>
+                        <p>Quality of life improvements aimed at the user configuration states and the overarching
+                            "glass theme" aesthetic.</p>
+                        <ul class="feature-list">
+                            <li>The floating <strong>.glass-btn</strong> profiles and components now universally reflect
+                                genuine backdrop-blurs in Light Mode without looking blown out.</li>
+                            <li>Removed restrictive default dummy "Folder1, Folder2" placeholders from the save
+                                dialogue. It will now properly warn you to create an actual physical folder before
+                                blindly capturing diagrams.</li>
+                            <li>Cleaned up the heavy 'Load' screen removing redundant footers/cancel buttons favoring
+                                our standard intuitive cross-outs.</li>
+                            <li>Removed default blue tap-highlights across all interactive components on touch devices
+                                for a pristine native-app feel.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

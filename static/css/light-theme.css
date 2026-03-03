@@ -21,8 +21,19 @@ body.light-theme .sidebar {
     background: rgba(255, 255, 255, 0.9);
 }
 
-body.light-theme .toolbar {
-    background: rgba(255, 255, 255, 0.85);
+body.light-theme .toolbar,
+body.light-theme .glass-btn {
+    background: rgba(255, 255, 255, 0.4) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border: 1px solid rgba(0, 0, 0, 0.1) !important;
+    color: var(--fg) !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05) !important;
+}
+
+body.light-theme .toolbar:hover,
+body.light-theme .glass-btn:hover {
+    background: rgba(255, 255, 255, 0.6) !important;
 }
 
 body.light-theme input[type="text"],
@@ -126,15 +137,19 @@ body.light-theme #profile-dropdown-wrapper a.dropdown-item:active {
 }
 
 /* Keep the logout button styled correctly */
-body.light-theme #btn-logout {
+body.light-theme #btn-logout,
+body.light-theme #btn-logout span,
+body.light-theme #btn-logout svg {
     color: #ff4d4d !important;
+}
+
+body.light-theme #btn-logout {
     border-color: rgba(255, 77, 77, 0.3) !important;
     background: rgba(255, 77, 77, 0.06) !important;
 }
 
 body.light-theme #btn-logout:hover {
     background: rgba(255, 77, 77, 0.12) !important;
-    color: #ff4d4d !important;
 }
 
 /* User profile container in light theme */
@@ -169,12 +184,7 @@ body.light-theme .toolbar .icon-btn:hover {
     background: rgba(0, 0, 0, 0.06);
 }
 
-/* Sidebar toggle (FAB) in light theme */
-body.light-theme .sidebar-toggle {
-    background: var(--fg);
-    color: var(--bg);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-}
+/* Sidebar toggle handled by .glass-btn styling above */
 
 @media (max-width: 768px) {
     body.light-theme #profile-dropdown-wrapper .dropdown-menu {
@@ -195,8 +205,13 @@ body.light-theme .sidebar-toggle {
         background: rgba(0, 0, 0, 0.07) !important;
     }
 
-    body.light-theme #profile-dropdown-wrapper .dropdown-menu #btn-logout {
+    body.light-theme #profile-dropdown-wrapper .dropdown-menu #btn-logout,
+    body.light-theme #profile-dropdown-wrapper .dropdown-menu #btn-logout span,
+    body.light-theme #profile-dropdown-wrapper .dropdown-menu #btn-logout svg {
         color: #ff4d4d !important;
+    }
+
+    body.light-theme #profile-dropdown-wrapper .dropdown-menu #btn-logout {
         background: rgba(255, 77, 77, 0.06) !important;
         border-color: rgba(255, 77, 77, 0.3) !important;
     }

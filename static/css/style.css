@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   Arka – AI Diagram Generator v2.7
+   Arka – AI Diagram Generator v2.1.0
    Theme: Monochrome, Brutalist, High-Contrast
    ═══════════════════════════════════════════════════════════════════════════ */
 
@@ -127,8 +127,8 @@ button:hover {
 }
 
 button:active {
-    transform: scale(0.97);
-    transition-duration: 0.05s;
+    transform: scale(0.98);
+    transition-duration: 0.1s;
 }
 
 button:disabled {
@@ -539,8 +539,9 @@ textarea::placeholder {
     display: flex;
     align-items: center;
     gap: 8px;
-    background: rgba(0, 0, 0, 0.75);
-    backdrop-filter: blur(16px);
+    background: rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     border: 1px solid var(--border);
     padding: 6px 12px;
     border-radius: var(--radius-pill);
@@ -595,9 +596,9 @@ textarea::placeholder {
 }
 
 .icon-btn:active {
-    transform: scale(0.92);
+    transform: scale(0.96);
     background: rgba(255, 255, 255, 0.1);
-    transition-duration: 0.05s;
+    transition-duration: 0.1s;
 }
 
 .icon-btn svg {
@@ -915,7 +916,16 @@ textarea::placeholder {
     border-color: #ef4444;
 }
 
-/* ── Toast Notifications ────────────────────────────────────────────────── */
+.primary:hover {
+    background: var(--fg);
+    color: var(--bg);
+}
+
+.secondary:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+/* ── Dropdowns ──────────────────────────────────────────────────────────── */
 .toast-container {
     position: fixed;
     bottom: 60px;
@@ -1058,18 +1068,16 @@ textarea::placeholder {
     color: var(--fg-muted);
     background: transparent;
     cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: all 0.15s ease;
     width: 100%;
     justify-content: flex-start;
     position: relative;
-    border-left: 2px solid transparent;
+    border: none;
 }
 
 .dropdown-item:hover {
     background: rgba(255, 255, 255, 0.08);
     color: var(--fg);
-    border-left-color: var(--accent);
-    padding-left: 16px;
 }
 
 .dropdown-item:active {
@@ -1148,22 +1156,72 @@ textarea::placeholder {
     fill: var(--accent, #E52E2E);
 }
 
-/* ── Mobile Sidebar Toggle ──────────────────────────────────────────────── */
+/* ── Glass Button Utility ──────────────────────────────────────────────── */
+.glass-btn {
+    width: 44px;
+    height: 44px;
+    background: rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--fg);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.glass-btn:active {
+    transform: scale(0.96);
+    background: rgba(255, 255, 255, 0.15);
+    transition-duration: 0.1s;
+}
+
 .sidebar-toggle {
     display: none;
     position: fixed;
-    bottom: 24px;
-    right: 24px;
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    background: var(--fg);
-    color: var(--bg);
+    bottom: 96px;
+    right: 80px;
     z-index: 50;
+    box-shadow: none;
 }
 
-.sidebar-toggle svg {
-    stroke: var(--bg);
+.hamburger-icon {
+    width: 26px;
+    height: 18px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    margin: auto;
+}
+
+.hamburger-icon span {
+    display: block;
+    width: 100%;
+    height: 3px;
+    background-color: var(--fg);
+    border-radius: 2px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transform-origin: center;
+}
+
+.sidebar-toggle.open .hl-top {
+    transform: translateY(7.5px) rotate(45deg);
+}
+
+.sidebar-toggle.open .hl-mid {
+    opacity: 0;
+}
+
+.sidebar-toggle.open .hl-bot {
+    transform: translateY(-7.5px) rotate(-45deg);
 }
 
 /* ── Responsive ─────────────────────────────────────────────────────────── */
@@ -1171,7 +1229,7 @@ textarea::placeholder {
     .sidebar {
         position: absolute;
         transform: translateX(-100%);
-        z-index: 40;
+        z-index: 100010;
         /* Make sure it's above the canvas, top-nav, and toolbar */
         width: 85%;
         min-width: unset;
@@ -1192,7 +1250,7 @@ textarea::placeholder {
         bottom: 0;
         background: rgba(0, 0, 0, 0.6);
         backdrop-filter: blur(4px);
-        z-index: 35;
+        z-index: 100009;
         /* Above canvas, below sidebar */
         opacity: 0;
         transition: opacity var(--transition-base);
@@ -1215,9 +1273,12 @@ textarea::placeholder {
     }
 
     .top-nav-bar {
-        top: 16px;
-        right: 16px;
-        z-index: 100000;
+        position: fixed;
+        top: auto;
+        bottom: 96px;
+        right: 24px;
+        z-index: 100005;
+        /* Ensures profile dropdown shows over toolbar */
     }
 
     .toolbar-left,
@@ -1237,18 +1298,21 @@ textarea::placeholder {
     }
 
     .toolbar {
-        top: 76px;
-        bottom: auto;
+        position: fixed;
+        top: auto;
+        bottom: 24px;
         left: 50%;
         transform: translateX(-50%);
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         justify-content: center;
         border-radius: var(--radius-md);
-        padding: 10px 12px;
-        width: 90vw;
-        max-width: 92vw;
-        gap: 10px;
+        padding: 6px 10px;
+        width: max-content;
+        max-width: 80vw;
+        gap: 8px;
         overflow: visible;
+        margin-top: 0;
+        z-index: 100000;
     }
 
     #btn-undo,
@@ -1260,7 +1324,7 @@ textarea::placeholder {
     #btn-save,
     #btn-load,
     #zoom-fit {
-        order: 1;
+        order: 3;
     }
 
     .mobile-break-row-1 {
@@ -1271,17 +1335,22 @@ textarea::placeholder {
         display: none !important;
     }
 
+    #btn-delete-selected,
+    #btn-code-view {
+        display: none !important;
+    }
+
     #btn-edit-text,
     #theme-dropdown-wrapper,
     #download-dropdown-wrapper {
-        order: 3;
+        order: 1;
     }
 
     .dropdown-wrapper .dropdown-menu {
         position: absolute;
-        top: calc(100% + 8px);
+        top: auto;
+        bottom: calc(100% + 8px);
         left: 0;
-        bottom: auto;
         right: auto;
         width: max-content;
         min-width: 160px;

@@ -237,12 +237,14 @@ function setupEventListeners() {
     const mobileOverlay = document.getElementById('mobile-overlay');
     sidebarToggle.addEventListener('click', () => {
         sidebar.classList.toggle('open');
+        sidebarToggle.classList.toggle('open');
         if (mobileOverlay) mobileOverlay.classList.toggle('active');
     });
 
     if (mobileOverlay) {
         mobileOverlay.addEventListener('click', () => {
             sidebar.classList.remove('open');
+            sidebarToggle.classList.remove('open');
             mobileOverlay.classList.remove('active');
         });
     }
@@ -688,7 +690,7 @@ function handleRedo() {
     }
 }
 
-async function renderFromCode(code, pushToHistory = true) {
+async function renderFromCode(code, pushToHistory = true, preserveViewport = false) {
     const state = appState[currentMode];
 
     if (!code || !code.trim()) {
@@ -708,6 +710,19 @@ async function renderFromCode(code, pushToHistory = true) {
     updateHistoryButtons();
 
     try {
+        let savedZoom = null;
+        let savedPan = null;
+
+        if (preserveViewport && panZoomInstance) {
+            savedZoom = panZoomInstance.getZoom();
+            savedPan = panZoomInstance.getPan();
+        }
+
+        if (panZoomInstance) {
+            panZoomInstance.destroy();
+            panZoomInstance = null;
+        }
+
         // Clean up any previously created render SVG element (Mermaid won't re-render same ID)
         ['mermaid-svg-graph', 'dmermaid-svg-graph'].forEach(id => {
             const el = document.getElementById(id);
@@ -816,9 +831,7 @@ async function renderFromCode(code, pushToHistory = true) {
                 });
             });
 
-            if (panZoomInstance) {
-                panZoomInstance.destroy();
-            }
+            // panZoomInstance already destroyed at the top of the function if present
 
             // Setup HammerJS for Pinch Zoom and Mobile Pan
             const eventsHandler = {
@@ -865,14 +878,19 @@ async function renderFromCode(code, pushToHistory = true) {
             panZoomInstance = svgPanZoom(svgEl, {
                 zoomEnabled: true,
                 controlIconsEnabled: false,
-                fit: true,
-                center: true,
+                fit: !preserveViewport,
+                center: !preserveViewport,
                 minZoom: 0.1,
                 maxZoom: 10,
                 preventMouseEventsDefault: false,
                 customEventsHandler: eventsHandler,
                 onZoom: function () { applyZoom(); }
             });
+
+            if (preserveViewport && savedZoom !== null && savedPan !== null) {
+                panZoomInstance.zoom(savedZoom);
+                panZoomInstance.pan(savedPan);
+            }
         }
 
         currentScale = 1;
@@ -1268,6 +1286,10 @@ function setupDownloadDropdown() {
 
     btn.addEventListener('click', (e) => {
         e.stopPropagation();
+        const themeMenu = document.getElementById('theme-dropdown-menu');
+        if (themeMenu && themeMenu.classList.contains('active')) {
+            themeMenu.classList.remove('active');
+        }
         menu.classList.toggle('active');
     });
 
@@ -1376,7 +1398,7 @@ function previewThemeChange(theme) {
     if (!currentMermaidCode || currentTheme === theme) return;
     isPreviewing = true;
     initializeMermaidTheme(theme);
-    renderFromCode(currentMermaidCode);
+    renderFromCode(currentMermaidCode, false, true);
 }
 
 function resetThemePreview() {
@@ -1384,7 +1406,7 @@ function resetThemePreview() {
     isPreviewing = false;
     initializeMermaidTheme(currentTheme);
     if (currentMermaidCode) {
-        renderFromCode(currentMermaidCode);
+        renderFromCode(currentMermaidCode, false, true);
     }
 }
 
@@ -1395,6 +1417,7 @@ function setupThemeDropdown() {
 
     btn.addEventListener('click', (e) => {
         e.stopPropagation();
+        closeDownloadDropdown();
         const isActive = menu.classList.toggle('active');
         if (!isActive) {
             resetThemePreview();
@@ -1447,7 +1470,7 @@ function changeTheme(theme) {
 
     initializeMermaidTheme(currentTheme);
     if (currentMermaidCode) {
-        renderFromCode(currentMermaidCode);
+        renderFromCode(currentMermaidCode, false, true);
     }
     showToast(`Theme changed to ${theme}`, 'success');
 }
@@ -1489,7 +1512,7 @@ async function handleApplyCodeEdit() {
 async function handleSave() {
     const nameInput = document.getElementById('save-name');
     const folderSelect = document.getElementById('save-folder');
-    const folderId = folderSelect ? folderSelect.value : 'folder1';
+    const folderId = folderSelect ? folderSelect.value : '';
     const name = nameInput.value.trim();
 
     if (!name) {
@@ -1504,6 +1527,11 @@ async function handleSave() {
     const user = firebase.auth().currentUser;
     if (!user) {
         showToast('You must be logged in to save.', 'error');
+        return;
+    }
+
+    if (!folderId) {
+        showToast(`Please create a folder first to save into.`, 'error');
         return;
     }
 
@@ -1615,9 +1643,18 @@ async function loadUserFolders() {
         // Clear existing options
         folderSelect.innerHTML = '';
 
-        // Default folders
-        const defaultFolders = ['folder1', 'folder2', 'folder3'];
-        const allFolderKeys = new Set([...defaultFolders, ...Object.keys(folders)]);
+        // Default folders removed
+        const allFolderKeys = new Set([...Object.keys(folders)]);
+
+        if (allFolderKeys.size === 0) {
+            const option = document.createElement('option');
+            option.value = '';
+            option.textContent = '-- Create a folder below --';
+            option.disabled = true;
+            option.selected = true;
+            folderSelect.appendChild(option);
+            return;
+        }
 
         allFolderKeys.forEach(key => {
             const option = document.createElement('option');
