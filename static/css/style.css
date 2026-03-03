@@ -109,7 +109,7 @@ button {
     font-size: 0.85rem;
     text-transform: uppercase;
     letter-spacing: 1px;
-    transition: all var(--transition-fast);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -124,6 +124,11 @@ a {
 button:hover {
     background: var(--fg);
     color: var(--bg);
+}
+
+button:active {
+    transform: scale(0.97);
+    transition-duration: 0.05s;
 }
 
 button:disabled {
@@ -540,6 +545,12 @@ textarea::placeholder {
     padding: 6px 12px;
     border-radius: var(--radius-pill);
     z-index: 20;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+    transition: box-shadow 0.3s ease;
+}
+
+.toolbar:hover {
+    box-shadow: 0 6px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
 }
 
 .toolbar-left,
@@ -573,17 +584,26 @@ textarea::placeholder {
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .icon-btn:hover {
     border-color: var(--border-light);
-    background: transparent;
+    background: rgba(255, 255, 255, 0.06);
     color: var(--fg);
+    transform: scale(1.08);
+}
+
+.icon-btn:active {
+    transform: scale(0.92);
+    background: rgba(255, 255, 255, 0.1);
+    transition-duration: 0.05s;
 }
 
 .icon-btn svg {
     width: 16px;
     height: 16px;
+    transition: transform 0.15s ease;
 }
 
 .zoom-level {
@@ -985,8 +1005,8 @@ textarea::placeholder {
     flex-direction: column;
     gap: 2px;
     z-index: 100;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
-    animation: dropdown-in 0.15s ease-out;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+    animation: dropdown-in 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     max-height: 250px;
     overflow-y: auto;
 }
@@ -1016,12 +1036,12 @@ textarea::placeholder {
 @keyframes dropdown-in {
     from {
         opacity: 0;
-        transform: translateY(-6px);
+        transform: translateY(-8px) scale(0.96);
     }
 
     to {
         opacity: 1;
-        transform: translateY(0);
+        transform: translateY(0) scale(1);
     }
 }
 
@@ -1038,20 +1058,35 @@ textarea::placeholder {
     color: var(--fg-muted);
     background: transparent;
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     width: 100%;
     justify-content: flex-start;
+    position: relative;
+    border-left: 2px solid transparent;
 }
 
 .dropdown-item:hover {
     background: rgba(255, 255, 255, 0.08);
     color: var(--fg);
+    border-left-color: var(--accent);
+    padding-left: 16px;
+}
+
+.dropdown-item:active {
+    background: rgba(255, 255, 255, 0.12);
+    transform: scale(0.98);
+    transition-duration: 0.05s;
 }
 
 .dropdown-item svg {
     flex-shrink: 0;
     width: 16px;
     height: 16px;
+    transition: transform 0.2s ease;
+}
+
+.dropdown-item:hover svg {
+    transform: scale(1.1);
 }
 
 /* ── Code Editor Modal ─────────────────────────────────────────────────── */

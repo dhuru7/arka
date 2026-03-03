@@ -1040,3 +1040,69 @@ body {
         padding-left: 0;
     }
 }
+
+/* ── Mobile Tap Highlight & Active States ────────────────────────────── */
+/* Remove blue tap highlight from all interactive elements */
+.large-btn,
+.auth-btn-sm,
+.support-btn,
+.nav-link,
+.footer-links a,
+.feature-row,
+.support-card,
+.about-me-card {
+    -webkit-tap-highlight-color: transparent !important;
+    outline: none;
+    -webkit-touch-callout: none;
+}
+
+/* Better press/active feedback for buttons */
+.large-btn:active {
+    transform: scale(0.97) !important;
+    transition: transform 0.1s ease;
+}
+
+.large-btn.primary:active {
+    background: #cc2424;
+    box-shadow: 0 0 15px rgba(229, 46, 46, 0.3);
+}
+
+.large-btn.secondary:active {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: var(--fg);
+}
+
+.auth-btn-sm:active {
+    transform: scale(0.95);
+    transition: transform 0.1s ease;
+}
+
+.support-btn:active {
+    transform: scale(0.97) !important;
+    box-shadow: 0 0 10px rgba(255, 221, 0, 0.3);
+}
+
+/* Feature row touchable feedback */
+.feature-row:active {
+    transform: translateY(-2px) !important;
+    border-color: var(--accent);
+    transition: all 0.15s ease;
+}
+
+/* Support card touchable feedback */
+.support-card:active {
+    transform: translateY(-2px) !important;
+    border-color: var(--accent);
+}
+
+/* Footer links active state */
+.footer-links a:active {
+    color: var(--accent);
+    transform: scale(0.97);
+    display: inline-block;
+}
+
+/* Nav link active state */
+.nav-link:active {
+    color: var(--fg);
+}

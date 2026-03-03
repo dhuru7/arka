@@ -16,8 +16,8 @@
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Orbitron:wght@500;700&family=Space+Grotesk:wght@300;400;500;600&family=Space+Mono&display=swap"
         rel="stylesheet">
 
-    <link rel="stylesheet" href="/static/css/style.css?v=2.4">
-    <link rel="stylesheet" href="/static/css/light-theme.css?v=2.4">
+    <link rel="stylesheet" href="/static/css/style.css?v=3.0">
+    <link rel="stylesheet" href="/static/css/light-theme.css?v=3.0">
     <!-- Replaced emoji favicon with a minimalistic SVG -->
     <link rel="icon"
         href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='black'/><text y='50%' x='50%' dominant-baseline='middle' text-anchor='middle' fill='white' font-family='sans-serif' font-size='60' font-weight='bold'>A</text></svg>">
@@ -266,7 +266,7 @@
                                     d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                                     fill="#EA4335" />
                             </svg>
-                            <span style="font-size: 0.8rem; font-weight: 500;">Signup w/ Google for More Credits</span>
+                            <span style="font-size: 0.8rem; font-weight: 500;">Sign Up to Save Your Work</span>
                         </button>
 
                         <a href="https://forms.gle/FA4qTch5rdXoaZvf6" target="_blank" class="dropdown-item"
@@ -554,6 +554,13 @@
                         <option value="folder2">Folder 2</option>
                         <option value="folder3">Folder 3</option>
                     </select>
+                    <div style="display: flex; gap: 8px; margin-top: 8px;">
+                        <input type="text" id="new-folder-name" placeholder="New folder name..."
+                            style="flex: 1; height: 38px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--border); background: rgba(0,0,0,0.2); color: var(--fg); font-family: var(--font-body); font-size: 0.8rem;">
+                        <button type="button" id="btn-create-folder"
+                            style="padding: 8px 14px; font-size: 0.75rem; border-radius: 6px; white-space: nowrap;">+
+                            Create</button>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label for="save-name">Diagram Name</label>
@@ -702,7 +709,7 @@
                 const btnSignupGoogle = document.getElementById('btn-signup-google');
 
                 if (user.isAnonymous) {
-                    nameEl.innerText = "Guest User";
+                    nameEl.innerText = "Dry Mode";
                     if (btnSignupGoogle) btnSignupGoogle.style.display = 'flex';
                 } else {
                     if (user.displayName) {
@@ -767,19 +774,56 @@
             });
         }
 
-        // Setup Guest Signup Google Action
+        // Setup Guest Signup Google Action (with Dry Mode migration)
         const signupGoogleBtn = document.getElementById('btn-signup-google');
         if (signupGoogleBtn) {
-            signupGoogleBtn.addEventListener('click', () => {
-                const provider = new firebase.auth.GoogleAuthProvider();
-                firebase.auth().signInWithPopup(provider)
-                    .then((result) => {
-                        window.location.reload();
-                    })
-                    .catch((err) => {
-                        console.error('Sign-in failed:', err);
-                        alert('Could not sign up with Google: ' + err.message);
-                    });
+            signupGoogleBtn.addEventListener('click', async () => {
+                const anonUser = firebase.auth().currentUser;
+                const anonUid = anonUser ? anonUser.uid : null;
+
+                try {
+                    // Try linking the anonymous account to Google
+                    const provider = new firebase.auth.GoogleAuthProvider();
+                    let result;
+                    try {
+                        const credential = await anonUser.linkWithPopup(provider);
+                        result = credential;
+                    } catch (linkErr) {
+                        // If linking fails (e.g. account already exists), sign in normally
+                        // and migrate data from anonymous account
+                        result = await firebase.auth().signInWithPopup(provider);
+
+                        // Migrate dry mode data from anonymous UID to the new user
+                        if (anonUid && result.user && anonUid !== result.user.uid) {
+                            try {
+                                const anonSnap = await db.ref(`users/${anonUid}/folders`).once('value');
+                                const anonFolders = anonSnap.val();
+                                if (anonFolders) {
+                                    // Merge into new user's folders
+                                    const newUserFoldersRef = db.ref(`users/${result.user.uid}/folders`);
+                                    const existingSnap = await newUserFoldersRef.once('value');
+                                    const existingFolders = existingSnap.val() || {};
+
+                                    for (const [folderKey, diagrams] of Object.entries(anonFolders)) {
+                                        if (!existingFolders[folderKey]) {
+                                            existingFolders[folderKey] = diagrams;
+                                        } else {
+                                            Object.assign(existingFolders[folderKey], diagrams);
+                                        }
+                                    }
+                                    await newUserFoldersRef.set(existingFolders);
+                                }
+                            } catch (migrateErr) {
+                                console.warn('Dry mode migration partial failure:', migrateErr);
+                            }
+                        }
+                    }
+
+                    window.location.reload();
+                } catch (err) {
+                    console.error('Sign-in failed:', err);
+                    alert('Could not sign up with Google: ' + err.message);
+                }
             });
         }
     </script>
@@ -824,7 +868,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
     <!-- App Scripts -->
-    <script src="/static/js/app.js?v=2.5"></script>
+    <script src="/static/js/app.js?v=3.0"></script>
 </body>
 
 </html>

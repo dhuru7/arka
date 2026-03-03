@@ -226,7 +226,7 @@ function setupEventListeners() {
     document.getElementById('btn-code-view').addEventListener('click', handleOpenCodeEditor);
     document.getElementById('code-editor-apply').addEventListener('click', handleApplyCodeEdit);
 
-    document.getElementById('btn-save').addEventListener('click', () => openModal('save-modal'));
+    document.getElementById('btn-save').addEventListener('click', () => { loadUserFolders(); openModal('save-modal'); });
     document.getElementById('btn-load').addEventListener('click', handleOpenLoad);
 
     // Clear canvas
@@ -302,6 +302,12 @@ function setupEventListeners() {
 
     // Save confirm
     document.getElementById('save-confirm').addEventListener('click', handleSave);
+
+    // Custom folder creation
+    const createFolderBtn = document.getElementById('btn-create-folder');
+    if (createFolderBtn) {
+        createFolderBtn.addEventListener('click', handleCreateFolder);
+    }
 
     const customConfirmBtn = document.getElementById('custom-theme-confirm');
     if (customConfirmBtn) {
@@ -545,16 +551,17 @@ async function handleGenerate() {
         }
 
         await incrementUserGenerationCount(user.uid, user.isAnonymous);
-        // Await to ensure the ui updates before toast is dismissed
-        await updateLiveCredits(user);
+
+        // Update credits optimistically (add 1 to displayed count immediately)
+        await updateLiveCredits(user, true);
 
         currentMermaidCode = generatedCode;
         await renderFromCode(currentMermaidCode);
         updateStatus('ready', 'Generated');
         showToast(`${currentMode} generated successfully!`, 'success');
 
-        // Update live credits dynamically after successful generation without refresh
-        await updateLiveCredits(user);
+        // Verify with server value after a short delay to ensure accuracy
+        setTimeout(() => updateLiveCredits(user, false), 1500);
 
         if (sidebar && sidebar.classList.contains('open')) {
             sidebar.classList.remove('open');
@@ -1054,20 +1061,22 @@ function checkAndInjectBMCWidget(usageCount, isAnonymous) {
     }
 }
 
-async function updateLiveCredits(user) {
+async function updateLiveCredits(user, optimisticIncrement = false) {
     if (!user) user = firebase.auth().currentUser;
     if (!user) return;
 
     try {
         const data = await checkUserLimits(user.uid, user.isAnonymous);
         const today = new Date().toISOString().split('T')[0];
-        const todayUsage = (data.dailyUsage && data.dailyUsage[today]) ? data.dailyUsage[today] : 0;
+        let todayUsage = (data.dailyUsage && data.dailyUsage[today]) ? data.dailyUsage[today] : 0;
 
         const statEl = document.getElementById('user-usage-stats');
         if (!statEl) return;
 
         if (user.isAnonymous) {
-            const guestTotal = data.totalGuestDiagrams || 0;
+            let guestTotal = data.totalGuestDiagrams || 0;
+            // Optimistic increment: server may not have committed yet
+            if (optimisticIncrement) guestTotal = Math.max(guestTotal, guestTotal + 1);
             statEl.innerText = `Credits: ${guestTotal} / 5 Limit`;
             if (guestTotal >= 5) {
                 statEl.style.color = '#ff4d4d';
@@ -1076,6 +1085,8 @@ async function updateLiveCredits(user) {
             }
             checkAndInjectBMCWidget(guestTotal, user.isAnonymous);
         } else {
+            // Optimistic increment for signed-in users
+            if (optimisticIncrement) todayUsage = Math.max(todayUsage, todayUsage + 1);
             statEl.innerText = `Credits: ${todayUsage} / 10 Limit`;
             if (todayUsage >= 10) {
                 statEl.style.color = '#ff4d4d';
@@ -1093,7 +1104,7 @@ async function updateLiveCredits(user) {
         }
         statEl.style.color = '#ff4d4d';
         if (!user.isAnonymous) {
-            checkAndInjectBMCWidget(10, user.isAnonymous);
+            checkAndInjectBMCWidget(10, user.isAnonymous); // force trigger BMC at limit
         }
     }
 }
@@ -1475,8 +1486,6 @@ async function handleApplyCodeEdit() {
 
 // ═══ Firebase Save & Load ═══════════════════════════════════════════════════
 
-// ═══ Firebase Save & Load ═══════════════════════════════════════════════════
-
 async function handleSave() {
     const nameInput = document.getElementById('save-name');
     const folderSelect = document.getElementById('save-folder');
@@ -1498,15 +1507,15 @@ async function handleSave() {
         return;
     }
 
-    // Check Limits (3 folders config, 3 diagrams per folder)
+    // Check Limits (3 diagrams per folder)
     const folderRef = db.ref(`users/${user.uid}/folders/${folderId}`);
     try {
         const snapshot = await folderRef.once('value');
         const folderData = snapshot.val() || {};
-        const diagramCount = Object.keys(folderData).length;
+        const diagramCount = Object.keys(folderData).filter(k => k !== '_meta').length;
 
         if (diagramCount >= 3) {
-            showToast('Premium Required! Folder is full (max 3 diagrams/folder).', 'error');
+            showToast('Folder is full (max 3 diagrams/folder). Create a new folder.', 'error');
             return;
         }
 
@@ -1521,11 +1530,108 @@ async function handleSave() {
         const newRef = folderRef.push();
         await newRef.set(flowchartData);
 
-        showToast(`Saved "${name}" into ${folderId} successfully!`, 'success');
+        // Get display name for folder
+        const meta = folderData._meta;
+        const folderDisplayName = meta && meta.name ? meta.name : folderId;
+        showToast(`Saved "${name}" into ${folderDisplayName} successfully!`, 'success');
         closeAllModals();
         nameInput.value = '';
     } catch (err) {
         showToast('Save failed: ' + err.message, 'error');
+    }
+}
+
+async function handleCreateFolder() {
+    const nameInput = document.getElementById('new-folder-name');
+    const folderName = nameInput ? nameInput.value.trim() : '';
+
+    if (!folderName) {
+        showToast('Enter a folder name.', 'error');
+        return;
+    }
+
+    const user = firebase.auth().currentUser;
+    if (!user) {
+        showToast('You must be logged in to create folders.', 'error');
+        return;
+    }
+
+    // Create a sanitized key from the folder name
+    const folderKey = folderName.toLowerCase().replace(/[^a-z0-9]/g, '_').substring(0, 30);
+    if (!folderKey) {
+        showToast('Invalid folder name.', 'error');
+        return;
+    }
+
+    // Check if user already has too many folders (max 6)
+    try {
+        const foldersSnap = await db.ref(`users/${user.uid}/folders`).once('value');
+        const existingFolders = foldersSnap.val() || {};
+        if (Object.keys(existingFolders).length >= 6) {
+            showToast('Max 6 folders allowed.', 'error');
+            return;
+        }
+
+        if (existingFolders[folderKey]) {
+            showToast('A folder with this name already exists.', 'error');
+            return;
+        }
+
+        // Create the folder with metadata
+        await db.ref(`users/${user.uid}/folders/${folderKey}/_meta`).set({
+            name: folderName,
+            createdAt: Date.now()
+        });
+
+        // Add to the select dropdown
+        const folderSelect = document.getElementById('save-folder');
+        if (folderSelect) {
+            const option = document.createElement('option');
+            option.value = folderKey;
+            option.textContent = folderName;
+            folderSelect.appendChild(option);
+            folderSelect.value = folderKey;
+        }
+
+        nameInput.value = '';
+        showToast(`Folder "${folderName}" created!`, 'success');
+    } catch (err) {
+        showToast('Failed to create folder: ' + err.message, 'error');
+    }
+}
+
+// Load user folders dynamically when Save modal opens
+async function loadUserFolders() {
+    const user = firebase.auth().currentUser;
+    if (!user) return;
+
+    const folderSelect = document.getElementById('save-folder');
+    if (!folderSelect) return;
+
+    try {
+        const snap = await db.ref(`users/${user.uid}/folders`).once('value');
+        const folders = snap.val() || {};
+
+        // Clear existing options
+        folderSelect.innerHTML = '';
+
+        // Default folders
+        const defaultFolders = ['folder1', 'folder2', 'folder3'];
+        const allFolderKeys = new Set([...defaultFolders, ...Object.keys(folders)]);
+
+        allFolderKeys.forEach(key => {
+            const option = document.createElement('option');
+            option.value = key;
+            // Use custom name from metadata if available
+            if (folders[key] && folders[key]._meta && folders[key]._meta.name) {
+                option.textContent = folders[key]._meta.name;
+            } else {
+                option.textContent = key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ');
+            }
+            folderSelect.appendChild(option);
+        });
+    } catch (err) {
+        console.error('Failed to load folders:', err);
     }
 }
 
@@ -1548,15 +1654,18 @@ function handleOpenLoad() {
             // Reconstruct array for display
             Object.keys(folders).forEach(fKey => {
                 const diagrams = folders[fKey];
+                // Get folder display name
+                const folderDisplayName = (diagrams._meta && diagrams._meta.name) ? diagrams._meta.name : fKey;
                 Object.keys(diagrams).forEach(dKey => {
-                    items.push({ id: dKey, folder: fKey, ...diagrams[dKey] });
+                    if (dKey === '_meta') return; // Skip metadata entries
+                    items.push({ id: dKey, folder: fKey, folderName: folderDisplayName, ...diagrams[dKey] });
                 });
             });
 
             items.sort((a, b) => b.createdAt - a.createdAt);
 
             if (items.length === 0) {
-                listEl.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);">No saved flowcharts.</div>';
+                listEl.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);">No saved diagrams.</div>';
                 return;
             }
 
@@ -1566,7 +1675,7 @@ function handleOpenLoad() {
                 div.className = 'saved-item';
                 div.innerHTML = `
                         <div style="text-align: left;">
-                        <div class="saved-item-name">${escapeHtml(item.name)} <span style="font-size:0.75rem; color:#888;">(${item.folder})</span></div>
+                        <div class="saved-item-name">${escapeHtml(item.name)} <span style="font-size:0.75rem; color:#888;">(${escapeHtml(item.folderName || item.folder)})</span></div>
                         <div class="saved-item-date">${new Date(item.createdAt).toLocaleDateString()}</div>
                         </div>
                         <div class="saved-item-actions">
