@@ -5,6 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ARKA | Changelog</title>
+    <meta name="description"
+        content="Track every update, fix and new feature shipped in ARKA – the AI diagram generator.">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -19,266 +21,202 @@
         href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='black'/><text y='50%' x='50%' dominant-baseline='middle' text-anchor='middle' fill='white' font-family='sans-serif' font-size='60' font-weight='bold'>A</text></svg>">
 
     <style>
+        * {
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+        }
+
         body {
             background-color: var(--bg);
             color: var(--fg);
+            margin: 0;
         }
 
-        /* Premium Background Glows */
-        .glow-orb {
-            position: fixed;
-            border-radius: 50%;
-            filter: blur(100px);
-            z-index: 0;
-            pointer-events: none;
-            opacity: 0.15;
-            animation: float 20s infinite ease-in-out alternate;
-        }
-
-        .glow-1 {
-            top: -10%;
-            left: -10%;
-            width: 50vw;
-            height: 50vw;
-            background: var(--accent);
-        }
-
-        .glow-2 {
-            bottom: -20%;
-            right: -10%;
-            width: 60vw;
-            height: 60vw;
-            background: #3b82f6;
-            animation-delay: -5s;
-        }
-
-        @keyframes float {
-            0% {
-                transform: scale(1) translate(0, 0);
-            }
-
-            50% {
-                transform: scale(1.1) translate(5%, 5%);
-            }
-
-            100% {
-                transform: scale(0.9) translate(-5%, -5%);
-            }
-        }
-
-        .updates-container {
-            max-width: 900px;
+        .cl-container {
+            max-width: 720px;
             margin: 0 auto;
-            padding: 100px 24px 80px;
+            padding: 80px 24px 100px;
             position: relative;
             z-index: 10;
         }
 
+        /* ── Back Button ─────────────────────── */
         .nav-back {
             position: fixed;
-            top: 24px;
-            left: 24px;
-            z-index: 100;
-        }
-
-        .header-section {
-            margin-bottom: 80px;
-        }
-
-        .header-section h1 {
-            font-family: var(--font-logo);
-            font-size: 4rem;
-            color: var(--fg);
-            margin-bottom: 16px;
-            letter-spacing: -1px;
-            background: linear-gradient(90deg, var(--fg), #888);
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .header-section p {
-            color: var(--fg-muted);
-            font-size: 1.2rem;
-            font-family: var(--font-body);
-            max-width: 500px;
-            line-height: 1.6;
-        }
-
-        .timeline-container {
-            position: relative;
-        }
-
-        .timeline-line {
-            position: absolute;
+            top: 20px;
             left: 20px;
-            top: 10px;
-            bottom: 0;
-            width: 2px;
-            background: linear-gradient(to bottom, var(--border), transparent);
-            z-index: 1;
-        }
-
-        .update-item {
-            position: relative;
-            padding-left: 64px;
-            margin-bottom: 72px;
-        }
-
-        /* The Dot */
-        .update-item::before {
-            content: '';
-            position: absolute;
-            left: 17px;
-            top: 6px;
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: var(--bg);
-            border: 2px solid var(--accent);
-            z-index: 2;
-            transition: all 0.3s ease;
-            box-shadow: 0 0 0 4px var(--bg);
-        }
-
-        .update-item:hover::before {
-            background: var(--accent);
-            box-shadow: 0 0 16px var(--accent), 0 0 0 4px var(--bg);
-        }
-
-        .update-meta {
+            z-index: 100;
+            width: 40px;
+            height: 40px;
             display: flex;
             align-items: center;
-            gap: 16px;
+            justify-content: center;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            color: var(--fg);
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        .nav-back:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--border-light);
+        }
+
+        .nav-back:active {
+            transform: scale(0.95);
+        }
+
+        /* ── Header ──────────────────────────── */
+        .cl-header {
+            margin-bottom: 56px;
+        }
+
+        .cl-header h1 {
+            font-family: var(--font-logo);
+            font-size: clamp(2rem, 5vw, 3rem);
+            letter-spacing: -0.5px;
+            margin: 0 0 8px;
+            color: var(--fg);
+        }
+
+        .cl-subtitle {
+            color: var(--fg-muted);
+            font-family: var(--font-body);
+            font-size: 0.95rem;
+            line-height: 1.5;
+            margin: 0;
+        }
+
+        /* ── Release Card ────────────────────── */
+        .release {
+            margin-bottom: 40px;
+        }
+
+        .release-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
             margin-bottom: 16px;
         }
 
-        .time-badge {
+        .release-version {
             font-family: var(--font-mono);
-            font-size: 0.85rem;
-            color: var(--fg);
-            background: rgba(255, 255, 255, 0.08);
-            padding: 6px 12px;
-            border-radius: var(--radius-pill);
-            border: 1px solid var(--border-light);
-        }
-
-        .version-badge {
-            font-family: var(--font-mono);
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             color: var(--accent);
+            background: rgba(229, 46, 46, 0.08);
+            border: 1px solid rgba(229, 46, 46, 0.15);
+            padding: 4px 12px;
+            border-radius: 100px;
             font-weight: 600;
+            letter-spacing: 0.5px;
         }
 
-        .update-content {
+        .release-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--fg);
+            margin: 0;
+            letter-spacing: -0.3px;
+        }
+
+        .release-body {
             background: var(--bg-surface);
             border: 1px solid var(--border);
-            border-radius: var(--radius-md);
-            padding: 32px;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border-radius: 12px;
+            padding: 20px 24px;
+            transition: border-color 0.3s ease;
         }
 
-        .update-item:hover .update-content {
-            transform: translateY(-4px);
+        .release:hover .release-body {
             border-color: var(--border-light);
-            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
         }
 
-        .update-content h2 {
-            font-size: 1.6rem;
-            font-weight: 600;
-            margin-bottom: 16px;
-            color: var(--fg);
-            letter-spacing: -0.5px;
-        }
-
-        .update-content p {
+        .release-desc {
             color: var(--fg-muted);
-            line-height: 1.7;
-            font-size: 1.05rem;
-            margin-bottom: 24px;
+            font-size: 0.9rem;
+            line-height: 1.65;
+            margin: 0 0 16px;
         }
 
-        .feature-list {
+        /* ── Change Items ────────────────────── */
+        .changes {
             list-style: none;
             padding: 0;
+            margin: 0;
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 10px;
         }
 
-        .feature-list li {
-            position: relative;
-            padding-left: 28px;
+        .changes li {
+            display: flex;
+            gap: 10px;
+            font-size: 0.88rem;
+            line-height: 1.55;
             color: var(--fg);
-            line-height: 1.6;
+            align-items: flex-start;
         }
 
-        .feature-list li::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 7px;
-            width: 12px;
-            height: 12px;
-            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23E52E2E' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'%3E%3C/polyline%3E%3C/svg%3E") no-repeat center;
-            background-size: contain;
+        .changes li::before {
+            content: '→';
+            color: var(--accent);
+            font-family: var(--font-mono);
+            font-weight: 700;
+            flex-shrink: 0;
+            margin-top: 1px;
         }
 
-        /* Light theme overrides */
-        body.light-theme .glow-1 {
-            opacity: 0.08;
+        /* ── Divider ─────────────────────────── */
+        .release-divider {
+            height: 1px;
+            background: var(--border);
+            margin: 0 0 40px;
+            opacity: 0.5;
         }
 
-        body.light-theme .header-section h1 {
-            background: linear-gradient(90deg, #111, #666);
-            -webkit-background-clip: text;
-            background-clip: text;
+        /* ── Light theme ─────────────────────── */
+        body.light-theme .nav-back {
+            background: rgba(255, 255, 255, 0.6);
         }
 
-        body.light-theme .time-badge {
-            background: rgba(0, 0, 0, 0.04);
-            border-color: var(--border);
+        body.light-theme .release-body {
+            background: rgba(0, 0, 0, 0.015);
         }
 
-        body.light-theme .update-item:hover .update-content {
-            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.05);
+        body.light-theme .release:hover .release-body {
+            border-color: rgba(0, 0, 0, 0.15);
         }
 
-        @media (max-width: 768px) {
-            .header-section h1 {
-                font-size: 2.8rem;
+        /* ── Mobile ──────────────────────────── */
+        @media (max-width: 640px) {
+            .cl-container {
+                padding: 72px 16px 80px;
             }
 
-            .updates-container {
-                padding: 90px 16px 60px;
+            .cl-header {
+                margin-bottom: 40px;
             }
 
-            .update-item {
-                padding-left: 40px;
-                margin-bottom: 56px;
+            .release-body {
+                padding: 16px 18px;
             }
 
-            .timeline-line {
-                left: 8px;
+            .release {
+                margin-bottom: 32px;
             }
 
-            .update-item::before {
-                left: 5px;
+            .release-divider {
+                margin: 0 0 32px;
             }
 
-            .update-content {
-                padding: 24px;
-            }
-
-            .update-content h2 {
-                font-size: 1.4rem;
-            }
-
-            .update-meta {
+            .release-header {
                 flex-direction: column;
                 align-items: flex-start;
-                gap: 8px;
+                gap: 6px;
             }
         }
     </style>
@@ -286,11 +224,9 @@
 
 <body class="dark-theme">
     <div class="bg-grid"></div>
-    <div class="glow-orb glow-1"></div>
-    <div class="glow-orb glow-2"></div>
 
-    <a href="/about" class="icon-btn glass-btn nav-back" id="back-btn" title="Back to About">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+    <a href="/" class="nav-back" id="back-btn" title="Back to Home">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
             <polyline points="15 18 9 12 15 6"></polyline>
         </svg>
     </a>
@@ -304,63 +240,78 @@
     </script>
 
     <div class="app-container" style="overflow-y: auto; display: block; height: 100vh;">
-        <div class="updates-container">
-            <div class="header-section">
+        <div class="cl-container">
+            <div class="cl-header">
                 <h1>CHANGELOG</h1>
-                <p>Track everything that's new and everything we've improved in ARKA. Always evolving.</p>
+                <p class="cl-subtitle">What's new in ARKA. Every fix, feature and improvement.</p>
             </div>
 
-            <div class="timeline-container">
-                <div class="timeline-line"></div>
-
-                <!-- Latest Update -->
-                <div class="update-item">
-                    <div class="update-meta">
-                        <span class="time-badge">Just now</span>
-                        <span class="version-badge">v2.1.0</span>
-                    </div>
-                    <div class="update-content">
-                        <h2>Mobile Redesign & Tool Tray Fixes</h2>
-                        <p>We've implemented massive UI consistency fixes across our mobile experience. Layout
-                            overlapping, z-indexes, and responsive drawer toggles are now flawlessly mapped.</p>
-                        <ul class="feature-list">
-                            <li>Re-engineered the bottom floating UI hierarchy so the sidebar and profile dropdowns
-                                gracefully slide completely above the middle tool-tray.</li>
-                            <li>The mobile hamburger toggle has been completely reshaped from a tiny dot to a fully
-                                interactive 28x28 icon with fluid geometric "X" rotations on click!</li>
-                            <li>Fixed conflicting dropdown logic where opening the Theme tray and Download tray
-                                simultaneously would break the UI overlay. Opening one now elegantly retracts any other
-                                active tray instantly.</li>
-                            <li>Implemented this brand new premium Changelog page structure to easily digest our latest
-                                patches.</li>
-                        </ul>
-                    </div>
+            <!-- v2.1.1 -->
+            <div class="release">
+                <div class="release-header">
+                    <span class="release-version">v2.1.1</span>
+                    <h2 class="release-title">Color & Shape Editing Overhaul</h2>
                 </div>
-
-                <!-- Previous Update -->
-                <div class="update-item">
-                    <div class="update-meta">
-                        <span class="time-badge">1 day ago</span>
-                        <span class="version-badge">v2.0.8</span>
-                    </div>
-                    <div class="update-content">
-                        <h2>Sleek Overlays & Folder Integrity</h2>
-                        <p>Quality of life improvements aimed at the user configuration states and the overarching
-                            "glass theme" aesthetic.</p>
-                        <ul class="feature-list">
-                            <li>The floating <strong>.glass-btn</strong> profiles and components now universally reflect
-                                genuine backdrop-blurs in Light Mode without looking blown out.</li>
-                            <li>Removed restrictive default dummy "Folder1, Folder2" placeholders from the save
-                                dialogue. It will now properly warn you to create an actual physical folder before
-                                blindly capturing diagrams.</li>
-                            <li>Cleaned up the heavy 'Load' screen removing redundant footers/cancel buttons favoring
-                                our standard intuitive cross-outs.</li>
-                            <li>Removed default blue tap-highlights across all interactive components on touch devices
-                                for a pristine native-app feel.</li>
-                        </ul>
-                    </div>
+                <div class="release-body">
+                    <p class="release-desc">Fixed critical bugs in the diagram editing workflow and introduced a
+                        brand-new visual shape picker.</p>
+                    <ul class="changes">
+                        <li>Fixed color-change parse errors caused by escaped newline characters in Mermaid style
+                            directives.</li>
+                        <li>Replaced the broken shape-cycling logic with a visual shape picker popup showing all 11
+                            Mermaid shapes.</li>
+                        <li>Users can now directly select Rectangle, Rounded, Stadium, Cylinder, Circle, Diamond,
+                            Hexagon, Parallelogram, Trapezoid, Subroutine, or Asymmetric shapes.</li>
+                        <li>Shape changes modify the Mermaid code directly — no AI calls needed.</li>
+                        <li>Fixed deployment routing issues for /index, /login, /law-bot, and /yt-notes on Vercel.</li>
+                        <li>Reduced static asset cache from 1 year to 1 hour to prevent stale content on deployments.
+                        </li>
+                    </ul>
                 </div>
             </div>
+
+            <div class="release-divider"></div>
+
+            <!-- v2.1.0 -->
+            <div class="release">
+                <div class="release-header">
+                    <span class="release-version">v2.1.0</span>
+                    <h2 class="release-title">Mobile Redesign & Tool Tray Fixes</h2>
+                </div>
+                <div class="release-body">
+                    <p class="release-desc">Massive UI consistency fixes across mobile. Layout overlapping, z-indexes,
+                        and responsive drawer toggles are now flawless.</p>
+                    <ul class="changes">
+                        <li>Re-engineered the bottom floating UI hierarchy so sidebar and profile dropdowns slide above
+                            the tool-tray.</li>
+                        <li>Mobile hamburger toggle reshaped with fluid geometric "X" rotations on click.</li>
+                        <li>Fixed conflicting dropdown logic — opening one tray now elegantly retracts any other active
+                            tray.</li>
+                        <li>Introduced this premium Changelog page.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="release-divider"></div>
+
+            <!-- v2.0.8 -->
+            <div class="release">
+                <div class="release-header">
+                    <span class="release-version">v2.0.8</span>
+                    <h2 class="release-title">Sleek Overlays & Folder Integrity</h2>
+                </div>
+                <div class="release-body">
+                    <p class="release-desc">Quality-of-life improvements for user configuration and the overarching
+                        glass theme aesthetic.</p>
+                    <ul class="changes">
+                        <li>Floating glass buttons now correctly reflect backdrop-blurs in Light Mode.</li>
+                        <li>Removed restrictive default "Folder1, Folder2" placeholders from the save dialogue.</li>
+                        <li>Cleaned up the 'Load' screen removing redundant footers and cancel buttons.</li>
+                        <li>Removed default blue tap-highlights on touch devices for a native-app feel.</li>
+                    </ul>
+                </div>
+            </div>
+
         </div>
     </div>
 </body>

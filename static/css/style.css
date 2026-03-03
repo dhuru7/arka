@@ -1021,7 +1021,7 @@ textarea::placeholder {
     z-index: 100;
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
     animation: dropdown-in 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-    max-height: 250px;
+    max-height: 400px;
     overflow-y: auto;
 }
 
@@ -1238,6 +1238,27 @@ textarea::placeholder {
         width: 85%;
         min-width: unset;
         max-width: 320px;
+    }
+
+    /* Mode dropdown inside sidebar: bottom-sheet on mobile so it's not clipped */
+    #mode-dropdown-wrapper .dropdown-menu {
+        position: fixed !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        top: auto !important;
+        right: auto !important;
+        width: 100vw !important;
+        min-width: 100vw !important;
+        max-height: 70vh !important;
+        overflow-y: auto;
+        background: rgba(10, 10, 15, 0.98) !important;
+        border: none !important;
+        border-top: 1px solid var(--border-light) !important;
+        border-radius: 20px 20px 0 0 !important;
+        padding: 16px 16px 32px 16px !important;
+        z-index: 100020 !important;
+        box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.8) !important;
+        animation: slide-up-mobile 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
     }
 
     .sidebar.open {
