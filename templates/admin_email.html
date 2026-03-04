@@ -930,7 +930,9 @@ nitishkaushik023@gmail.com</textarea>
                     }
                 } else {
                     statusEl.className = 'send-status error';
-                    statusEl.textContent = `❌ Error: ${data.error}`;
+                    // The backend returns it in `data.errors` instead of `data.error` when it fails during processing
+                    const errorMsg = (data.errors && data.errors.length > 0) ? data.errors[0] : (data.error || "Unknown Error");
+                    statusEl.textContent = `❌ Error: ${errorMsg}`;
                 }
             } catch (err) {
                 statusEl.className = 'send-status error';
