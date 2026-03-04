@@ -77,6 +77,10 @@
             "destination": "/templates/admin_email.html"
         },
         {
+            "source": "/admin_email",
+            "destination": "/templates/admin_email.html"
+        },
+        {
             "source": "/templates/:path*",
             "destination": "/templates/:path*"
         },
