@@ -836,7 +836,7 @@ def admin_email():
 
 @app.route('/api/send-emails', methods=['POST'])
 def send_emails():
-    """Send emails to users via Brevo (Sendinblue) API."""
+    """Send emails to users via Resend API."""
     try:
         data = request.get_json()
         emails = data.get('emails', [])
@@ -844,15 +844,14 @@ def send_emails():
         html_body = data.get('html', '')
         admin_key = data.get('admin_key', '')
 
-        BREVO_API_KEY = os.environ.get('BREVO_API_KEY', '').strip()
-        BREVO_SENDER_EMAIL = os.environ.get('BREVO_SENDER_EMAIL', '').strip()
+        RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '').strip('"\'  ')
         ADMIN_SECRET = os.environ.get('ADMIN_SECRET', 'arka-dhruv-2026')
 
         if admin_key != ADMIN_SECRET:
             return jsonify({'error': 'Unauthorized. Invalid admin key.'}), 403
 
-        if not BREVO_API_KEY or not BREVO_SENDER_EMAIL:
-            return jsonify({'error': 'BREVO_API_KEY or BREVO_SENDER_EMAIL not configured in environment.'}), 500
+        if not RESEND_API_KEY:
+            return jsonify({'error': 'RESEND_API_KEY not configured.'}), 500
 
         if not emails or not subject or not html_body:
             return jsonify({'error': 'Missing emails, subject, or html body.'}), 400
@@ -864,26 +863,23 @@ def send_emails():
         import urllib.request
         import json
 
-        batch_size = 50
-        total_sent = 0
+        sent = 0
         all_errors = []
-        
-        for i in range(0, len(valid_emails), batch_size):
-            batch = valid_emails[i:i + batch_size]
-            data_payload = {
-                "sender": {"name": "Arka Team", "email": BREVO_SENDER_EMAIL},
-                "to": [{"email": BREVO_SENDER_EMAIL}],
-                "bcc": [{"email": e} for e in batch],
-                "subject": subject,
-                "htmlContent": html_body
-            }
-            req = urllib.request.Request("https://api.brevo.com/v3/smtp/email", data=json.dumps(data_payload).encode('utf-8'))
-            req.add_header('api-key', BREVO_API_KEY)
-            req.add_header('accept', 'application/json')
-            req.add_header('content-type', 'application/json')
+
+        for email in valid_emails:
             try:
+                data_payload = {
+                    "from": "Arka Team <onboarding@resend.dev>",
+                    "to": [email],
+                    "subject": subject,
+                    "html": html_body
+                }
+                req = urllib.request.Request("https://api.resend.com/emails", data=json.dumps(data_payload).encode('utf-8'))
+                req.add_header('Authorization', f'Bearer {RESEND_API_KEY}')
+                req.add_header('Content-Type', 'application/json')
+                
                 with urllib.request.urlopen(req) as response:
-                    total_sent += len(batch)
+                    sent += 1
             except Exception as e:
                 err_body = str(e)
                 if hasattr(e, 'read'):
@@ -891,14 +887,15 @@ def send_emails():
                         err_body = e.read().decode('utf-8')
                     except Exception:
                         pass
-                all_errors.append(f"Batch failed: {err_body}")
+                all_errors.append(f"{email}: {err_body}")
 
         return jsonify({
-            'success': total_sent == len(valid_emails),
-            'sent': total_sent,
-            'failed': len(valid_emails) - total_sent,
+            'success': sent == len(valid_emails),
+            'sent': sent,
+            'failed': len(valid_emails) - sent,
             'total': len(valid_emails),
-            'errors': all_errors[:10]
+            'errors': all_errors[:10],
+            'error': all_errors[0] if all_errors else None
         })
 
     except Exception as e:

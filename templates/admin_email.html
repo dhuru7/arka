@@ -602,13 +602,12 @@ nitishkaushik023@gmail.com</textarea>
                     </p>
                 </div>
                 <p style="color: #71717a; font-size: 0.8rem; margin-top: 20px;">
-                    ℹ️ Emails are sent via <b>Gmail SMTP</b> to bypass free-tier limits. <br>
+                    ℹ️ Emails are sent via <b>Resend API</b>. <br>
                     You <strong style="color: #e52e2e;">must</strong> set <code
-                        style="color: #fff;">GMAIL_ADDRESS</code> and <code
-                        style="color: #fff;">GMAIL_APP_PASSWORD</code> in your Vercel Environment Variables.
+                        style="color: #fff;">RESEND_API_KEY</code> in your Vercel Environment Variables.
                     <br><br>
-                    <i>(To get an App Password, go to your Gmail Account Settings &rarr; Security &rarr; 2-Step
-                        Verification &rarr; App passwords)</i>
+                    <i>(Please note: Free Resend accounts can only send testing emails to their OWN verified email
+                        address until a custom domain is verified!)</i>
                 </p>
             </div>
 
@@ -911,34 +910,58 @@ nitishkaushik023@gmail.com</textarea>
             statusEl.textContent = `📤 Sending to ${combinedEmails.length} users...`;
 
             try {
-                const resp = await fetch('/api/send-emails', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        emails: combinedEmails,
-                        subject: subject,
-                        html: html,
-                        admin_key: adminKey
-                    })
-                });
+                let sent = 0;
+                let failed = 0;
+                let errors = [];
 
-                const data = await resp.json();
+                for (let i = 0; i < combinedEmails.length; i++) {
+                    const email = combinedEmails[i];
+                    statusEl.textContent = `⏳ Sending: ${i + 1}/${combinedEmails.length} (Queuing to avoid limits...)`;
 
-                if (data.success) {
-                    statusEl.className = 'send-status success';
-                    statusEl.textContent = `✅ Done! Sent: ${data.sent}  |  Failed: ${data.failed}  |  Total: ${data.total}`;
-                    if (data.errors && data.errors.length > 0) {
-                        statusEl.textContent += '\n\nFirst errors:\n' + data.errors.join('\n');
+                    try {
+                        const payload = {
+                            emails: [email],
+                            subject: subject, // Use the subject from the input field
+                            html: html, // Use the html from the input field
+                            admin_key: adminKey
+                        };
+
+                        const response = await fetch('/api/send-emails', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(payload)
+                        });
+
+                        const data = await response.json();
+                        if (data.success) {
+                            sent++;
+                        } else {
+                            failed++;
+                            const errorMsg = (data.errors && data.errors.length > 0) ? data.errors[0] : (data.error || "Unknown Error");
+                            errors.push(`${email}: ${errorMsg}`);
+                        }
+                    } catch (e) {
+                        failed++;
+                        errors.push(`${email}: ${e.message}`);
                     }
-                } else {
-                    statusEl.className = 'send-status error';
-                    // The backend returns it in `data.errors` instead of `data.error` when it fails during processing
-                    const errorMsg = (data.errors && data.errors.length > 0) ? data.errors[0] : (data.error || "Unknown Error");
-                    statusEl.textContent = `❌ Error: ${errorMsg}`;
+
+                    // Sleep for 1.2 seconds between each email to bypass Resend RATE LIMITS (2 per second limit)
+                    if (i < combinedEmails.length - 1) {
+                        await new Promise(r => setTimeout(r, 1200));
+                    }
                 }
+
+                statusEl.className = 'send-status ' + (failed === 0 ? 'success' : 'error');
+                statusEl.textContent = `✅ Done! Sent: ${sent}  |  Failed: ${failed}  |  Total: ${combinedEmails.length}`;
+                if (errors.length > 0) {
+                    statusEl.textContent += '\n\nFirst errors:\n' + errors.slice(0, 10).join('\n');
+                }
+
             } catch (err) {
                 statusEl.className = 'send-status error';
-                statusEl.textContent = `❌ Network error: ${err.message}`;
+                statusEl.textContent = `❌ Error: ${err.message}`;
             } finally {
                 sendBtn.disabled = false;
                 sendBtn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg> Send to All Users`;
