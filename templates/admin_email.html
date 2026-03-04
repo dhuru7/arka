@@ -575,7 +575,17 @@
                     <label>Sender Display Name</label>
                     <input type="text" id="sender-name" value="Arka Team">
                 </div>
-                <p style="color: #71717a; font-size: 0.8rem; margin-top: 12px;">
+                <div class="form-section">
+                    <label>Manual Email List (Optional)</label>
+                    <textarea id="manual-emails" style="min-height: 100px; font-size: 0.85rem;"
+                        placeholder="Paste emails here separated by commas or new lines..."></textarea>
+                    <p style="color: #71717a; font-size: 0.75rem; margin-top: 8px;">
+                        Note: Firebase Auth users aren't fully synced to the DB. To email everyone, go to Firebase
+                        Console &rarr; Authentication &rarr; Download users (csv), open the file, copy the emails, and
+                        paste them here.
+                    </p>
+                </div>
+                <p style="color: #71717a; font-size: 0.8rem; margin-top: 20px;">
                     ℹ️ Emails will be sent from <code style="color: #e52e2e;">onboarding@resend.dev</code> with
                     your display name. To use a custom domain email, verify your domain in
                     <a href="https://resend.com" target="_blank" style="color: #e52e2e;">Resend dashboard</a>.
@@ -856,28 +866,36 @@
                 return;
             }
 
-            if (allUserEmails.length === 0) {
+            // Gather manual emails from the Settings tab
+            const manualRaw = document.getElementById('manual-emails').value;
+            const manualEmails = manualRaw.split(/[\n,]/)
+                .map(e => e.trim())
+                .filter(e => e && e.includes('@'));
+
+            const combinedEmails = [...new Set([...allUserEmails, ...manualEmails])];
+
+            if (combinedEmails.length === 0) {
                 statusEl.className = 'send-status error';
-                statusEl.textContent = '❌ No user emails found. Load users first.';
+                statusEl.textContent = '❌ No user emails found. Wait for load or add them manually in Settings tab.';
                 return;
             }
 
             const confirm = window.confirm(
-                `Are you sure you want to send this email to ${allUserEmails.length} users?\n\nSubject: ${subject}`
+                `Are you sure you want to send this email to ${combinedEmails.length} users?\n\nSubject: ${subject}`
             );
             if (!confirm) return;
 
             sendBtn.disabled = true;
             sendBtn.innerHTML = '<span class="spinner"></span> Sending...';
             statusEl.className = 'send-status loading';
-            statusEl.textContent = `📤 Sending to ${allUserEmails.length} users...`;
+            statusEl.textContent = `📤 Sending to ${combinedEmails.length} users...`;
 
             try {
                 const resp = await fetch('/api/send-emails', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        emails: allUserEmails,
+                        emails: combinedEmails,
                         subject: subject,
                         html: html,
                         admin_key: adminKey
