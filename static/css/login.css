@@ -120,3 +120,28 @@ body {
         font-size: 1rem;
     }
 }
+
+/* ── Auth Buttons Explicit Styles ── */
+.auth-btn.primary {
+    background-color: var(--accent) !important;
+    color: #ffffff !important;
+    border-color: var(--accent) !important;
+}
+
+.auth-btn.primary:hover {
+    background-color: var(--accent-hover) !important;
+    color: #ffffff !important;
+    border-color: var(--accent-hover) !important;
+    opacity: 1;
+}
+
+.auth-btn.secondary {
+    background-color: transparent;
+    color: var(--fg);
+    border: 1px solid var(--border-light);
+}
+
+.auth-btn.secondary:hover {
+    background-color: var(--fg) !important;
+    color: var(--bg) !important;
+}
