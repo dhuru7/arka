@@ -236,16 +236,37 @@ function setupEventListeners() {
     // Sidebar toggle (mobile)
     const mobileOverlay = document.getElementById('mobile-overlay');
     sidebarToggle.addEventListener('click', () => {
+        const isOpening = !sidebar.classList.contains('open');
+        // Add transition for the animation
+        const spans = sidebarToggle.querySelectorAll('.hamburger-icon span');
+        spans.forEach(s => s.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)');
+
         sidebar.classList.toggle('open');
         sidebarToggle.classList.toggle('open');
         if (mobileOverlay) mobileOverlay.classList.toggle('active');
+
+        // If closing, remove transition after animation completes to prevent visual glitch
+        if (!isOpening) {
+            setTimeout(() => {
+                spans.forEach(s => s.style.transition = 'none');
+            }, 350);
+        }
     });
 
     if (mobileOverlay) {
         mobileOverlay.addEventListener('click', () => {
+            // Add transition for close animation  
+            const spans = sidebarToggle.querySelectorAll('.hamburger-icon span');
+            spans.forEach(s => s.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)');
+
             sidebar.classList.remove('open');
             sidebarToggle.classList.remove('open');
             mobileOverlay.classList.remove('active');
+
+            // Remove transition after animation
+            setTimeout(() => {
+                spans.forEach(s => s.style.transition = 'none');
+            }, 350);
         });
     }
 
@@ -928,11 +949,25 @@ function autoFixMermaidCode(code) {
         }).join('\n');
     }
 
-    if (firstLine.startsWith('gitgraph') || firstLine.startsWith('gitGraph')) {
+    if (firstLine.startsWith('gitgraph')) {
         // Fix common git graph issues
         code = code.replace(/commit msg:/g, 'commit id:');
+        // Remove tag operations and cherry-pick
         code = lines.map((line, i) => {
-            if (i === 0) return line;
+            if (i === 0) return 'gitGraph';
+            const stripped = line.trim();
+            if (stripped.startsWith('cherry-pick')) return null;
+            let fixed = line.replace(/[()\\]/g, '');
+            // Remove tag directives
+            fixed = fixed.replace(/\s*tag:\s*"[^"]*"/g, '');
+            return fixed;
+        }).filter(l => l !== null).join('\n');
+    }
+
+    if (firstLine.startsWith('xychart')) {
+        // Ensure xychart-beta header
+        code = lines.map((line, i) => {
+            if (i === 0) return 'xychart-beta';
             return line.replace(/[()\\]/g, '');
         }).join('\n');
     }
@@ -1325,6 +1360,52 @@ function changeShape(element) {
     // Remove any existing shape picker
     const existingPicker = document.getElementById('shape-picker-popup');
     if (existingPicker) existingPicker.remove();
+    const existingOverlay = document.getElementById('shape-picker-overlay');
+    if (existingOverlay) existingOverlay.remove();
+
+    // SVG shape previews for each shape type
+    const shapeSVGs = [
+        /* Rectangle */    '<svg viewBox="0 0 40 28" width="40" height="28"><rect x="2" y="2" width="36" height="24" rx="3" ry="3" fill="FILL" stroke="STROKE" stroke-width="1.5"/></svg>',
+        /* Rounded */      '<svg viewBox="0 0 40 28" width="40" height="28"><rect x="2" y="2" width="36" height="24" rx="12" ry="12" fill="FILL" stroke="STROKE" stroke-width="1.5"/></svg>',
+        /* Stadium */      '<svg viewBox="0 0 40 28" width="40" height="28"><rect x="2" y="4" width="36" height="20" rx="10" ry="10" fill="FILL" stroke="STROKE" stroke-width="1.5"/></svg>',
+        /* Cylinder */     '<svg viewBox="0 0 40 32" width="40" height="32"><ellipse cx="20" cy="8" rx="16" ry="5" fill="FILL" stroke="STROKE" stroke-width="1.5"/><rect x="4" y="8" width="32" height="16" fill="FILL"/><line x1="4" y1="8" x2="4" y2="24" stroke="STROKE" stroke-width="1.5"/><line x1="36" y1="8" x2="36" y2="24" stroke="STROKE" stroke-width="1.5"/><ellipse cx="20" cy="24" rx="16" ry="5" fill="FILL" stroke="STROKE" stroke-width="1.5"/></svg>',
+        /* Circle */       '<svg viewBox="0 0 36 36" width="36" height="36"><circle cx="18" cy="18" r="15" fill="FILL" stroke="STROKE" stroke-width="1.5"/></svg>',
+        /* Diamond */      '<svg viewBox="0 0 36 36" width="36" height="36"><polygon points="18,2 34,18 18,34 2,18" fill="FILL" stroke="STROKE" stroke-width="1.5"/></svg>',
+        /* Hexagon */      '<svg viewBox="0 0 40 32" width="40" height="32"><polygon points="10,2 30,2 38,16 30,30 10,30 2,16" fill="FILL" stroke="STROKE" stroke-width="1.5"/></svg>',
+        /* Parallelogram */'<svg viewBox="0 0 40 28" width="40" height="28"><polygon points="10,2 38,2 30,26 2,26" fill="FILL" stroke="STROKE" stroke-width="1.5"/></svg>',
+        /* Trapezoid */    '<svg viewBox="0 0 40 28" width="40" height="28"><polygon points="8,2 32,2 38,26 2,26" fill="FILL" stroke="STROKE" stroke-width="1.5"/></svg>',
+        /* Subroutine */   '<svg viewBox="0 0 40 28" width="40" height="28"><rect x="2" y="2" width="36" height="24" rx="2" ry="2" fill="FILL" stroke="STROKE" stroke-width="1.5"/><line x1="8" y1="2" x2="8" y2="26" stroke="STROKE" stroke-width="1.5"/><line x1="32" y1="2" x2="32" y2="26" stroke="STROKE" stroke-width="1.5"/></svg>',
+        /* Asymmetric */   '<svg viewBox="0 0 40 28" width="40" height="28"><polygon points="2,2 32,2 38,14 32,26 2,26" fill="FILL" stroke="STROKE" stroke-width="1.5"/></svg>',
+    ];
+
+    // Inject animation styles once
+    if (!document.getElementById('shape-picker-styles')) {
+        const styleEl = document.createElement('style');
+        styleEl.id = 'shape-picker-styles';
+        styleEl.textContent = `
+            @keyframes shapePickerIn {
+                from { opacity: 0; transform: translate(-50%, -50%) scale(0.92); }
+                to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            }
+            @keyframes shapePickerOverlayIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+            #shape-picker-popup .shape-item {
+                transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+                will-change: transform;
+            }
+            #shape-picker-popup .shape-item:hover {
+                transform: scale(1.06);
+            }
+            #shape-picker-popup .shape-item:active {
+                transform: scale(0.96);
+            }
+        `;
+        document.head.appendChild(styleEl);
+    }
+
+    const isMobile = window.innerWidth <= 768;
 
     // Create popup
     const popup = document.createElement('div');
@@ -1333,97 +1414,125 @@ function changeShape(element) {
         position: fixed;
         top: 50%; left: 50%;
         transform: translate(-50%, -50%);
-        background: rgba(12, 12, 18, 0.97);
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        border-radius: 16px;
-        padding: 20px 24px;
+        background: rgba(12, 12, 18, 0.98);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 20px;
+        padding: 24px;
         z-index: 10000;
-        backdrop-filter: blur(20px);
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 60px rgba(0, 255, 255, 0.05);
-        animation: fadeInDown 0.2s ease-out;
-        min-width: 320px;
-        max-width: 400px;
+        backdrop-filter: blur(24px);
+        -webkit-backdrop-filter: blur(24px);
+        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.7), 0 0 1px rgba(255, 255, 255, 0.1) inset;
+        animation: shapePickerIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        width: ${isMobile ? 'calc(100% - 32px)' : '380px'};
+        max-width: 420px;
     `;
 
-    // Title
+    // Header
+    const header = document.createElement('div');
+    header.style.cssText = 'display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;';
+
+    const titleWrap = document.createElement('div');
+
     const title = document.createElement('div');
-    title.textContent = 'Choose Shape';
+    title.textContent = 'Change Shape';
     title.style.cssText = `
-        color: #fff; font-size: 14px; font-weight: 700;
-        text-transform: uppercase; letter-spacing: 2px;
-        margin-bottom: 14px; text-align: center;
+        color: #fff; font-size: 15px; font-weight: 600;
+        letter-spacing: 1px;
+        font-family: var(--font-body, 'Space Grotesk', sans-serif);
+    `;
+
+    const subtitle = document.createElement('div');
+    subtitle.textContent = selectedNodeOriginalText.length > 28
+        ? selectedNodeOriginalText.substring(0, 28) + '…'
+        : selectedNodeOriginalText;
+    subtitle.style.cssText = `
+        color: rgba(255,255,255,0.4); font-size: 12px;
+        margin-top: 2px;
         font-family: var(--font-mono, 'Space Mono', monospace);
     `;
-    popup.appendChild(title);
 
-    // Subtitle showing selected node
-    const subtitle = document.createElement('div');
-    subtitle.textContent = `Node: ${selectedNodeOriginalText}`;
-    subtitle.style.cssText = `
-        color: rgba(255,255,255,0.5); font-size: 11px;
-        margin-bottom: 16px; text-align: center;
-        font-family: var(--font-body, 'Space Grotesk', sans-serif);
-        overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    titleWrap.appendChild(title);
+    titleWrap.appendChild(subtitle);
+
+    const closeBtn = document.createElement('button');
+    closeBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
+    closeBtn.style.cssText = `
+        width: 32px; height: 32px; padding: 0; margin: 0;
+        border-radius: 50%; border: 1px solid rgba(255,255,255,0.1);
+        background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.5);
+        cursor: pointer; display: flex; align-items: center; justify-content: center;
+        transition: all 0.15s ease;
     `;
-    popup.appendChild(subtitle);
+    closeBtn.addEventListener('mouseenter', () => { closeBtn.style.background = 'rgba(255,255,255,0.15)'; closeBtn.style.color = '#fff'; });
+    closeBtn.addEventListener('mouseleave', () => { closeBtn.style.background = 'rgba(255,255,255,0.05)'; closeBtn.style.color = 'rgba(255,255,255,0.5)'; });
+    closeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        popup.remove();
+        overlay.remove();
+        showMobileOverlayButtons();
+    });
+
+    header.appendChild(titleWrap);
+    header.appendChild(closeBtn);
+    popup.appendChild(header);
 
     // Shape grid
     const grid = document.createElement('div');
     grid.style.cssText = `
         display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 8px;
+        grid-template-columns: repeat(${isMobile ? 3 : 4}, 1fr);
+        gap: 10px;
     `;
 
     MERMAID_SHAPES.forEach((shape, idx) => {
         const btn = document.createElement('button');
+        btn.className = 'shape-item';
         const isActive = idx === currentShapeIdx;
+        const accentColor = '#E52E2E';
         btn.title = shape.name;
         btn.style.cssText = `
             display: flex; flex-direction: column;
             align-items: center; justify-content: center;
-            gap: 4px; padding: 10px 4px;
-            background: ${isActive ? 'rgba(0, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.04)'};
-            border: 1px solid ${isActive ? 'rgba(0, 255, 255, 0.5)' : 'rgba(255, 255, 255, 0.08)'};
-            border-radius: 10px; cursor: pointer;
-            transition: all 0.15s ease;
+            gap: 8px; padding: ${isMobile ? '14px 6px' : '12px 6px'};
+            background: ${isActive ? 'rgba(229, 46, 46, 0.12)' : 'rgba(255, 255, 255, 0.03)'};
+            border: 1.5px solid ${isActive ? accentColor : 'rgba(255, 255, 255, 0.06)'};
+            border-radius: 12px; cursor: pointer;
             color: #fff; font-family: var(--font-body, 'Space Grotesk', sans-serif);
+            ${isActive ? `box-shadow: 0 0 16px rgba(229, 46, 46, 0.15);` : ''}
         `;
 
-        // Shape preview box
-        const previewBox = document.createElement('div');
-        previewBox.style.cssText = `
-            width: 32px; height: 24px;
-            background: ${isActive ? 'rgba(0, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.1)'};
-            border: 1.5px solid ${isActive ? '#00ffff' : 'rgba(255, 255, 255, 0.3)'};
-            display: flex; align-items: center; justify-content: center;
-            font-size: 14px; color: ${isActive ? '#00ffff' : '#fff'};
-            ${shape.css}
-        `;
-        previewBox.textContent = shape.preview;
+        // SVG shape preview
+        const previewWrap = document.createElement('div');
+        previewWrap.style.cssText = 'display: flex; align-items: center; justify-content: center; height: 36px;';
+        const fillColor = isActive ? 'rgba(229, 46, 46, 0.25)' : 'rgba(255, 255, 255, 0.08)';
+        const strokeColor = isActive ? accentColor : 'rgba(255, 255, 255, 0.4)';
+        previewWrap.innerHTML = (shapeSVGs[idx] || shapeSVGs[0])
+            .replace(/FILL/g, fillColor)
+            .replace(/STROKE/g, strokeColor);
 
         // Label
         const label = document.createElement('div');
         label.textContent = shape.name;
         label.style.cssText = `
-            font-size: 9px; opacity: 0.7;
-            text-align: center; line-height: 1.1;
-            color: ${isActive ? '#00ffff' : '#fff'};
+            font-size: 10px; font-weight: 500;
+            text-align: center; line-height: 1.2;
+            color: ${isActive ? '#fff' : 'rgba(255,255,255,0.55)'};
+            letter-spacing: 0.3px;
         `;
 
-        btn.appendChild(previewBox);
+        btn.appendChild(previewWrap);
         btn.appendChild(label);
 
         btn.addEventListener('mouseenter', () => {
             if (!isActive) {
-                btn.style.background = 'rgba(255, 255, 255, 0.1)';
-                btn.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+                btn.style.background = 'rgba(255, 255, 255, 0.08)';
+                btn.style.borderColor = 'rgba(255, 255, 255, 0.2)';
             }
         });
         btn.addEventListener('mouseleave', () => {
             if (!isActive) {
-                btn.style.background = 'rgba(255, 255, 255, 0.04)';
-                btn.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+                btn.style.background = 'rgba(255, 255, 255, 0.03)';
+                btn.style.borderColor = 'rgba(255, 255, 255, 0.06)';
             }
         });
 
@@ -1442,9 +1551,12 @@ function changeShape(element) {
 
     // Overlay
     const overlay = document.createElement('div');
+    overlay.id = 'shape-picker-overlay';
     overlay.style.cssText = `
         position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-        background: rgba(0,0,0,0.4); z-index: 9999;
+        background: rgba(0,0,0,0.55); z-index: 9999;
+        backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px);
+        animation: shapePickerOverlayIn 0.2s ease-out forwards;
     `;
     overlay.addEventListener('click', () => {
         popup.remove();

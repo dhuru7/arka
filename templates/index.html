@@ -326,7 +326,7 @@
                         </button>
 
                         <button class="dropdown-item" id="btn-logout" title="Log Out"
-                            style="justify-content: center; align-items: center; gap: 8px; border-radius: 6px; padding: 10px; width: 100%; color: #ff4d4d; border: 1px solid rgba(255, 77, 77, 0.2); background: rgba(255, 77, 77, 0.05); cursor: pointer; font-family: var(--font-body); display: flex;">
+                            style="justify-content: center; align-items: center; gap: 8px; border-radius: 6px; padding: 10px; width: 100%; color: #ff4d4d; border: 1px solid rgba(255, 77, 77, 0.2); background: rgba(255, 77, 77, 0.05); cursor: pointer; font-family: var(--font-body); display: none;">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                 style="width: 16px; height: 16px;">
                                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
@@ -720,13 +720,21 @@
                 if (user.isAnonymous) {
                     nameEl.innerText = "Guest Mode";
                     if (btnSignupGoogle) btnSignupGoogle.style.display = 'flex';
+                    // Hide logout button for guest users
+                    const logoutBtn = document.getElementById('btn-logout');
+                    if (logoutBtn) logoutBtn.style.display = 'none';
                 } else {
+                    // Save/update profile to DB on every sign-in
+                    saveUserProfile(user);
                     if (user.displayName) {
                         nameEl.innerText = user.displayName;
                     } else {
                         nameEl.innerText = user.email || "Logged In";
                     }
                     if (btnSignupGoogle) btnSignupGoogle.style.display = 'none';
+                    // Show logout button for logged-in users
+                    const logoutBtn = document.getElementById('btn-logout');
+                    if (logoutBtn) logoutBtn.style.display = 'flex';
                 }
 
                 // Fetch limits and stats dynamically from Firebase real-time DB via our check script logically initialized earlier

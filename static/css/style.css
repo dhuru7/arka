@@ -998,6 +998,31 @@ textarea::placeholder {
     }
 }
 
+/* Mobile-specific toast from top */
+@keyframes toast-in-top {
+    from {
+        opacity: 0;
+        transform: translateY(-40px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes toast-out-top {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    to {
+        opacity: 0;
+        transform: translateY(40px);
+    }
+}
+
 /* ── Download Dropdown ──────────────────────────────────────────────────── */
 .dropdown-wrapper {
     position: relative;
@@ -1212,8 +1237,14 @@ textarea::placeholder {
     height: 3px;
     background-color: var(--fg);
     border-radius: 2px;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    /* No transition in default state to prevent visual collapse */
+    transition: none;
     transform-origin: center;
+}
+
+/* Only animate when opening/closing the sidebar */
+.sidebar-toggle.open .hamburger-icon span {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .sidebar-toggle.open .hl-top {
@@ -1291,6 +1322,20 @@ textarea::placeholder {
         justify-content: center;
     }
 
+    /* Make glass buttons solid on mobile to match other toolbar buttons */
+    .glass-btn {
+        background: rgba(10, 10, 15, 0.92) !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        border: 1px solid var(--border-light) !important;
+        border-radius: var(--radius-pill) !important;
+    }
+
+    .glass-btn:hover {
+        background: var(--fg) !important;
+        color: var(--bg) !important;
+    }
+
     .status-bar {
         display: none;
         /* Hide status bar on small screens to save space */
@@ -1343,11 +1388,11 @@ textarea::placeholder {
     .theme-download-tray .toolbar-btn {
         width: 44px !important;
         height: 44px !important;
-        background: rgba(0, 0, 0, 0.2) !important;
-        backdrop-filter: blur(8px) !important;
-        -webkit-backdrop-filter: blur(8px) !important;
-        border: 1px solid var(--border) !important;
-        border-radius: 8px !important;
+        background: rgba(10, 10, 15, 0.92) !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        border: 1px solid var(--border-light) !important;
+        border-radius: var(--radius-pill) !important;
         box-shadow: none !important;
         color: var(--fg) !important;
         padding: 0 !important;
@@ -1356,13 +1401,30 @@ textarea::placeholder {
     }
 
     .theme-download-tray .toolbar-btn:hover {
-        background: rgba(255, 255, 255, 0.1) !important;
+        background: var(--fg) !important;
+        color: var(--bg) !important;
     }
 
     .theme-download-tray .toolbar-btn:active {
-        transform: scale(0.96) !important;
-        background: rgba(255, 255, 255, 0.15) !important;
+        transform: scale(0.98) !important;
         transition-duration: 0.1s !important;
+    }
+
+    /* Toast from top on mobile */
+    .toast-container {
+        top: 24px;
+        bottom: auto;
+        right: 24px;
+        left: 24px;
+        align-items: center;
+    }
+
+    .toast {
+        animation: toast-in-top 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .toast-exit {
+        animation: toast-out-top 0.4s ease-in forwards;
     }
 
     .toolbar {
@@ -1482,7 +1544,11 @@ textarea::placeholder {
         padding: 0 16px !important;
         height: 44px !important;
         justify-content: center !important;
-        border-radius: 8px !important;
+        border-radius: var(--radius-pill) !important;
+        background: rgba(10, 10, 15, 0.92) !important;
+        border: 1px solid var(--border-light) !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
     }
 
     #btn-theme-text {

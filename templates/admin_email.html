@@ -554,31 +554,84 @@
             loadUsers();
         });
 
-        // Load Users
+        // Load Users from both 'users' and 'userProfiles' nodes
         async function loadUsers() {
             try {
-                const snapshot = await db.ref('users').once('value');
-                const users = snapshot.val();
+                // Fetch from both sources in parallel
+                const [usersSnapshot, profilesSnapshot] = await Promise.all([
+                    db.ref('users').once('value'),
+                    db.ref('userProfiles').once('value')
+                ]);
+                const users = usersSnapshot.val() || {};
+                const profiles = profilesSnapshot.val() || {};
 
                 let total = 0, withEmail = 0, anonymous = 0;
                 allUsersData = [];
+                const emailSet = new Set(); // Track unique emails
 
-                if (users) {
-                    for (const uid in users) {
-                        total++;
-                        const user = users[uid];
-                        if (user.email && user.email.includes('@')) {
+                // Helper to extract email from a user data object (may be nested)
+                function extractEmail(data) {
+                    if (!data || typeof data !== 'object') return null;
+                    // Direct email field
+                    if (data.email && typeof data.email === 'string' && data.email.includes('@')) return data.email;
+                    // Check nested profile/info objects
+                    for (const key of Object.keys(data)) {
+                        const val = data[key];
+                        if (val && typeof val === 'object') {
+                            if (val.email && typeof val.email === 'string' && val.email.includes('@')) return val.email;
+                        }
+                    }
+                    return null;
+                }
+
+                // Helper to extract display name
+                function extractName(data) {
+                    if (!data || typeof data !== 'object') return 'Unknown';
+                    return data.name || data.displayName || data.userName || 'Unknown';
+                }
+
+                // Process users from the main 'users' node
+                for (const uid in users) {
+                    total++;
+                    const user = users[uid];
+                    const email = extractEmail(user);
+                    if (email) {
+                        const emailLower = email.toLowerCase();
+                        if (!emailSet.has(emailLower)) {
+                            emailSet.add(emailLower);
                             withEmail++;
                             allUsersData.push({
                                 id: uid,
-                                name: user.name || 'Unknown',
-                                email: user.email
+                                name: extractName(user),
+                                email: email
                             });
-                        } else {
-                            anonymous++;
+                        }
+                    } else {
+                        anonymous++;
+                    }
+                }
+
+                // Process users from 'userProfiles' node (Google sign-in users)
+                for (const uid in profiles) {
+                    const profile = profiles[uid];
+                    const email = extractEmail(profile);
+                    if (email) {
+                        const emailLower = email.toLowerCase();
+                        if (!emailSet.has(emailLower)) {
+                            emailSet.add(emailLower);
+                            withEmail++;
+                            if (!users[uid]) total++; // Only increment total if not already counted
+                            allUsersData.push({
+                                id: uid,
+                                name: profile.displayName || profile.name || 'Unknown',
+                                email: email
+                            });
                         }
                     }
                 }
+
+                // Sort by name for easier browsing
+                allUsersData.sort((a, b) => a.name.localeCompare(b.name));
 
                 document.getElementById('total-users').textContent = total;
                 document.getElementById('email-users').textContent = withEmail;
