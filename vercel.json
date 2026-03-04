@@ -73,6 +73,10 @@
             "destination": "/templates/updateslog.html"
         },
         {
+            "source": "/admin-email",
+            "destination": "/templates/admin_email.html"
+        },
+        {
             "source": "/templates/:path*",
             "destination": "/templates/:path*"
         },

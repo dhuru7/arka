@@ -829,6 +829,77 @@ def about():
     """Serve the About Landing page."""
     return render_template('about.html')
 
+@app.route('/admin-email')
+def admin_email():
+    """Serve the Admin Email page."""
+    return render_template('admin_email.html')
+
+@app.route('/api/send-emails', methods=['POST'])
+def send_emails():
+    """Send emails to users via Resend API."""
+    try:
+        data = request.get_json()
+        emails = data.get('emails', [])
+        subject = data.get('subject', '')
+        html_body = data.get('html', '')
+        admin_key = data.get('admin_key', '')
+
+        RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '').strip('"\'  ')
+        ADMIN_SECRET = os.environ.get('ADMIN_SECRET', 'arka-dhruv-2026')
+
+        if admin_key != ADMIN_SECRET:
+            return jsonify({'error': 'Unauthorized. Invalid admin key.'}), 403
+
+        if not RESEND_API_KEY:
+            return jsonify({'error': 'RESEND_API_KEY not configured.'}), 500
+
+        if not emails or not subject or not html_body:
+            return jsonify({'error': 'Missing emails, subject, or html body.'}), 400
+
+        valid_emails = [e.strip() for e in emails if e and '@' in e and '.' in e]
+        if not valid_emails:
+            return jsonify({'error': 'No valid email addresses found.'}), 400
+
+        sent = 0
+        failed = 0
+        errors = []
+
+        for email in valid_emails:
+            try:
+                resp = requests.post(
+                    'https://api.resend.com/emails',
+                    headers={
+                        'Authorization': f'Bearer {RESEND_API_KEY}',
+                        'Content-Type': 'application/json'
+                    },
+                    json={
+                        'from': 'Arka Team <onboarding@resend.dev>',
+                        'to': [email],
+                        'subject': subject,
+                        'html': html_body
+                    },
+                    timeout=30
+                )
+                if resp.status_code in (200, 201):
+                    sent += 1
+                else:
+                    failed += 1
+                    errors.append(f"{email}: {resp.text[:200]}")
+            except Exception as e:
+                failed += 1
+                errors.append(f"{email}: {str(e)}")
+
+        return jsonify({
+            'success': True,
+            'sent': sent,
+            'failed': failed,
+            'total': len(valid_emails),
+            'errors': errors[:10]
+        })
+
+    except Exception as e:
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
+
 @app.route('/api/law-chat', methods=['POST'])
 def law_chat():
     """
