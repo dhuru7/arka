@@ -6,17 +6,14 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-def _send_via_outlook(to_emails, subject, html_body, smtp_email, smtp_pass):
-    """Send emails via Outlook SMTP using BCC."""
-    if not smtp_email or not smtp_pass:
-        return False, "SMTP_EMAIL or SMTP_PASSWORD not configured.", 0, len(to_emails)
+def _send_via_gmail(to_emails, subject, html_body, gmail_addr, gmail_pass):
+    """Send emails via Gmail SMTP using BCC."""
+    if not gmail_addr or not gmail_pass:
+        return False, "GMAIL_ADDRESS or GMAIL_APP_PASSWORD not configured.", 0, len(to_emails)
 
     try:
-        # Outlook uses Port 587 and requires STARTTLS
-        server = smtplib.SMTP('smtp-mail.outlook.com', 587)
-        server.ehlo()
-        server.starttls()
-        server.login(smtp_email, smtp_pass)
+        server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
+        server.login(gmail_addr, gmail_pass)
         
         # Batch into 50 Bcc max per send to avoid spam flags
         batch_size = 50
@@ -28,14 +25,14 @@ def _send_via_outlook(to_emails, subject, html_body, smtp_email, smtp_pass):
             try:
                 msg = MIMEMultipart('alternative')
                 msg['Subject'] = subject
-                msg['From'] = f"Arka Team <{smtp_email}>"
-                msg['To'] = smtp_email # Primary 'to' address
+                msg['From'] = f"Arka Team <{gmail_addr}>"
+                msg['To'] = gmail_addr # Primary 'to' address
                 msg['Bcc'] = ", ".join(batch)
                 
                 part = MIMEText(html_body, 'html')
                 msg.attach(part)
                 
-                server.sendmail(smtp_email, [smtp_email] + batch, msg.as_string())
+                server.sendmail(gmail_addr, [gmail_addr] + batch, msg.as_string())
                 total_sent += len(batch)
             except Exception as e:
                 all_errors.append(f"Batch failed: {str(e)}")
@@ -71,15 +68,15 @@ class handler(BaseHTTPRequestHandler):
             admin_key = data.get('admin_key', '')
 
             ADMIN_SECRET_ENV = os.getenv("ADMIN_SECRET", "arka-dhruv-2026")
-            SMTP_EMAIL_ENV = os.getenv("SMTP_EMAIL", "").strip()
-            SMTP_PASSWORD_ENV = os.getenv("SMTP_PASSWORD", "").strip()
+            GMAIL_ADDRESS_ENV = os.getenv("GMAIL_ADDRESS", "").strip()
+            GMAIL_APP_PASSWORD_ENV = os.getenv("GMAIL_APP_PASSWORD", "").strip()
 
             if admin_key != ADMIN_SECRET_ENV:
                 self._json(403, {"error": "Unauthorized. Invalid admin key."})
                 return
 
-            if not SMTP_EMAIL_ENV or not SMTP_PASSWORD_ENV:
-                self._json(500, {"error": "SMTP_EMAIL or SMTP_PASSWORD not configured. Please set them in Vercel. Make sure you REDEPLOYED your app after adding them!"})
+            if not GMAIL_ADDRESS_ENV or not GMAIL_APP_PASSWORD_ENV:
+                self._json(500, {"error": "GMAIL_ADDRESS or GMAIL_APP_PASSWORD not configured. Please set them in Vercel. Make sure you REDEPLOYED your app after adding them!"})
                 return
 
             if not emails or not subject or not html_body:
@@ -92,7 +89,7 @@ class handler(BaseHTTPRequestHandler):
                 self._json(400, {"error": "No valid email addresses found."})
                 return
 
-            success, err, sent, failed = _send_via_outlook(valid_emails, subject, html_body, SMTP_EMAIL_ENV, SMTP_PASSWORD_ENV)
+            success, err, sent, failed = _send_via_gmail(valid_emails, subject, html_body, GMAIL_ADDRESS_ENV, GMAIL_APP_PASSWORD_ENV)
             
             self._json(200, {
                 "success": success,

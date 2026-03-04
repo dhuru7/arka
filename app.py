@@ -836,7 +836,7 @@ def admin_email():
 
 @app.route('/api/send-emails', methods=['POST'])
 def send_emails():
-    """Send emails to users via Outlook SMTP."""
+    """Send emails to users via Gmail SMTP."""
     try:
         data = request.get_json()
         emails = data.get('emails', [])
@@ -844,15 +844,15 @@ def send_emails():
         html_body = data.get('html', '')
         admin_key = data.get('admin_key', '')
 
-        SMTP_EMAIL = os.environ.get('SMTP_EMAIL', '').strip()
-        SMTP_PASSWORD = os.environ.get('SMTP_PASSWORD', '').strip()
+        GMAIL_ADDRESS = os.environ.get('GMAIL_ADDRESS', '').strip()
+        GMAIL_APP_PASSWORD = os.environ.get('GMAIL_APP_PASSWORD', '').strip()
         ADMIN_SECRET = os.environ.get('ADMIN_SECRET', 'arka-dhruv-2026')
 
         if admin_key != ADMIN_SECRET:
             return jsonify({'error': 'Unauthorized. Invalid admin key.'}), 403
 
-        if not SMTP_EMAIL or not SMTP_PASSWORD:
-            return jsonify({'error': 'SMTP_EMAIL or SMTP_PASSWORD not configured in environment.'}), 500
+        if not GMAIL_ADDRESS or not GMAIL_APP_PASSWORD:
+            return jsonify({'error': 'GMAIL_ADDRESS or GMAIL_APP_PASSWORD not configured in environment.'}), 500
 
         if not emails or not subject or not html_body:
             return jsonify({'error': 'Missing emails, subject, or html body.'}), 400
@@ -865,10 +865,8 @@ def send_emails():
         from email.mime.text import MIMEText
         from email.mime.multipart import MIMEMultipart
 
-        server = smtplib.SMTP('smtp-mail.outlook.com', 587)
-        server.ehlo()
-        server.starttls()
-        server.login(SMTP_EMAIL, SMTP_PASSWORD)
+        server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
+        server.login(GMAIL_ADDRESS, GMAIL_APP_PASSWORD)
         
         batch_size = 50
         total_sent = 0
@@ -879,14 +877,14 @@ def send_emails():
             try:
                 msg = MIMEMultipart('alternative')
                 msg['Subject'] = subject
-                msg['From'] = f"Arka Team <{SMTP_EMAIL}>"
-                msg['To'] = SMTP_EMAIL
+                msg['From'] = f"Arka Team <{GMAIL_ADDRESS}>"
+                msg['To'] = GMAIL_ADDRESS
                 msg['Bcc'] = ", ".join(batch)
                 
                 part = MIMEText(html_body, 'html')
                 msg.attach(part)
                 
-                server.sendmail(SMTP_EMAIL, [SMTP_EMAIL] + batch, msg.as_string())
+                server.sendmail(GMAIL_ADDRESS, [GMAIL_ADDRESS] + batch, msg.as_string())
                 total_sent += len(batch)
             except Exception as e:
                 all_errors.append(f"Batch failed: {str(e)}")
