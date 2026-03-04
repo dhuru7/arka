@@ -29,6 +29,7 @@ def _send_via_resend(to_emails, subject, html_body, api_key):
         req = urllib.request.Request(url, data=json.dumps(data).encode('utf-8'))
         req.add_header('Authorization', f'Bearer {api_key}')
         req.add_header('Content-Type', 'application/json')
+        req.add_header('User-Agent', 'Mozilla/5.0')
         
         try:
             with urllib.request.urlopen(req) as response:
