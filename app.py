@@ -836,7 +836,7 @@ def admin_email():
 
 @app.route('/api/send-emails', methods=['POST'])
 def send_emails():
-    """Send emails to users via Resend API."""
+    """Send emails to users via Gmail SMTP."""
     try:
         data = request.get_json()
         emails = data.get('emails', [])
@@ -844,14 +844,15 @@ def send_emails():
         html_body = data.get('html', '')
         admin_key = data.get('admin_key', '')
 
-        RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '').strip('"\'  ')
+        GMAIL_ADDRESS = os.environ.get('GMAIL_ADDRESS', '').strip()
+        GMAIL_APP_PASSWORD = os.environ.get('GMAIL_APP_PASSWORD', '').strip()
         ADMIN_SECRET = os.environ.get('ADMIN_SECRET', 'arka-dhruv-2026')
 
         if admin_key != ADMIN_SECRET:
             return jsonify({'error': 'Unauthorized. Invalid admin key.'}), 403
 
-        if not RESEND_API_KEY:
-            return jsonify({'error': 'RESEND_API_KEY not configured.'}), 500
+        if not GMAIL_ADDRESS or not GMAIL_APP_PASSWORD:
+            return jsonify({'error': 'GMAIL_ADDRESS or GMAIL_APP_PASSWORD not configured in environment.'}), 500
 
         if not emails or not subject or not html_body:
             return jsonify({'error': 'Missing emails, subject, or html body.'}), 400
@@ -860,41 +861,42 @@ def send_emails():
         if not valid_emails:
             return jsonify({'error': 'No valid email addresses found.'}), 400
 
-        sent = 0
-        failed = 0
-        errors = []
+        import smtplib
+        from email.mime.text import MIMEText
+        from email.mime.multipart import MIMEMultipart
 
-        for email in valid_emails:
+        server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
+        server.login(GMAIL_ADDRESS, GMAIL_APP_PASSWORD)
+        
+        batch_size = 50
+        total_sent = 0
+        all_errors = []
+        
+        for i in range(0, len(valid_emails), batch_size):
+            batch = valid_emails[i:i + batch_size]
             try:
-                resp = requests.post(
-                    'https://api.resend.com/emails',
-                    headers={
-                        'Authorization': f'Bearer {RESEND_API_KEY}',
-                        'Content-Type': 'application/json'
-                    },
-                    json={
-                        'from': 'Arka Team <onboarding@resend.dev>',
-                        'to': [email],
-                        'subject': subject,
-                        'html': html_body
-                    },
-                    timeout=30
-                )
-                if resp.status_code in (200, 201):
-                    sent += 1
-                else:
-                    failed += 1
-                    errors.append(f"{email}: {resp.text[:200]}")
+                msg = MIMEMultipart('alternative')
+                msg['Subject'] = subject
+                msg['From'] = f"Arka Team <{GMAIL_ADDRESS}>"
+                msg['To'] = GMAIL_ADDRESS
+                msg['Bcc'] = ", ".join(batch)
+                
+                part = MIMEText(html_body, 'html')
+                msg.attach(part)
+                
+                server.sendmail(GMAIL_ADDRESS, [GMAIL_ADDRESS] + batch, msg.as_string())
+                total_sent += len(batch)
             except Exception as e:
-                failed += 1
-                errors.append(f"{email}: {str(e)}")
+                all_errors.append(f"Batch failed: {str(e)}")
+        
+        server.quit()
 
         return jsonify({
-            'success': True,
-            'sent': sent,
-            'failed': failed,
+            'success': total_sent == len(valid_emails),
+            'sent': total_sent,
+            'failed': len(valid_emails) - total_sent,
             'total': len(valid_emails),
-            'errors': errors[:10]
+            'errors': all_errors[:10]
         })
 
     except Exception as e:

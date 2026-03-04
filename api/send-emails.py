@@ -2,63 +2,55 @@
 from http.server import BaseHTTPRequestHandler
 import json
 import os
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
-try:
-    import requests
-except ImportError:
-    import urllib.request
-    import urllib.error
-
-RESEND_API_KEY = os.getenv("RESEND_API_KEY", "").strip('"\'  ')
 ADMIN_SECRET = os.getenv("ADMIN_SECRET", "arka-dhruv-2026")
+GMAIL_ADDRESS = os.getenv("GMAIL_ADDRESS", "")
+GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD", "")
 
+def _send_via_gmail(to_emails, subject, html_body):
+    """Send emails via Gmail SMTP using BCC."""
+    if not GMAIL_ADDRESS or not GMAIL_APP_PASSWORD:
+        return False, "GMAIL_ADDRESS or GMAIL_APP_PASSWORD not configured.", 0, len(to_emails)
 
-def _send_via_resend(to_email, subject, html_body):
-    """Send a single email via Resend API. Returns (success: bool, error: str|None)."""
-    import requests as req
-    resp = req.post(
-        'https://api.resend.com/emails',
-        headers={
-            'Authorization': f'Bearer {RESEND_API_KEY}',
-            'Content-Type': 'application/json'
-        },
-        json={
-            'from': 'Arka Team <onboarding@resend.dev>',
-            'to': [to_email],
-            'subject': subject,
-            'html': html_body
-        },
-        timeout=30
-    )
-    if resp.status_code in (200, 201):
-        return True, None
-    else:
-        return False, resp.text
-
-
-def _send_batch_via_resend(emails, subject, html_body):
-    """Send batch of emails via Resend batch API. Max 100 per call."""
-    import requests as req
-    batch_payload = []
-    for email in emails:
-        batch_payload.append({
-            'from': 'Arka Team <onboarding@resend.dev>',
-            'to': [email],
-            'subject': subject,
-            'html': html_body
-        })
-
-    resp = req.post(
-        'https://api.resend.com/emails/batch',
-        headers={
-            'Authorization': f'Bearer {RESEND_API_KEY}',
-            'Content-Type': 'application/json'
-        },
-        json=batch_payload,
-        timeout=60
-    )
-    return resp.status_code, resp.text
-
+    try:
+        server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
+        server.login(GMAIL_ADDRESS, GMAIL_APP_PASSWORD)
+        
+        # Batch into 50 Bcc max per send to avoid spam flags
+        batch_size = 50
+        total_sent = 0
+        all_errors = []
+        
+        for i in range(0, len(to_emails), batch_size):
+            batch = to_emails[i:i + batch_size]
+            try:
+                msg = MIMEMultipart('alternative')
+                msg['Subject'] = subject
+                msg['From'] = f"Arka Team <{GMAIL_ADDRESS}>"
+                msg['To'] = GMAIL_ADDRESS # Primary 'to' address
+                msg['Bcc'] = ", ".join(batch)
+                
+                part = MIMEText(html_body, 'html')
+                msg.attach(part)
+                
+                server.sendmail(GMAIL_ADDRESS, [GMAIL_ADDRESS] + batch, msg.as_string())
+                total_sent += len(batch)
+            except Exception as e:
+                all_errors.append(f"Batch failed: {str(e)}")
+        
+        server.quit()
+        
+        if total_sent == 0:
+            return False, f"Failed to send any batches. Errors: {'; '.join(all_errors)}", 0, len(to_emails)
+            
+        success = total_sent == len(to_emails)
+        return success, ", ".join(all_errors), total_sent, len(to_emails) - total_sent
+        
+    except Exception as e:
+        return False, f"SMTP Connection Error: {str(e)}", 0, len(to_emails)
 
 class handler(BaseHTTPRequestHandler):
     def _json(self, status, data):
@@ -70,10 +62,6 @@ class handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         try:
-            if not RESEND_API_KEY:
-                self._json(500, {"error": "RESEND_API_KEY not configured. Set it in Vercel environment variables."})
-                return
-
             content_length = int(self.headers.get('Content-Length', 0))
             body = self.rfile.read(content_length)
             data = json.loads(body)
@@ -83,68 +71,32 @@ class handler(BaseHTTPRequestHandler):
             html_body = data.get('html', '')
             admin_key = data.get('admin_key', '')
 
-            # Admin verification
             if admin_key != ADMIN_SECRET:
                 self._json(403, {"error": "Unauthorized. Invalid admin key."})
+                return
+
+            if not GMAIL_ADDRESS or not GMAIL_APP_PASSWORD:
+                self._json(500, {"error": "GMAIL_ADDRESS or GMAIL_APP_PASSWORD not configured. Please set them in Vercel."})
                 return
 
             if not emails or not subject or not html_body:
                 self._json(400, {"error": "Missing emails, subject, or html body."})
                 return
 
-            # Filter out empty/invalid emails
             valid_emails = [e.strip() for e in emails if e and '@' in e and '.' in e]
 
             if not valid_emails:
                 self._json(400, {"error": "No valid email addresses found."})
                 return
 
-            # Send in batches of 50 (Resend batch limit is 100)
-            total_sent = 0
-            total_failed = 0
-            all_errors = []
-
-            # Try batch API first for efficiency
-            batch_size = 50
-            for i in range(0, len(valid_emails), batch_size):
-                batch = valid_emails[i:i + batch_size]
-                try:
-                    status_code, resp_text = _send_batch_via_resend(batch, subject, html_body)
-                    if status_code in (200, 201):
-                        total_sent += len(batch)
-                    else:
-                        # If batch fails, try one-by-one as fallback
-                        for email in batch:
-                            try:
-                                success, err = _send_via_resend(email, subject, html_body)
-                                if success:
-                                    total_sent += 1
-                                else:
-                                    total_failed += 1
-                                    all_errors.append(f"{email}: {err}")
-                            except Exception as e:
-                                total_failed += 1
-                                all_errors.append(f"{email}: {str(e)}")
-                except Exception as e:
-                    # Batch failed entirely, try one-by-one
-                    for email in batch:
-                        try:
-                            success, err = _send_via_resend(email, subject, html_body)
-                            if success:
-                                total_sent += 1
-                            else:
-                                total_failed += 1
-                                all_errors.append(f"{email}: {err}")
-                        except Exception as e2:
-                            total_failed += 1
-                            all_errors.append(f"{email}: {str(e2)}")
-
+            success, err, sent, failed = _send_via_gmail(valid_emails, subject, html_body)
+            
             self._json(200, {
-                "success": True,
-                "sent": total_sent,
-                "failed": total_failed,
+                "success": success,
+                "sent": sent,
+                "failed": failed,
                 "total": len(valid_emails),
-                "errors": all_errors[:10]
+                "errors": [err] if err else []
             })
 
         except Exception as e:
