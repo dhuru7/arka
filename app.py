@@ -184,6 +184,7 @@ CRITICAL RULES:
 - Include 'dateFormat YYYY-MM-DD' on the second line
 - Do NOT use backslashes (\\) in task names
 - Do NOT use parentheses () in task names
+- Task names MUST be SHORT — maximum 3-4 words. NEVER use long descriptions as task names.
 - Each task MUST have a valid format: TaskName :status, id, startDate, duration
 - Use simple short task names without special characters
 - Valid statuses: done, active, crit, or leave empty
@@ -194,11 +195,11 @@ gantt
     title Project Plan
     dateFormat YYYY-MM-DD
     section Planning
-        Requirements Analysis :done, a1, 2024-01-01, 30d
-        Design Phase :active, a2, after a1, 20d
+        Requirements :done, a1, 2024-01-01, 30d
+        Design :active, a2, after a1, 20d
     section Development
-        Backend Development :a3, after a2, 40d
-        Frontend Development :a4, after a2, 35d
+        Backend Dev :a3, after a2, 40d
+        Frontend Dev :a4, after a2, 35d
     section Testing
         QA Testing :a5, after a3, 15d
         Deployment :a6, after a5, 5d""",
@@ -308,24 +309,29 @@ classDiagram
 CRITICAL RULES:
 - Do NOT use markdown code fences
 - Do NOT add any text or explanations
-- Start with 'gitGraph' on the first line
-- Use only these commands: commit, branch, checkout, merge
-- Commit messages must be in double quotes after 'id:'
-- Do NOT use 'commit msg:' -- use 'commit id:' instead
+- Start with 'gitGraph' on the first line (exact casing: gitGraph)
+- Use ONLY these commands: commit, branch, checkout, merge
+- Do NOT use 'commit msg:' — ALWAYS use 'commit id:'
+- Commit IDs MUST be in double quotes: commit id: "message"
+- Branch names MUST be simple single words without spaces or special chars
+- Do NOT use 'tag:' — avoid tag commands
 - Do NOT use parentheses or backslashes in commit messages
-- Branch names must be single words without special chars
+- Do NOT use 'cherry-pick' command
+- You MUST checkout a branch before committing to it
+- After creating a branch, you MUST checkout that branch before committing to it
 
 Example:
 gitGraph
-    commit id: "Initial Commit"
+    commit id: "Initial"
     commit id: "Add README"
     branch develop
     checkout develop
-    commit id: "Add feature A"
-    commit id: "Add feature B"
+    commit id: "Feature A"
+    commit id: "Feature B"
     checkout main
     merge develop
-    commit id: "Release v1.0" """,
+    commit id: "Release v1.0"
+""",
 
     'quadrant': """You are an expert Mermaid quadrant chart generator. You ONLY output valid Mermaid JS code. You NEVER explain, comment, or add anything outside the Mermaid code.
 
@@ -451,6 +457,8 @@ def fix_mermaid_syntax(code, mode):
         code = _fix_pie(code)
     elif mode == 'treemap':
         code = _fix_mindmap(code)
+    elif mode == 'xy':
+        code = _fix_xychart(code)
 
     return code
 
@@ -476,16 +484,26 @@ def _fix_gantt(code):
             fixed.append(line)
             continue
 
-        # Remove parentheses from task names (common AI mistake)
+        # Remove parentheses from section names
         if stripped.startswith('section '):
             stripped = re.sub(r'[()\\]', '', stripped)
-            line = '    ' + stripped
+            # Truncate long section names
+            section_name = stripped[8:].strip()
+            if len(section_name) > 30:
+                section_name = ' '.join(section_name.split()[:4])
+            line = '    section ' + section_name
 
         # Fix task lines: remove backslashes and parentheses from task names
         elif ':' in stripped and not stripped.startswith(('section', 'dateFormat', 'title', 'gantt', 'axisFormat', 'todayMarker', 'tickInterval', 'excludes', 'includes')):
             # Clean parentheses and backslashes from the task name part
             parts = stripped.split(':', 1)
             task_name = re.sub(r'[()\\]', '', parts[0]).strip()
+            # Truncate long task names to prevent text overflow
+            words = task_name.split()
+            if len(words) > 4:
+                task_name = ' '.join(words[:4])
+            elif len(task_name) > 25:
+                task_name = task_name[:25].rstrip()
             if len(parts) > 1:
                 task_meta = parts[1].strip()
                 # If task meta is empty or invalid, add a default duration
@@ -537,20 +555,76 @@ def _fix_gitgraph(code):
     for line in lines:
         stripped = line.strip()
 
-        # Fix 'commit msg:' -> 'commit id:' (common AI mistake)
+        # Skip empty lines
+        if not stripped:
+            continue
+
+        # Fix the header line - ensure correct casing
+        if stripped.lower() == 'gitgraph':
+            line = 'gitGraph'
+            fixed.append(line)
+            continue
+
+        # Fix 'commit msg:' -> 'commit id:'
         if 'commit msg:' in stripped:
             line = line.replace('commit msg:', 'commit id:')
+            stripped = line.strip()
 
-        # Remove parentheses from commit messages
-        if 'commit id:' in stripped:
+        # Remove tag operations that can cause issues
+        if stripped.startswith('tag:') or ' tag:' in stripped:
+            line = re.sub(r'\s*tag:\s*"[^"]*"', '', line)
+            stripped = line.strip()
+
+        # Skip cherry-pick commands (often cause errors)
+        if stripped.startswith('cherry-pick'):
+            continue
+
+        # Fix commit lines
+        if 'commit' in stripped and 'id:' in stripped:
+            # Remove parentheses and backslashes from commit messages
             line = re.sub(r'[()\\]', '', line)
+            # Ensure commit id value is in double quotes
+            match = re.search(r'commit\s+id:\s*(["\']?)(.+?)\1\s*$', line.strip())
+            if match:
+                quote = match.group(1)
+                msg = match.group(2).strip()
+                if not quote:
+                    line = '    commit id: "' + msg + '"'
+        elif stripped.startswith('commit') and 'id:' not in stripped and stripped != 'commit':
+            rest = stripped[6:].strip()
+            if rest and rest != ':':
+                line = '    commit id: "' + re.sub(r'[()\\"\']', '', rest) + '"'
+            else:
+                line = '    commit'
+        elif stripped == 'commit':
+            line = '    commit'
 
-        # Fix branch names with spaces or special chars
+        # Fix branch names
         if stripped.startswith('branch '):
-            branch_name = stripped[7:].strip()
-            # Replace spaces and special chars with hyphens
+            branch_name = stripped[7:].strip().strip('"').strip("'")
             branch_name = re.sub(r'[^a-zA-Z0-9_/-]', '-', branch_name)
+            branch_name = branch_name.strip('-')
+            if not branch_name:
+                branch_name = 'feature'
             line = '    branch ' + branch_name
+
+        # Fix checkout lines
+        if stripped.startswith('checkout '):
+            branch_name = stripped[9:].strip().strip('"').strip("'")
+            branch_name = re.sub(r'[^a-zA-Z0-9_/-]', '-', branch_name)
+            branch_name = branch_name.strip('-')
+            if not branch_name:
+                branch_name = 'main'
+            line = '    checkout ' + branch_name
+
+        # Fix merge lines
+        if stripped.startswith('merge '):
+            branch_name = stripped[6:].strip().strip('"').strip("'")
+            branch_name = re.sub(r'[^a-zA-Z0-9_/-]', '-', branch_name)
+            branch_name = branch_name.strip('-')
+            if not branch_name:
+                continue
+            line = '    merge ' + branch_name
 
         fixed.append(line)
 
@@ -590,6 +664,27 @@ def _fix_mindmap(code):
 
         fixed.append(line)
 
+    return '\n'.join(fixed)
+
+
+def _fix_xychart(code):
+    """Fix common XY chart syntax issues."""
+    lines = code.split('\n')
+    fixed = []
+    for line in lines:
+        stripped = line.strip()
+        # Ensure first line is xychart-beta
+        if stripped.lower().startswith('xychart'):
+            line = 'xychart-beta'
+            fixed.append(line)
+            continue
+        # Remove parentheses from labels
+        if stripped.startswith('x-axis') or stripped.startswith('y-axis'):
+            line = re.sub(r'[()\\]', '', line)
+        # Clean bar and line data
+        if stripped.startswith('bar ') or stripped.startswith('line '):
+            line = re.sub(r'[()\\]', '', line)
+        fixed.append(line)
     return '\n'.join(fixed)
 
 

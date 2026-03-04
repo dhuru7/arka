@@ -121,6 +121,7 @@ CRITICAL RULES:
 - Start with 'gantt' on the first line
 - Include 'dateFormat YYYY-MM-DD' on the second line
 - Do NOT use backslashes or parentheses in task names
+- Task names MUST be SHORT — maximum 3-4 words. NEVER use long descriptions as task names.
 - Each task: TaskName :status, id, startDate, duration
 
 Example:
@@ -128,10 +129,10 @@ gantt
     title Project Plan
     dateFormat YYYY-MM-DD
     section Planning
-        Requirements Analysis :done, a1, 2024-01-01, 30d
-        Design Phase :active, a2, after a1, 20d
+        Requirements :done, a1, 2024-01-01, 30d
+        Design :active, a2, after a1, 20d
     section Development
-        Backend Development :a3, after a2, 40d""",
+        Backend Dev :a3, after a2, 40d""",
 
     'pie': """You are a Mermaid pie chart generator. You ONLY output valid Mermaid JS code.
 
@@ -196,21 +197,29 @@ classDiagram
     'git': """You are a Mermaid gitgraph generator. You ONLY output valid Mermaid JS code.
 
 CRITICAL RULES:
-- Start with 'gitGraph' on the first line
-- Use only: commit, branch, checkout, merge
-- Commit messages with 'commit id:' (NOT 'commit msg:')
-- Branch names must be single words
+- Start with 'gitGraph' on the first line (exact casing: gitGraph)
+- Use ONLY these commands: commit, branch, checkout, merge
+- Do NOT use 'commit msg:' — ALWAYS use 'commit id:'
+- Commit IDs MUST be in double quotes: commit id: "message"
+- Branch names MUST be simple single words without spaces or special chars
+- Do NOT use 'tag:' — avoid tag commands
+- Do NOT use parentheses or backslashes in commit messages
+- Do NOT use 'cherry-pick' command
+- You MUST checkout a branch before committing to it
+- After creating a branch, you MUST checkout that branch before committing to it
 
 Example:
 gitGraph
-    commit id: "Initial Commit"
+    commit id: "Initial"
     commit id: "Add README"
     branch develop
     checkout develop
-    commit id: "Add feature A"
+    commit id: "Feature A"
+    commit id: "Feature B"
     checkout main
     merge develop
-    commit id: "Release v1.0" """,
+    commit id: "Release v1.0"
+""",
 
     'quadrant': """You are an expert Mermaid quadrant chart generator. You ONLY output valid Mermaid JS code.
 
@@ -298,6 +307,8 @@ def clean_mermaid_code(code, mode='flowchart'):
         cleaned = _fix_pie(cleaned)
     elif mode == 'treemap':
         cleaned = _fix_mindmap(cleaned)
+    elif mode == 'xy':
+        cleaned = _fix_xychart(cleaned)
 
     return cleaned
 
@@ -319,10 +330,20 @@ def _fix_gantt(code):
             continue
         if stripped.startswith('section '):
             stripped = re.sub(r'[()\\]', '', stripped)
-            line = '    ' + stripped
+            # Truncate long section names
+            section_name = stripped[8:].strip()
+            if len(section_name) > 30:
+                section_name = ' '.join(section_name.split()[:4])
+            line = '    section ' + section_name
         elif ':' in stripped and not stripped.startswith(('section', 'dateFormat', 'title', 'gantt', 'axisFormat', 'todayMarker', 'tickInterval', 'excludes', 'includes')):
             parts = stripped.split(':', 1)
             task_name = re.sub(r'[()\\]', '', parts[0]).strip()
+            # Truncate long task names to prevent text overflow
+            words = task_name.split()
+            if len(words) > 4:
+                task_name = ' '.join(words[:4])
+            elif len(task_name) > 25:
+                task_name = task_name[:25].rstrip()
             task_meta = parts[1].strip() if len(parts) > 1 else ''
             if not task_meta:
                 task_meta = '2024-01-01, 30d'
@@ -352,14 +373,72 @@ def _fix_gitgraph(code):
     fixed = []
     for line in lines:
         stripped = line.strip()
+        # Skip empty lines
+        if not stripped:
+            continue
+        # Fix the header line - ensure correct casing
+        if stripped.lower() == 'gitgraph':
+            line = 'gitGraph'
+            fixed.append(line)
+            continue
+        # Fix 'commit msg:' -> 'commit id:'
         if 'commit msg:' in stripped:
             line = line.replace('commit msg:', 'commit id:')
-        if 'commit id:' in stripped:
+            stripped = line.strip()
+        # Remove tag operations that can cause issues
+        if stripped.startswith('tag:') or ' tag:' in stripped:
+            # Remove tag from commit lines
+            line = re.sub(r'\s*tag:\s*"[^"]*"', '', line)
+            stripped = line.strip()
+        # Skip cherry-pick commands (often cause errors)
+        if stripped.startswith('cherry-pick'):
+            continue
+        # Fix commit lines
+        if 'commit' in stripped and 'id:' in stripped:
+            # Remove parentheses and backslashes from commit messages
             line = re.sub(r'[()\\]', '', line)
+            # Ensure commit id value is in double quotes
+            match = re.search(r'commit\s+id:\s*(["\']?)(.+?)\1\s*$', line.strip())
+            if match:
+                quote = match.group(1)
+                msg = match.group(2).strip()
+                if not quote:
+                    line = '    commit id: "' + msg + '"'
+        elif stripped.startswith('commit') and 'id:' not in stripped and stripped != 'commit':
+            # commit without id: — fix it
+            rest = stripped[6:].strip()
+            if rest and rest != ':':
+                line = '    commit id: "' + re.sub(r'[()\\"\']', '', rest) + '"'
+            else:
+                line = '    commit'
+        elif stripped == 'commit':
+            line = '    commit'
+        # Fix branch names
         if stripped.startswith('branch '):
-            branch_name = stripped[7:].strip()
+            branch_name = stripped[7:].strip().strip('"').strip("'")
+            # Replace spaces and special chars with hyphens
             branch_name = re.sub(r'[^a-zA-Z0-9_/-]', '-', branch_name)
+            # Remove leading/trailing hyphens
+            branch_name = branch_name.strip('-')
+            if not branch_name:
+                branch_name = 'feature'
             line = '    branch ' + branch_name
+        # Fix checkout lines
+        if stripped.startswith('checkout '):
+            branch_name = stripped[9:].strip().strip('"').strip("'")
+            branch_name = re.sub(r'[^a-zA-Z0-9_/-]', '-', branch_name)
+            branch_name = branch_name.strip('-')
+            if not branch_name:
+                branch_name = 'main'
+            line = '    checkout ' + branch_name
+        # Fix merge lines
+        if stripped.startswith('merge '):
+            branch_name = stripped[6:].strip().strip('"').strip("'")
+            branch_name = re.sub(r'[^a-zA-Z0-9_/-]', '-', branch_name)
+            branch_name = branch_name.strip('-')
+            if not branch_name:
+                continue  # Skip invalid merge
+            line = '    merge ' + branch_name
         fixed.append(line)
     return '\n'.join(fixed)
 
@@ -384,6 +463,27 @@ def _fix_mindmap(code):
     for line in lines:
         if not line.strip().startswith('mindmap'):
             line = re.sub(r'\\', '', line)
+        fixed.append(line)
+    return '\n'.join(fixed)
+
+
+def _fix_xychart(code):
+    """Fix common XY chart syntax issues."""
+    lines = code.split('\n')
+    fixed = []
+    for line in lines:
+        stripped = line.strip()
+        # Ensure first line is xychart-beta
+        if stripped.lower().startswith('xychart'):
+            line = 'xychart-beta'
+            fixed.append(line)
+            continue
+        # Remove parentheses from labels
+        if stripped.startswith('x-axis') or stripped.startswith('y-axis'):
+            line = re.sub(r'[()\\]', '', line)
+        # Clean bar and line data
+        if stripped.startswith('bar ') or stripped.startswith('line '):
+            line = re.sub(r'[()\\]', '', line)
         fixed.append(line)
     return '\n'.join(fixed)
 

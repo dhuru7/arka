@@ -115,3 +115,32 @@ async function incrementDownloadCount(userId) {
         return currentData;
     });
 }
+
+// ── Save User Profile on Sign-In ─────────────────────────────────────────
+// Ensures all users (Google, Email, etc.) have their profile data
+// stored in the Realtime Database for the admin email page.
+async function saveUserProfile(user) {
+    if (!user || user.isAnonymous) return;
+    try {
+        const profileData = {
+            email: user.email || '',
+            displayName: user.displayName || '',
+            lastLogin: new Date().toISOString()
+        };
+
+        // Save to userProfiles node (always updated)
+        await db.ref('userProfiles/' + user.uid).update(profileData);
+
+        // Also ensure the users node has email/name if not already set
+        const userSnap = await db.ref('users/' + user.uid).once('value');
+        const existing = userSnap.val();
+        if (!existing || !existing.email) {
+            await db.ref('users/' + user.uid).update({
+                email: user.email || '',
+                name: user.displayName || existing?.name || '',
+            });
+        }
+    } catch (e) {
+        console.warn('Could not save user profile:', e);
+    }
+}

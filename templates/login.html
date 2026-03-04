@@ -154,7 +154,9 @@
         googleBtn.addEventListener('click', async function () {
             try {
                 const provider = new firebase.auth.GoogleAuthProvider();
-                await firebase.auth().signInWithPopup(provider);
+                const result = await firebase.auth().signInWithPopup(provider);
+                // Save profile to DB so admin email page can see this user
+                await saveUserProfile(result.user);
                 window.location.href = '/index';
             } catch (error) {
                 showError(error.message);
