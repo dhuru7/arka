@@ -836,7 +836,7 @@ def admin_email():
 
 @app.route('/api/send-emails', methods=['POST'])
 def send_emails():
-    """Send emails to users via Gmail SMTP."""
+    """Send emails to users via Brevo (Sendinblue) API."""
     try:
         data = request.get_json()
         emails = data.get('emails', [])
@@ -844,15 +844,15 @@ def send_emails():
         html_body = data.get('html', '')
         admin_key = data.get('admin_key', '')
 
-        GMAIL_ADDRESS = os.environ.get('GMAIL_ADDRESS', '').strip()
-        GMAIL_APP_PASSWORD = os.environ.get('GMAIL_APP_PASSWORD', '').strip()
+        BREVO_API_KEY = os.environ.get('BREVO_API_KEY', '').strip()
+        BREVO_SENDER_EMAIL = os.environ.get('BREVO_SENDER_EMAIL', '').strip()
         ADMIN_SECRET = os.environ.get('ADMIN_SECRET', 'arka-dhruv-2026')
 
         if admin_key != ADMIN_SECRET:
             return jsonify({'error': 'Unauthorized. Invalid admin key.'}), 403
 
-        if not GMAIL_ADDRESS or not GMAIL_APP_PASSWORD:
-            return jsonify({'error': 'GMAIL_ADDRESS or GMAIL_APP_PASSWORD not configured in environment.'}), 500
+        if not BREVO_API_KEY or not BREVO_SENDER_EMAIL:
+            return jsonify({'error': 'BREVO_API_KEY or BREVO_SENDER_EMAIL not configured in environment.'}), 500
 
         if not emails or not subject or not html_body:
             return jsonify({'error': 'Missing emails, subject, or html body.'}), 400
@@ -861,35 +861,37 @@ def send_emails():
         if not valid_emails:
             return jsonify({'error': 'No valid email addresses found.'}), 400
 
-        import smtplib
-        from email.mime.text import MIMEText
-        from email.mime.multipart import MIMEMultipart
+        import urllib.request
+        import json
 
-        server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
-        server.login(GMAIL_ADDRESS, GMAIL_APP_PASSWORD)
-        
         batch_size = 50
         total_sent = 0
         all_errors = []
         
         for i in range(0, len(valid_emails), batch_size):
             batch = valid_emails[i:i + batch_size]
+            data_payload = {
+                "sender": {"name": "Arka Team", "email": BREVO_SENDER_EMAIL},
+                "to": [{"email": BREVO_SENDER_EMAIL}],
+                "bcc": [{"email": e} for e in batch],
+                "subject": subject,
+                "htmlContent": html_body
+            }
+            req = urllib.request.Request("https://api.brevo.com/v3/smtp/email", data=json.dumps(data_payload).encode('utf-8'))
+            req.add_header('api-key', BREVO_API_KEY)
+            req.add_header('accept', 'application/json')
+            req.add_header('content-type', 'application/json')
             try:
-                msg = MIMEMultipart('alternative')
-                msg['Subject'] = subject
-                msg['From'] = f"Arka Team <{GMAIL_ADDRESS}>"
-                msg['To'] = GMAIL_ADDRESS
-                msg['Bcc'] = ", ".join(batch)
-                
-                part = MIMEText(html_body, 'html')
-                msg.attach(part)
-                
-                server.sendmail(GMAIL_ADDRESS, [GMAIL_ADDRESS] + batch, msg.as_string())
-                total_sent += len(batch)
+                with urllib.request.urlopen(req) as response:
+                    total_sent += len(batch)
             except Exception as e:
-                all_errors.append(f"Batch failed: {str(e)}")
-        
-        server.quit()
+                err_body = str(e)
+                if hasattr(e, 'read'):
+                    try:
+                        err_body = e.read().decode('utf-8')
+                    except Exception:
+                        pass
+                all_errors.append(f"Batch failed: {err_body}")
 
         return jsonify({
             'success': total_sent == len(valid_emails),
