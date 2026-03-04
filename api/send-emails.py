@@ -6,18 +6,14 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-ADMIN_SECRET = os.getenv("ADMIN_SECRET", "arka-dhruv-2026")
-GMAIL_ADDRESS = os.getenv("GMAIL_ADDRESS", "")
-GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD", "")
-
-def _send_via_gmail(to_emails, subject, html_body):
+def _send_via_gmail(to_emails, subject, html_body, gmail_addr, gmail_pass):
     """Send emails via Gmail SMTP using BCC."""
-    if not GMAIL_ADDRESS or not GMAIL_APP_PASSWORD:
+    if not gmail_addr or not gmail_pass:
         return False, "GMAIL_ADDRESS or GMAIL_APP_PASSWORD not configured.", 0, len(to_emails)
 
     try:
         server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
-        server.login(GMAIL_ADDRESS, GMAIL_APP_PASSWORD)
+        server.login(gmail_addr, gmail_pass)
         
         # Batch into 50 Bcc max per send to avoid spam flags
         batch_size = 50
@@ -29,14 +25,14 @@ def _send_via_gmail(to_emails, subject, html_body):
             try:
                 msg = MIMEMultipart('alternative')
                 msg['Subject'] = subject
-                msg['From'] = f"Arka Team <{GMAIL_ADDRESS}>"
-                msg['To'] = GMAIL_ADDRESS # Primary 'to' address
+                msg['From'] = f"Arka Team <{gmail_addr}>"
+                msg['To'] = gmail_addr # Primary 'to' address
                 msg['Bcc'] = ", ".join(batch)
                 
                 part = MIMEText(html_body, 'html')
                 msg.attach(part)
                 
-                server.sendmail(GMAIL_ADDRESS, [GMAIL_ADDRESS] + batch, msg.as_string())
+                server.sendmail(gmail_addr, [gmail_addr] + batch, msg.as_string())
                 total_sent += len(batch)
             except Exception as e:
                 all_errors.append(f"Batch failed: {str(e)}")
@@ -71,12 +67,16 @@ class handler(BaseHTTPRequestHandler):
             html_body = data.get('html', '')
             admin_key = data.get('admin_key', '')
 
-            if admin_key != ADMIN_SECRET:
+            ADMIN_SECRET_ENV = os.getenv("ADMIN_SECRET", "arka-dhruv-2026")
+            GMAIL_ADDRESS_ENV = os.getenv("GMAIL_ADDRESS", "").strip()
+            GMAIL_APP_PASSWORD_ENV = os.getenv("GMAIL_APP_PASSWORD", "").strip()
+
+            if admin_key != ADMIN_SECRET_ENV:
                 self._json(403, {"error": "Unauthorized. Invalid admin key."})
                 return
 
-            if not GMAIL_ADDRESS or not GMAIL_APP_PASSWORD:
-                self._json(500, {"error": "GMAIL_ADDRESS or GMAIL_APP_PASSWORD not configured. Please set them in Vercel."})
+            if not GMAIL_ADDRESS_ENV or not GMAIL_APP_PASSWORD_ENV:
+                self._json(500, {"error": "GMAIL_ADDRESS or GMAIL_APP_PASSWORD not configured. Please set them in Vercel. Make sure you REDEPLOYED your app after adding them!"})
                 return
 
             if not emails or not subject or not html_body:
@@ -89,7 +89,7 @@ class handler(BaseHTTPRequestHandler):
                 self._json(400, {"error": "No valid email addresses found."})
                 return
 
-            success, err, sent, failed = _send_via_gmail(valid_emails, subject, html_body)
+            success, err, sent, failed = _send_via_gmail(valid_emails, subject, html_body, GMAIL_ADDRESS_ENV, GMAIL_APP_PASSWORD_ENV)
             
             self._json(200, {
                 "success": success,
