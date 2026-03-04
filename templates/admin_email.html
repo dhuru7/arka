@@ -602,12 +602,8 @@ nitishkaushik023@gmail.com</textarea>
                     </p>
                 </div>
                 <p style="color: #71717a; font-size: 0.8rem; margin-top: 20px;">
-                    ℹ️ Emails are sent via <b>Resend API</b>. <br>
-                    You <strong style="color: #e52e2e;">must</strong> set <code
-                        style="color: #fff;">RESEND_API_KEY</code> in your Vercel Environment Variables.
-                    <br><br>
-                    <i>(Please note: Free Resend accounts can only send testing emails to their OWN verified email
-                        address until a custom domain is verified!)</i>
+                    ℹ️ Emails are sent via <b>EmailJS</b> (Direct from Browser). <br>
+                    No backend APIs or Vercel Environment Variables are required!
                 </p>
             </div>
 
@@ -920,13 +916,17 @@ nitishkaushik023@gmail.com</textarea>
 
                     try {
                         const payload = {
-                            emails: [email],
-                            subject: subject, // Use the subject from the input field
-                            html: html, // Use the html from the input field
-                            admin_key: adminKey
+                            service_id: 'service_cwwuy86',
+                            template_id: 'template_nikgira',
+                            user_id: 'frzivjqrgvnvXPMCg',
+                            template_params: {
+                                to_email: email,
+                                subject: subject,
+                                html: html
+                            }
                         };
 
-                        const response = await fetch('/api/send-emails', {
+                        const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
@@ -934,22 +934,21 @@ nitishkaushik023@gmail.com</textarea>
                             body: JSON.stringify(payload)
                         });
 
-                        const data = await response.json();
-                        if (data.success) {
+                        if (response.ok) {
                             sent++;
                         } else {
                             failed++;
-                            const errorMsg = (data.errors && data.errors.length > 0) ? data.errors[0] : (data.error || "Unknown Error");
-                            errors.push(`${email}: ${errorMsg}`);
+                            const errorText = await response.text();
+                            errors.push(`${email}: ${errorText}`);
                         }
                     } catch (e) {
                         failed++;
                         errors.push(`${email}: ${e.message}`);
                     }
 
-                    // Sleep for 1.2 seconds between each email to bypass Resend RATE LIMITS (2 per second limit)
+                    // Small pause to not overwhelm EmailJS rate limits (even though they are generous)
                     if (i < combinedEmails.length - 1) {
-                        await new Promise(r => setTimeout(r, 1200));
+                        await new Promise(r => setTimeout(r, 800));
                     }
                 }
 
