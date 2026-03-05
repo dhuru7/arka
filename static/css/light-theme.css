@@ -222,10 +222,29 @@ body.light-theme .toolbar .icon-btn:hover {
         border-color: var(--border) !important;
     }
 
-    /* Remove backdrop-filter on mobile toolbar so .theme-download-tray position:fixed works */
-    body.light-theme .toolbar {
-        backdrop-filter: none !important;
-        -webkit-backdrop-filter: none !important;
-        background: rgba(245, 245, 245, 0.95) !important;
+    /* Restore glass effect on mobile light theme for all buttons/trays */
+    body.light-theme .toolbar,
+    body.light-theme .glass-btn,
+    body.light-theme .theme-download-tray .toolbar-btn,
+    body.light-theme #btn-theme {
+        backdrop-filter: blur(12px) !important;
+        -webkit-backdrop-filter: blur(12px) !important;
+        background: rgba(255, 255, 255, 0.4) !important;
+        border: 1px solid rgba(0, 0, 0, 0.1) !important;
+    }
+
+    body.light-theme .glass-btn:hover,
+    body.light-theme .theme-download-tray .toolbar-btn:hover,
+    body.light-theme #btn-theme:hover {
+        background: rgba(255, 255, 255, 0.6) !important;
+        border-color: rgba(0, 0, 0, 0.2) !important;
+        color: var(--fg) !important;
+    }
+
+    body.light-theme .glass-btn:active,
+    body.light-theme .theme-download-tray .toolbar-btn:active,
+    body.light-theme #btn-theme:active {
+        background: rgba(255, 255, 255, 0.8) !important;
+        transform: scale(0.96) !important;
     }
 }

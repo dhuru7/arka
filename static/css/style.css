@@ -1229,6 +1229,7 @@ textarea::placeholder {
     flex-direction: column;
     justify-content: space-between;
     margin: auto;
+    flex-shrink: 0;
 }
 
 .hamburger-icon span {
@@ -1242,22 +1243,11 @@ textarea::placeholder {
     transform-origin: center;
 }
 
-/* Only animate when opening/closing the sidebar */
-.sidebar-toggle.open .hamburger-icon span {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.sidebar-toggle.open .hl-top {
-    transform: translateY(7.5px) rotate(45deg);
-}
-
-.sidebar-toggle.open .hl-mid {
-    opacity: 0;
-}
-
-.sidebar-toggle.open .hl-bot {
-    transform: translateY(-7.5px) rotate(-45deg);
-}
+/* Animation removed per user request */
+/* .sidebar-toggle.open .hamburger-icon span { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); } */
+/* .sidebar-toggle.open .hl-top { transform: translateY(7.5px) rotate(45deg); } */
+/* .sidebar-toggle.open .hl-mid { opacity: 0; } */
+/* .sidebar-toggle.open .hl-bot { transform: translateY(-7.5px) rotate(-45deg); } */
 
 /* ── Responsive ─────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
@@ -1322,18 +1312,35 @@ textarea::placeholder {
         justify-content: center;
     }
 
-    /* Make glass buttons solid on mobile to match other toolbar buttons */
+    /* Unified style for all individual floating buttons to perfectly match the .toolbar base */
     .glass-btn {
-        background: rgba(10, 10, 15, 0.92) !important;
-        backdrop-filter: none !important;
-        -webkit-backdrop-filter: none !important;
-        border: 1px solid var(--border-light) !important;
+        background: rgba(0, 0, 0, 0.2) !important;
+        backdrop-filter: blur(8px) !important;
+        -webkit-backdrop-filter: blur(8px) !important;
+        border: 1px solid var(--border) !important;
         border-radius: var(--radius-pill) !important;
+        color: var(--fg-muted) !important;
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+
+    .hamburger-icon span {
+        background-color: var(--fg-muted) !important;
     }
 
     .glass-btn:hover {
-        background: var(--fg) !important;
-        color: var(--bg) !important;
+        background: rgba(255, 255, 255, 0.06) !important;
+        border-color: var(--border-light) !important;
+        color: var(--fg) !important;
+    }
+
+    .glass-btn:hover .hamburger-icon span {
+        background-color: var(--fg) !important;
+    }
+
+    .glass-btn:active {
+        transform: scale(0.96) !important;
+        background: rgba(255, 255, 255, 0.1) !important;
+        transition-duration: 0.1s !important;
     }
 
     .status-bar {
@@ -1367,9 +1374,9 @@ textarea::placeholder {
     }
 
     .theme-download-tray {
-        position: fixed;
-        bottom: 96px;
-        right: 136px;
+        position: absolute;
+        bottom: 72px;
+        right: 120px;
         left: auto;
         background: transparent;
         backdrop-filter: none;
@@ -1388,25 +1395,27 @@ textarea::placeholder {
     .theme-download-tray .toolbar-btn {
         width: 44px !important;
         height: 44px !important;
-        background: rgba(10, 10, 15, 0.92) !important;
-        backdrop-filter: none !important;
-        -webkit-backdrop-filter: none !important;
-        border: 1px solid var(--border-light) !important;
+        background: rgba(0, 0, 0, 0.2) !important;
+        backdrop-filter: blur(8px) !important;
+        -webkit-backdrop-filter: blur(8px) !important;
+        border: 1px solid var(--border) !important;
         border-radius: var(--radius-pill) !important;
         box-shadow: none !important;
-        color: var(--fg) !important;
+        color: var(--fg-muted) !important;
         padding: 0 !important;
         justify-content: center !important;
         transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
     }
 
     .theme-download-tray .toolbar-btn:hover {
-        background: var(--fg) !important;
-        color: var(--bg) !important;
+        background: rgba(255, 255, 255, 0.06) !important;
+        border-color: var(--border-light) !important;
+        color: var(--fg) !important;
     }
 
     .theme-download-tray .toolbar-btn:active {
-        transform: scale(0.98) !important;
+        transform: scale(0.96) !important;
+        background: rgba(255, 255, 255, 0.1) !important;
         transition-duration: 0.1s !important;
     }
 
@@ -1444,12 +1453,9 @@ textarea::placeholder {
         overflow: visible;
         margin-top: 0;
         z-index: 100000;
-        /* Remove backdrop-filter on mobile so that children with position:fixed
-           (like .theme-download-tray) are positioned relative to the viewport,
-           not the toolbar. backdrop-filter creates a new containing block. */
-        backdrop-filter: none;
-        -webkit-backdrop-filter: none;
-        background: rgba(10, 10, 15, 0.92);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        background: rgba(0, 0, 0, 0.2);
     }
 
     #btn-undo,
@@ -1545,10 +1551,24 @@ textarea::placeholder {
         height: 44px !important;
         justify-content: center !important;
         border-radius: var(--radius-pill) !important;
-        background: rgba(10, 10, 15, 0.92) !important;
-        border: 1px solid var(--border-light) !important;
-        backdrop-filter: none !important;
-        -webkit-backdrop-filter: none !important;
+        background: rgba(0, 0, 0, 0.2) !important;
+        border: 1px solid var(--border) !important;
+        backdrop-filter: blur(8px) !important;
+        -webkit-backdrop-filter: blur(8px) !important;
+        color: var(--fg-muted) !important;
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+
+    #btn-theme:hover {
+        background: rgba(255, 255, 255, 0.06) !important;
+        border-color: var(--border-light) !important;
+        color: var(--fg) !important;
+    }
+
+    #btn-theme:active {
+        transform: scale(0.96) !important;
+        background: rgba(255, 255, 255, 0.1) !important;
+        transition-duration: 0.1s !important;
     }
 
     #btn-theme-text {
