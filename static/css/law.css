@@ -163,7 +163,7 @@ body {
     background: rgba(5, 5, 8, 0.85);
     backdrop-filter: blur(20px);
     flex-shrink: 0;
-    z-index: 250;
+    z-index: 10;
 }
 
 .law-header-logo {
@@ -1073,10 +1073,6 @@ body {
     }
 
     .law-logo-text {
-        display: block;
-    }
-
-    .law-logo-sub {
         display: none;
     }
 
@@ -1085,8 +1081,8 @@ body {
     }
 
     .law-new-chat-btn {
-        padding: 8px 12px;
-        border-radius: var(--law-radius-pill);
+        padding: 8px;
+        border-radius: 50%;
     }
 
     .law-chat-scroll {
@@ -1164,7 +1160,7 @@ body {
 /* ── Law Sidebar (History) ────────────────────────────────────────────── */
 .law-sidebar {
     position: fixed;
-    top: var(--law-header-h);
+    top: 0;
     left: 0;
     bottom: 0;
     width: 320px;
@@ -1257,11 +1253,15 @@ body {
 
 /* ── Law Sidebar Toggle ────────────────────────────────────────────────── */
 .law-sidebar-toggle {
-    width: 38px;
-    height: 38px;
+    position: fixed;
+    top: 16px;
+    left: 20px;
+    width: 32px;
+    height: 32px;
+    z-index: 250;
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid var(--law-border);
-    border-radius: 8px;
+    border-radius: 6px;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -1269,8 +1269,6 @@ body {
     gap: 4px;
     cursor: pointer;
     transition: all var(--law-transition-base);
-    flex-shrink: 0;
-    margin-left: 8px;
 }
 
 .law-sidebar-toggle:hover {
@@ -1306,10 +1304,7 @@ body {
 
 .law-mobile-overlay {
     position: fixed;
-    top: var(--law-header-h);
-    left: 0;
-    right: 0;
-    bottom: 0;
+    inset: 0;
     background: rgba(0, 0, 0, 0.6);
     backdrop-filter: blur(4px);
     z-index: 150;
@@ -1429,7 +1424,7 @@ body {
     }
 
     .law-header {
-        padding-left: 16px;
+        padding-left: 64px;
     }
 }
 
