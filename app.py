@@ -249,7 +249,8 @@ RULES:
 - Do NOT use markdown code fences
 - Do NOT add any text or explanations
 - Start with 'erDiagram' on the first line
-- Use proper relationship notation
+- Use proper relationship notation (e.g. ||--o{ )
+- ALWAYS use curly braces { } for attribute blocks. NEVER use [ ].
 
 Example:
 erDiagram
@@ -416,7 +417,7 @@ def clean_mermaid_code(code, mode='flowchart'):
     for i, line in enumerate(lines):
         stripped = line.strip()
         for kw in MERMAID_KEYWORDS:
-            if stripped.startswith(kw.strip()):
+            if stripped.lower().startswith(kw.strip().lower()):
                 start_idx = i
                 break
         else:
@@ -928,6 +929,11 @@ def about():
 def admin_email():
     """Serve the Admin Email page."""
     return render_template('admin_email.html')
+
+@app.route('/admin-reviews')
+def admin_reviews():
+    """Serve the Admin Reviews page."""
+    return render_template('admin_reviews.html')
 
 @app.route('/api/send-emails', methods=['POST'])
 def send_emails():

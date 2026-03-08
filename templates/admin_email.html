@@ -287,6 +287,9 @@
         <div class="admin-header">
             <h1>ARKA <span>MAIL</span></h1>
             <p class="admin-subtitle">Send emails to registered users on the platform.</p>
+            <p style="margin-top: 10px;"><a href="/admin-reviews"
+                    style="color: var(--accent); font-size: 0.9rem; text-decoration: none;">View User Feedback & Reviews
+                    &rarr;</a></p>
         </div>
 
         <!-- Auth Gate -->
@@ -543,15 +546,21 @@
         unlockBtn.addEventListener('click', () => {
             adminKey = keyInput.value.trim();
             if (!adminKey) return;
-            // Simple display toggle. Actual security would be on a backend route.
-            document.getElementById('auth-gate').style.display = 'none';
-            document.getElementById('email-panel').style.display = 'block';
 
-            // Set initial email HTML
-            document.getElementById('email-html').value = getDefaultEmailHTML();
+            // Simple display toggle with a specific key check
+            if (adminKey === 'arka-dhruv-2026') {
+                document.getElementById('auth-gate').style.display = 'none';
+                document.getElementById('email-panel').style.display = 'block';
 
-            // Load Users
-            loadUsers();
+                // Set initial email HTML
+                const emailHtmlEl = document.getElementById('email-html');
+                if (emailHtmlEl) emailHtmlEl.value = getDefaultEmailHTML();
+
+                // Load Users
+                loadUsers();
+            } else {
+                alert('Invalid Admin Key');
+            }
         });
 
         // Load Users from both 'users' and 'userProfiles' nodes

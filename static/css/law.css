@@ -1156,3 +1156,329 @@ body {
         justify-content: center;
     }
 }
+
+/* ── Law Sidebar (History) ────────────────────────────────────────────── */
+.law-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 320px;
+    background: rgba(13, 13, 18, 0.95);
+    backdrop-filter: blur(25px);
+    border-right: 1px solid var(--law-border);
+    z-index: 200;
+    transform: translateX(-100%);
+    transition: transform var(--law-transition-smooth);
+    display: flex;
+    flex-direction: column;
+}
+
+.law-sidebar.open {
+    transform: translateX(0);
+}
+
+.law-sidebar-header {
+    padding: 24px;
+    border-bottom: 1px solid var(--law-border);
+}
+
+.law-sidebar-logo {
+    display: flex;
+    flex-direction: column;
+}
+
+.law-history-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.law-history-item {
+    padding: 14px;
+    border: 1px solid var(--law-border);
+    border-radius: var(--law-radius-md);
+    background: rgba(255, 255, 255, 0.03);
+    cursor: pointer;
+    transition: all var(--law-transition-fast);
+    text-align: left;
+}
+
+.law-history-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--law-border-light);
+}
+
+.law-history-item.active {
+    background: var(--law-accent-soft);
+    border-color: var(--law-accent);
+}
+
+.law-history-item-title {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--law-fg);
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin-bottom: 2px;
+}
+
+.law-history-item-date {
+    font-size: 0.7rem;
+    font-family: var(--law-font-mono);
+    color: var(--law-fg-muted);
+}
+
+.law-history-empty {
+    text-align: center;
+    padding: 24px;
+    color: var(--law-fg-dim);
+    font-size: 0.85rem;
+}
+
+.law-sidebar-footer {
+    padding: 16px;
+    border-top: 1px solid var(--law-border);
+}
+
+.sidebar-btn {
+    width: 100%;
+}
+
+/* ── Law Sidebar Toggle ────────────────────────────────────────────────── */
+.law-sidebar-toggle {
+    position: fixed;
+    top: 16px;
+    left: 20px;
+    width: 32px;
+    height: 32px;
+    z-index: 250;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--law-border);
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    transition: all var(--law-transition-base);
+}
+
+.law-sidebar-toggle:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--law-fg-muted);
+}
+
+.law-hamburger-icon {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.law-hamburger-icon span {
+    display: block;
+    width: 16px;
+    height: 1.5px;
+    background: var(--law-fg);
+    transition: all 0.3s ease;
+}
+
+.law-sidebar-toggle.active .law-hamburger-icon span:nth-child(1) {
+    transform: translateY(4.5px) rotate(45deg);
+}
+
+.law-sidebar-toggle.active .law-hamburger-icon span:nth-child(2) {
+    opacity: 0;
+}
+
+.law-sidebar-toggle.active .law-hamburger-icon span:nth-child(3) {
+    transform: translateY(-4.5px) rotate(-45deg);
+}
+
+.law-mobile-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 150;
+    display: none;
+    opacity: 0;
+    transition: opacity var(--law-transition-base);
+}
+
+.law-mobile-overlay.active {
+    display: block;
+    opacity: 1;
+}
+
+/* ── Law Profile & Dropdown ────────────────────────────────────────────────── */
+.law-header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.law-profile-wrapper {
+    position: relative;
+}
+
+.law-profile-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--law-border);
+    color: var(--law-fg-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all var(--law-transition-fast);
+}
+
+.law-profile-btn:hover {
+    color: var(--law-fg);
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--law-border-light);
+}
+
+.law-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 12px);
+    right: 0;
+    width: 240px;
+    background: var(--law-bg-card);
+    border: 1px solid var(--law-border);
+    border-radius: var(--radius-md);
+    padding: 12px;
+    display: none;
+    flex-direction: column;
+    gap: 4px;
+    box-shadow: var(--law-shadow-lg);
+    z-index: 1000;
+}
+
+.law-dropdown-menu.active {
+    display: flex;
+}
+
+.law-profile-info {
+    padding: 8px 12px 12px;
+}
+
+#user-display-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--law-fg);
+    display: block;
+}
+
+.law-dropdown-divider {
+    height: 1px;
+    background: var(--law-border);
+    margin: 4px 0;
+}
+
+.law-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    color: var(--law-fg-muted);
+    text-decoration: none;
+    font-size: 0.85rem;
+    transition: all var(--law-transition-fast);
+    background: transparent;
+    border: none;
+    width: 100%;
+    cursor: pointer;
+}
+
+.law-dropdown-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--law-fg);
+}
+
+.law-dropdown-item svg {
+    flex-shrink: 0;
+}
+
+@media (max-width: 1024px) {
+    .law-sidebar {
+        width: 280px;
+    }
+}
+
+@media (max-width: 768px) {
+    .law-sidebar {
+        width: 85%;
+        max-width: 320px;
+    }
+
+    .law-header {
+        padding-left: 64px;
+    }
+}
+
+/* ── Modals & Overlays ──────────────────────────────────────────────────── */
+.law-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 20px;
+    animation: lawFadeIn 0.3s ease;
+}
+
+.law-modal-overlay.active {
+    display: flex;
+}
+
+.law-modal {
+    background: var(--law-bg-card);
+    border: 1px solid var(--law-border);
+    border-radius: var(--law-radius-lg);
+    width: 100%;
+    max-width: 440px;
+    box-shadow: var(--law-shadow-lg);
+    overflow: hidden;
+    animation: lawModalSlide 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes lawFadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes lawModalSlide {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}

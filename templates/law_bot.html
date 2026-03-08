@@ -22,6 +22,12 @@
     <link rel="icon"
         href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='black'/><text y='50%' x='50%' dominant-baseline='middle' text-anchor='middle' fill='white' font-family='sans-serif' font-size='60' font-weight='bold'>A</text></svg>">
 
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script src="/static/js/firebase-init.js"></script>
+
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-WJZD6LFFNX"></script>
     <script>
@@ -42,24 +48,100 @@
     <!-- Toast Container -->
     <div class="toast-container" id="toast-container"></div>
 
+    <!-- Mobile Sidebar Overlay -->
+    <div class="law-mobile-overlay" id="law-mobile-overlay"></div>
+
+    <!-- Sidebar Toggle (Mobile) -->
+    <button class="law-sidebar-toggle" id="law-sidebar-toggle" aria-label="Toggle sidebar">
+        <div class="law-hamburger-icon">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+    </button>
+
+    <!-- Sidebar (History) -->
+    <aside class="law-sidebar" id="law-sidebar">
+        <div class="law-sidebar-header">
+            <div class="law-sidebar-logo">
+                <span class="law-logo-title">ARKA</span>
+                <span class="law-logo-sub">Chat History</span>
+            </div>
+        </div>
+        <div class="law-history-list" id="law-history-list">
+            <!-- Populated by JS -->
+            <div class="law-history-empty">No conversations yet</div>
+        </div>
+        <div class="law-sidebar-footer">
+            <button class="law-new-chat-btn sidebar-btn" id="sidebar-new-chat-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                <span>New Conversation</span>
+            </button>
+        </div>
+    </aside>
+
     <!-- Full-screen Chat Layout -->
     <div class="law-app" id="law-app">
 
         <!-- Header Bar -->
         <header class="law-header" id="law-header">
-            <a href="/" class="law-header-logo" title="Back to Arka">
-                <div class="law-logo-text">
-                    <span class="law-logo-title">ARKA</span>
-                    <span class="law-logo-sub">LEGAL AI</span>
+            <div class="law-header-left">
+                <a href="/" class="law-header-logo" title="Back to Arka">
+                    <div class="law-logo-text">
+                        <span class="law-logo-title">ARKA</span>
+                        <span class="law-logo-sub">LEGAL AI</span>
+                    </div>
+                </a>
+            </div>
+
+            <div class="law-header-right">
+                <!-- User Profile Dropdown -->
+                <div class="law-profile-wrapper" id="profile-dropdown-wrapper">
+                    <button class="law-profile-btn" id="btn-profile" title="Profile Menu">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20"
+                            height="20">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                    </button>
+                    <div class="law-dropdown-menu" id="profile-dropdown-menu">
+                        <div id="user-profile-container" class="law-profile-info">
+                            <span id="user-display-name">Not Logged In</span>
+                            <span id="user-email"
+                                style="font-size: 0.7rem; color: var(--law-fg-muted); display: block;"></span>
+                        </div>
+                        <div class="law-dropdown-divider"></div>
+                        <a href="/" class="law-dropdown-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14"
+                                height="14">
+                                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                                <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                            </svg>
+                            <span>Back to Diagrams</span>
+                        </a>
+                        <button class="law-dropdown-item" id="btn-logout">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14"
+                                height="14">
+                                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                                <polyline points="16 17 21 12 16 7"></polyline>
+                                <line x1="21" y1="12" x2="9" y2="12"></line>
+                            </svg>
+                            <span>Log Out</span>
+                        </button>
+                    </div>
                 </div>
-            </a>
-            <button class="law-new-chat-btn" id="new-chat-btn" title="Start New Conversation">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
-                    <line x1="12" y1="5" x2="12" y2="19"></line>
-                    <line x1="5" y1="12" x2="19" y2="12"></line>
-                </svg>
-                <span>New Chat</span>
-            </button>
+
+                <button class="law-new-chat-btn" id="new-chat-btn" title="Start New Conversation">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    <span>New Chat</span>
+                </button>
+            </div>
         </header>
 
         <!-- Chat Messages Area -->
@@ -160,6 +242,116 @@
 
     </div>
 
+    <!-- Feedback Modal -->
+    <div class="law-modal-overlay" id="feedback-modal">
+        <div class="law-modal">
+            <div class="law-sidebar-header" style="border-bottom: 1px solid var(--law-border);">
+                <span class="law-logo-title" style="font-size: 1.1rem;">GIVE FEEDBACK</span>
+            </div>
+            <div style="padding: 24px;">
+                <p style="margin-bottom: 20px; font-size: 0.9rem; color: var(--law-fg-muted);">Your feedback helps us
+                    improve Arka Legal AI.</p>
+
+                <div style="margin-bottom: 24px;">
+                    <label style="display: block; margin-bottom: 10px; font-size: 0.8rem; color: var(--law-fg);">Was the
+                        answer correct?</label>
+                    <div style="display: flex; gap: 12px;">
+                        <button class="law-chip feedback-correctness" data-value="correct" style="flex: 1;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16"
+                                height="16">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                            <span>Correct</span>
+                        </button>
+                        <button class="law-chip feedback-correctness" data-value="incorrect" style="flex: 1;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16"
+                                height="16">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                            <span>Incorrect</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 24px;">
+                    <label style="display: block; margin-bottom: 10px; font-size: 0.8rem; color: var(--law-fg);">Rating
+                        (1-5)</label>
+                    <div style="display: flex; justify-content: space-between;" id="feedback-rating-container">
+                        <button class="law-rating-btn" data-value="1">1</button>
+                        <button class="law-rating-btn" data-value="2">2</button>
+                        <button class="law-rating-btn" data-value="3">3</button>
+                        <button class="law-rating-btn" data-value="4">4</button>
+                        <button class="law-rating-btn" data-value="5">5</button>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 24px;">
+                    <label
+                        style="display: block; margin-bottom: 10px; font-size: 0.8rem; color: var(--law-fg);">Additional
+                        Comments</label>
+                    <textarea id="feedback-comments" class="law-chat-textarea" placeholder="What could we do better?"
+                        rows="3"
+                        style="background: rgba(0,0,0,0.2); border: 1px solid var(--law-border); border-radius: 8px; width: 100%; color: var(--law-fg); padding: 12px;"></textarea>
+                </div>
+
+                <div style="display: flex; gap: 12px;">
+                    <button class="law-dropdown-item" id="btn-cancel-feedback"
+                        style="justify-content: center; border: 1px solid var(--law-border);">Cancel</button>
+                    <button class="law-new-chat-btn" id="btn-submit-feedback"
+                        style="flex: 1; justify-content: center;">Submit Feedback</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login Required Modal -->
+    <div class="law-modal-overlay" id="login-modal">
+        <div class="law-modal" style="border-width: 2px; border-color: rgba(255, 255, 255, 0.1);">
+            <div style="padding: 40px 24px; text-align: center;">
+                <div style="display: flex; justify-content: center; margin-bottom: 24px;">
+                    <div
+                        style="width: 64px; height: 64px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.1);">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="var(--law-accent)" stroke-width="2" width="32"
+                            height="32">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                        </svg>
+                    </div>
+                </div>
+
+                <h2
+                    style="font-family: 'Orbitron'; font-size: 1.5rem; letter-spacing: 2px; margin-bottom: 12px; color: #fff;">
+                    WELCOME TO <span style="color: var(--law-accent);">ARKA</span></h2>
+                <p
+                    style="color: var(--law-fg-muted); font-size: 0.95rem; margin-bottom: 32px; line-height: 1.6; text-transform: none;">
+                    Sign up with Google to unlock legal AI guidance and save your chat history.</p>
+
+                <button class="law-new-chat-btn" id="btn-google-login"
+                    style="width: 100%; justify-content: center; background: #fff; color: #000; border-color: #fff; padding: 16px; border-radius: 12px; font-weight: 700;">
+                    <svg width="18" height="18" viewBox="0 0 18 18" style="margin-right: 12px;">
+                        <path
+                            d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"
+                            fill="#4285F4"></path>
+                        <path
+                            d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z"
+                            fill="#34A853"></path>
+                        <path d="M3.964 10.71a5.41 5.41 0 010-3.42V4.958H.957a8.991 8.991 0 000 8.083l3.007-2.331z"
+                            fill="#FBBC05"></path>
+                        <path
+                            d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"
+                            fill="#EA4335"></path>
+                    </svg>
+                    <span>SIGN UP WITH GOOGLE</span>
+                </button>
+
+                <div style="margin-top: 24px;">
+                    <a href="/"
+                        style="color: var(--law-fg-muted); font-size: 0.8rem; text-decoration: none; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 2px;">Back
+                        to Diagrams</a>
+                </div>
+            </div>
+        </div>
+    </div>
     <!-- App Scripts -->
     <script src="/static/js/law_bot.js"></script>
 </body>

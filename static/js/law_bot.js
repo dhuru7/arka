@@ -13,6 +13,112 @@ document.addEventListener('DOMContentLoaded', () => {
     const chatScroll = document.getElementById('law-chat-scroll');
     const welcomeEl = document.getElementById('law-welcome');
     const newChatBtn = document.getElementById('new-chat-btn');
+    const sidebarNewChatBtn = document.getElementById('sidebar-new-chat-btn');
+
+    // UI Elements for Sidebar & Profile
+    const sidebarToggle = document.getElementById('law-sidebar-toggle');
+    const sidebar = document.getElementById('law-sidebar');
+    const mobileOverlay = document.getElementById('law-mobile-overlay');
+    const profileBtn = document.getElementById('btn-profile');
+    const profileMenu = document.getElementById('profile-dropdown-menu');
+    const historyList = document.getElementById('law-history-list');
+
+    let currentSessionId = Date.now().toString();
+    let currentUser = null;
+
+    // ── Deep-Link Handling (for Admin Context) ──────────────────────────────
+    const urlParams = new URLSearchParams(window.location.search);
+    const targetUid = urlParams.get('uid');
+    const targetSid = urlParams.get('sid');
+
+    async function loadDeepLink(uid, sid) {
+        try {
+            const snap = await firebase.database().ref(`law_chats/${uid}/${sid}`).once('value');
+            const sessionData = snap.val();
+            if (sessionData) {
+                console.log("[LawBot] Loading shared session:", sid);
+                loadSpecificSession(sid, sessionData);
+            } else {
+                showToast("Chat session not found.", "error");
+            }
+        } catch (e) {
+            console.error("[LawBot] Deep link error:", e);
+            showToast("Unauthorized or invalid session.", "error");
+        }
+    }
+
+    const loginModal = document.getElementById('login-modal');
+    const googleLoginBtn = document.getElementById('btn-google-login');
+
+    googleLoginBtn?.addEventListener('click', async () => {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        try {
+            googleLoginBtn.disabled = true;
+            googleLoginBtn.innerHTML = `<span>SIGNING IN...</span>`;
+            await firebase.auth().signInWithPopup(provider);
+            // onAuthStateChanged will handle the rest
+            loginModal.classList.remove('active');
+        } catch (error) {
+            console.error("Login failed:", error);
+            showToast("Login failed. Please try again.", "error");
+            googleLoginBtn.disabled = false;
+            googleLoginBtn.innerHTML = `
+                <svg width="18" height="18" viewBox="0 0 18 18" style="margin-right: 12px;">
+                    <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4"></path>
+                    <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"></path>
+                    <path d="M3.964 10.71a5.41 5.41 0 010-3.42V4.958H.957a8.991 8.991 0 000 8.083l3.007-2.331z" fill="#FBBC05"></path>
+                    <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"></path>
+                </svg>
+                <span>SIGN UP WITH GOOGLE</span>
+            `;
+        }
+    });
+
+    // Wrap initialization to separate normal load vs deep link
+    firebase.auth().onAuthStateChanged(async (user) => {
+        if (user && !user.isAnonymous) {
+            currentUser = user;
+            document.getElementById('user-display-name').innerText = user.displayName || user.email;
+            document.getElementById('user-email').innerText = user.email;
+            loginModal.classList.remove('active');
+
+            if (targetUid && targetSid) {
+                await loadDeepLink(targetUid, targetSid);
+            } else {
+                loadChatHistory();
+            }
+        } else {
+            loginModal.classList.add('active');
+        }
+    });
+
+    document.getElementById('btn-logout')?.addEventListener('click', () => {
+        firebase.auth().signOut().then(() => window.location.href = '/');
+    });
+
+    // ── UI Toggle Logic ────────────────────────────────────────────────────
+    sidebarToggle.addEventListener('click', () => {
+        sidebar.classList.toggle('open');
+        sidebarToggle.classList.toggle('active');
+        mobileOverlay.classList.toggle('active');
+    });
+
+    mobileOverlay.addEventListener('click', () => {
+        sidebar.classList.remove('open');
+        sidebarToggle.classList.remove('active');
+        mobileOverlay.classList.remove('active');
+    });
+
+    profileBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        profileMenu.classList.toggle('active');
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('#profile-dropdown-wrapper')) {
+            profileMenu.classList.remove('active');
+        }
+    });
 
     // ── Auto-resize textarea ──────────────────────────────────────────────
     inputArea.addEventListener('input', function () {
@@ -40,9 +146,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ── New Chat ──────────────────────────────────────────────────────────
-    newChatBtn.addEventListener('click', () => {
+    function startNewChat() {
         chatHistory = [];
         questionCount = 0;
+        currentSessionId = Date.now().toString();
         // Remove all messages (keep welcome)
         const msgs = chatScroll.querySelectorAll('.law-msg');
         msgs.forEach(m => m.remove());
@@ -53,7 +160,15 @@ document.addEventListener('DOMContentLoaded', () => {
         inputArea.value = '';
         inputArea.style.height = 'auto';
         inputArea.focus();
-    });
+
+        // Close sidebar on mobile
+        sidebar.classList.remove('open');
+        sidebarToggle.classList.remove('active');
+        mobileOverlay.classList.remove('active');
+    }
+
+    newChatBtn.addEventListener('click', startNewChat);
+    sidebarNewChatBtn?.addEventListener('click', startNewChat);
 
     // ── Build API URL (auto-detects environment) ─────────────────────────
     function getApiUrl(path) {
@@ -141,8 +256,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ── Handle Send ───────────────────────────────────────────────────────
-    async function handleSend(optionText) {
-        const text = optionText || inputArea.value.trim();
+    async function handleSend(optionTextOrEvent) {
+        if (!currentUser) {
+            showToast("You must be logged in.", "error");
+            return;
+        }
+
+        const text = (typeof optionTextOrEvent === 'string') ? optionTextOrEvent : inputArea.value.trim();
         if (!text) return;
 
         // Hide welcome
@@ -151,7 +271,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Reset input
-        if (!optionText) {
+        if (typeof optionTextOrEvent !== 'string') {
             inputArea.value = '';
             inputArea.style.height = 'auto';
         }
@@ -209,6 +329,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (parsed.phase === 'final') {
                     renderFinalCards(parsed.cards);
+                    // Ask for feedback after final response
+                    setTimeout(showFeedbackModal, 2000);
                 } else if (parsed.phase === 'questioning') {
                     questionCount++;
                     renderQuestionMsg(parsed);
@@ -217,6 +339,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     const msg = parsed.message || JSON.stringify(parsed);
                     renderPlainAIMsg(msg);
                 }
+
+                // Save session to Firebase
+                saveChatSession();
             } else {
                 showToast(data.error || 'Failed to get response', 'error');
                 renderPlainAIMsg('⚠️ ' + (data.error || 'Something went wrong.'));
@@ -542,4 +667,145 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => toast.remove(), 300);
         }, 3000);
     }
+    // ── Firebase Storage & History ─────────────────────────────────────────
+
+    async function saveChatSession() {
+        if (!currentUser || chatHistory.length === 0) return;
+
+        const path = `law_chats/${currentUser.uid}/${currentSessionId}`;
+        const summary = chatHistory[0].content.substring(0, 50) + "...";
+
+        try {
+            await firebase.database().ref(path).set({
+                history: chatHistory,
+                lastUpdated: firebase.database.ServerValue.TIMESTAMP,
+                title: summary,
+                userName: currentUser.displayName || currentUser.email
+            });
+            loadChatHistory();
+        } catch (e) {
+            console.error("Error saving chat:", e);
+        }
+    }
+
+    async function loadChatHistory() {
+        if (!currentUser) return;
+        const ref = firebase.database().ref(`law_chats/${currentUser.uid}`);
+        ref.off(); // avoid multiple listeners
+        ref.on('value', (snap) => {
+            const data = snap.val();
+            if (!data) {
+                historyList.innerHTML = '<div class="law-history-empty">No conversations yet</div>';
+                return;
+            }
+
+            const items = Object.entries(data).sort((a, b) => b[1].lastUpdated - a[1].lastUpdated);
+            historyList.innerHTML = items.map(([id, chat]) => `
+                <div class="law-history-item ${id === currentSessionId ? 'active' : ''}" data-id="${id}">
+                    <div class="law-history-item-title">${escapeHTML(chat.title || 'Legal Chat')}</div>
+                    <div class="law-history-item-date">${new Date(chat.lastUpdated).toLocaleDateString()}</div>
+                </div>
+            `).join('');
+
+            historyList.querySelectorAll('.law-history-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const sid = item.getAttribute('data-id');
+                    loadSpecificSession(sid, data[sid]);
+                });
+            });
+        });
+    }
+
+    function loadSpecificSession(sessionId, sessionData) {
+        currentSessionId = sessionId;
+        chatHistory = sessionData.history || [];
+
+        // Clear and render all messages
+        const msgs = chatScroll.querySelectorAll('.law-msg');
+        msgs.forEach(m => m.remove());
+        if (welcomeEl) welcomeEl.style.display = 'none';
+
+        chatHistory.forEach(msg => {
+            if (msg.role === 'user') {
+                appendUserMsg(msg.content);
+            } else {
+                try {
+                    const parsed = JSON.parse(msg.content);
+                    if (parsed.phase === 'final') {
+                        renderFinalCards(parsed.cards);
+                    } else if (parsed.phase === 'questioning') {
+                        renderQuestionMsg(parsed);
+                    } else {
+                        renderPlainAIMsg(parsed.message || msg.content);
+                    }
+                } catch (e) {
+                    renderPlainAIMsg(msg.content);
+                }
+            }
+        });
+
+        // Close sidebar on mobile
+        sidebar.classList.remove('open');
+        sidebarToggle.classList.remove('active');
+        mobileOverlay.classList.remove('active');
+
+        scrollBottom();
+    }
+
+    // ── Feedback System ────────────────────────────────────────────────────
+    const feedbackModal = document.getElementById('feedback-modal');
+    let feedbackData = { correctness: null, rating: null };
+
+    function showFeedbackModal() {
+        feedbackModal.classList.add('active');
+        // Reset state
+        feedbackData = { correctness: null, rating: null };
+        document.getElementById('feedback-comments').value = '';
+        document.querySelectorAll('.feedback-correctness, .law-rating-btn').forEach(btn => btn.classList.remove('active'));
+    }
+
+    document.querySelectorAll('.feedback-correctness').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.feedback-correctness').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            feedbackData.correctness = btn.getAttribute('data-value');
+        });
+    });
+
+    document.querySelectorAll('.law-rating-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.law-rating-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            feedbackData.rating = btn.getAttribute('data-value');
+        });
+    });
+
+    document.getElementById('btn-cancel-feedback').addEventListener('click', () => {
+        feedbackModal.classList.remove('active');
+    });
+
+    document.getElementById('btn-submit-feedback').addEventListener('click', async () => {
+        const comments = document.getElementById('feedback-comments').value.trim();
+
+        if (!feedbackData.correctness || !feedbackData.rating) {
+            showToast("Please provide correctness and rating.", "warning");
+            return;
+        }
+
+        const path = `law_feedback/${currentUser.uid}/${currentSessionId}`;
+        try {
+            await firebase.database().ref(path).set({
+                correctness: feedbackData.correctness,
+                rating: parseInt(feedbackData.rating),
+                comments: comments,
+                timestamp: firebase.database.ServerValue.TIMESTAMP,
+                userName: currentUser.displayName || currentUser.email,
+                chatSnippet: chatHistory.length > 0 ? chatHistory[0].content : ""
+            });
+            showToast("Feedback submitted. Thank you!", "success");
+            feedbackModal.classList.remove('active');
+        } catch (e) {
+            showToast("Error submitting feedback.", "error");
+        }
+    });
 });

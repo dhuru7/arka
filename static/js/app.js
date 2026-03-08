@@ -792,7 +792,7 @@ async function renderFromCode(code, pushToHistory = true, preserveViewport = fal
             svgEl.style.height = '100%';
 
             // Add click-to-edit capability
-            const nodesAndEdges = canvasContainer.querySelectorAll('.node, .edgeLabel');
+            const nodesAndEdges = canvasContainer.querySelectorAll('.node, .edgeLabel, .entityBox, .relationshipLabel');
 
             canvasContainer.addEventListener('click', () => {
                 resetSelection(nodesAndEdges);
@@ -920,6 +920,7 @@ async function renderFromCode(code, pushToHistory = true, preserveViewport = fal
         console.error('Parse/render error:', err);
         showToast('Error parsing the Mermaid code: ' + err.message, 'error');
         triggerErrorReport('Error parsing the Mermaid code: ' + err.message);
+        throw err; // Re-throw so callers know it failed
     }
 }
 
@@ -969,6 +970,15 @@ function autoFixMermaidCode(code) {
         code = lines.map((line, i) => {
             if (i === 0) return 'xychart-beta';
             return line.replace(/[()\\]/g, '');
+        }).join('\n');
+    }
+
+    if (firstLine.startsWith('erdiagram')) {
+        // Ensure accurate erDiagram header and conversion of invalid syntax like entity[attr] to entity{attr}
+        code = lines.map((line, i) => {
+            if (i === 0) return 'erDiagram';
+            // Basic fix for entities using [] instead of {}
+            return line.replace(/(\w+)\s*\[([^\]]+)\]/g, '$1 { $2 }').replace(/\\/g, '');
         }).join('\n');
     }
 

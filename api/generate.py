@@ -279,7 +279,7 @@ def clean_mermaid_code(code, mode='flowchart'):
     for i, line in enumerate(lines):
         stripped = line.strip()
         for kw in MERMAID_KEYWORDS:
-            if stripped.startswith(kw.strip()):
+            if stripped.lower().startswith(kw.strip().lower()):
                 start_idx = i
                 break
         else:
