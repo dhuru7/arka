@@ -168,6 +168,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const ackNoticeBtn = document.getElementById('btn-ack-mobile-notice');
     if (ackNoticeBtn) ackNoticeBtn.addEventListener('click', dismissNotice);
+
+    // Under Development Disclaimer (First time only)
+    if (!localStorage.getItem('arka-dev-disclaimer-seen')) {
+        const devModal = document.getElementById('dev-disclaimer-modal');
+        if (devModal) {
+            setTimeout(() => devModal.classList.add('active'), 2000);
+            const closeDevBtn = document.getElementById('btn-close-disclaimer');
+            if (closeDevBtn) {
+                closeDevBtn.onclick = () => {
+                    devModal.classList.remove('active');
+                    localStorage.setItem('arka-dev-disclaimer-seen', 'true');
+                };
+            }
+        }
+    }
 });
 
 // Init handled by firebase-init.js globally.
@@ -1630,95 +1645,8 @@ function applyShapeChange(nodeId, nodeText, targetShapeIdx) {
 // ═══ Live Credits Update ════════════════════════════════════════════════════
 
 function checkAndInjectBMCWidget(usageCount, isAnonymous) {
-    // Show custom BMC popup at 6+ credits for signed-in users, once per session
-    if (isAnonymous) return;
-    if (usageCount < 6) return;
-    if (sessionStorage.getItem('bmc-popup-shown')) return;
-    if (document.getElementById('bmc-custom-popup')) return;
-
-    sessionStorage.setItem('bmc-popup-shown', '1');
-
-    // Small delay so it feels natural after diagram generation
-    setTimeout(() => {
-        const popup = document.createElement('div');
-        popup.id = 'bmc-custom-popup';
-        popup.style.cssText = `
-            position: fixed; bottom: 24px; right: 24px; z-index: 9999;
-            background: rgba(12, 12, 18, 0.97);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 16px; padding: 24px;
-            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), 0 0 60px rgba(229, 46, 46, 0.08);
-            max-width: 320px; width: calc(100% - 48px);
-            animation: bmcSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-            font-family: var(--font-body, 'Space Grotesk', sans-serif);
-        `;
-
-        popup.innerHTML = `
-            <style>
-                @keyframes bmcSlideIn {
-                    from { opacity: 0; transform: translateY(20px) scale(0.95); }
-                    to { opacity: 1; transform: translateY(0) scale(1); }
-                }
-                #bmc-custom-popup .bmc-close {
-                    position: absolute; top: 10px; right: 14px;
-                    background: none; border: none; color: rgba(255,255,255,0.3);
-                    font-size: 18px; cursor: pointer; padding: 4px; line-height: 1;
-                }
-                #bmc-custom-popup .bmc-close:hover { color: #fff; }
-                #bmc-custom-popup .bmc-title {
-                    font-size: 15px; font-weight: 700; color: #fff;
-                    margin-bottom: 6px;
-                }
-                #bmc-custom-popup .bmc-msg {
-                    font-size: 13px; color: rgba(255,255,255,0.5); line-height: 1.5;
-                    margin-bottom: 16px;
-                }
-                #bmc-custom-popup .bmc-btn {
-                    display: block; width: 100%; padding: 12px;
-                    border: none; border-radius: 10px; cursor: pointer;
-                    font-family: var(--font-body, 'Space Grotesk', sans-serif);
-                    font-weight: 600; font-size: 14px; text-align: center;
-                    text-decoration: none; transition: all 0.2s;
-                    margin-bottom: 8px;
-                }
-                #bmc-custom-popup .bmc-btn-primary {
-                    background: linear-gradient(135deg, #e52e2e, #ff6b35);
-                    color: #fff;
-                }
-                #bmc-custom-popup .bmc-btn-primary:hover {
-                    transform: translateY(-1px);
-                    box-shadow: 0 6px 20px rgba(229, 46, 46, 0.3);
-                }
-                #bmc-custom-popup .bmc-btn-secondary {
-                    background: rgba(255,255,255,0.06);
-                    color: rgba(255,255,255,0.7);
-                    border: 1px solid rgba(255,255,255,0.08);
-                    margin-bottom: 0;
-                }
-                #bmc-custom-popup .bmc-btn-secondary:hover {
-                    background: rgba(255,255,255,0.1);
-                }
-            </style>
-            <button class="bmc-close" onclick="this.parentElement.remove()">✕</button>
-            <div class="bmc-title">☕ Enjoying Arka?</div>
-            <div class="bmc-msg">You've used ${usageCount}/10 credits today! If Arka's been helpful, consider supporting the project.</div>
-            <a href="https://buymeacoffee.com/dhruvgautam" target="_blank" class="bmc-btn bmc-btn-primary">Buy Me a Coffee ☕</a>
-            <a href="/about#support" target="_blank" class="bmc-btn bmc-btn-secondary">More Ways to Support</a>
-        `;
-
-        document.body.appendChild(popup);
-
-        // Auto-dismiss after 15 seconds
-        setTimeout(() => {
-            if (popup.parentElement) {
-                popup.style.transition = 'opacity 0.3s, transform 0.3s';
-                popup.style.opacity = '0';
-                popup.style.transform = 'translateY(10px)';
-                setTimeout(() => popup.remove(), 300);
-            }
-        }, 15000);
-    }, 2000);
+    // Official BMC Widget is now injected via HTML script tag
+    return;
 }
 
 async function updateLiveCredits(user, optimisticIncrement = false) {

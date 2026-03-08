@@ -145,6 +145,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // ── Report Button ─────────────────────────────────────────────────────
+    document.getElementById('btn-report-top')?.addEventListener('click', () => {
+        showFeedbackModal();
+    });
+
     // ── New Chat ──────────────────────────────────────────────────────────
     function startNewChat() {
         chatHistory = [];
@@ -600,9 +605,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="law-typing-dots">
                         <span class="law-typing-dot"></span>
                         <span class="law-typing-dot"></span>
-                        <span class="law-typing-dot"></span>
                     </div>
-                    <span class="law-loading-text">Analyzing legal patterns...</span>
+                    <span class="law-loading-text">Processing...</span>
                 </div>
             </div>
         `;

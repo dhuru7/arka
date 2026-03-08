@@ -51,23 +51,9 @@
     <!-- Mobile Sidebar Overlay -->
     <div class="law-mobile-overlay" id="law-mobile-overlay"></div>
 
-    <!-- Sidebar Toggle (Mobile) -->
-    <button class="law-sidebar-toggle" id="law-sidebar-toggle" aria-label="Toggle sidebar">
-        <div class="law-hamburger-icon">
-            <span></span>
-            <span></span>
-            <span></span>
-        </div>
-    </button>
 
     <!-- Sidebar (History) -->
     <aside class="law-sidebar" id="law-sidebar">
-        <div class="law-sidebar-header">
-            <div class="law-sidebar-logo">
-                <span class="law-logo-title">ARKA</span>
-                <span class="law-logo-sub">Chat History</span>
-            </div>
-        </div>
         <div class="law-history-list" id="law-history-list">
             <!-- Populated by JS -->
             <div class="law-history-empty">No conversations yet</div>
@@ -98,6 +84,17 @@
             </div>
 
             <div class="law-header-right">
+                <button class="law-new-chat-btn" id="btn-report-top" title="Report an Issue">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                        <path
+                            d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z">
+                        </path>
+                        <line x1="12" y1="9" x2="12" y2="13"></line>
+                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                    </svg>
+                    <span>Report</span>
+                </button>
+
                 <!-- User Profile Dropdown -->
                 <div class="law-profile-wrapper" id="profile-dropdown-wrapper">
                     <button class="law-profile-btn" id="btn-profile" title="Profile Menu">
@@ -140,6 +137,15 @@
                         <line x1="5" y1="12" x2="19" y2="12"></line>
                     </svg>
                     <span>New Chat</span>
+                </button>
+
+                <!-- Sidebar Toggle -->
+                <button class="law-sidebar-toggle" id="law-sidebar-toggle" aria-label="Toggle sidebar">
+                    <div class="law-hamburger-icon">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
                 </button>
             </div>
         </header>

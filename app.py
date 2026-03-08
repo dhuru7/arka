@@ -699,6 +699,7 @@ def index():
 @app.route('/updateslog')
 @app.route('/updates-log')
 @app.route('/updateslog.html')
+@app.route('/updates')
 def updates_log():
     """Serve the updates log page."""
     return render_template('updateslog.html')
@@ -892,6 +893,8 @@ ADDITIONAL GUIDELINES:
 """
 
 @app.route('/law-bot')
+@app.route('/lawbot')
+@app.route('/law')
 @app.route('/law-bot.html')
 @app.route('/law_bot')
 @app.route('/law_bot.html')
@@ -908,12 +911,14 @@ def yt_notes():
     return render_template('yt_notes.html')
 
 @app.route('/login')
+@app.route('/signin')
 @app.route('/login.html')
 def login():
     """Serve the Login page."""
     return render_template('login.html')
 
 @app.route('/signup')
+@app.route('/register')
 @app.route('/signup.html')
 def signup():
     """Serve the Signup page."""
